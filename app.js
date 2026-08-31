@@ -15,6 +15,18 @@ let payload=null;
 let selected=derivMarkets[0];
 let liveSocket=null;
 let liveQuote=null;
+const welcomePopup=$("welcomePopup");
+const welcomeContinue=$("welcomeContinue");
+document.body.classList.add("popup-open");
+welcomeContinue.addEventListener("click",closeWelcomePopup);
+welcomePopup.addEventListener("click",event=>{if(event.target===welcomePopup)closeWelcomePopup();});
+document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!welcomePopup.classList.contains("closed"))closeWelcomePopup();});
+function closeWelcomePopup(){
+  welcomePopup.classList.add("closed");
+  document.body.classList.remove("popup-open");
+  setTimeout(()=>welcomePopup.setAttribute("hidden",""),230);
+}
+
 
 const fmt=n=>Number.isFinite(Number(n))?Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):"—";
 const ageMinutes=iso=>iso?(Date.now()-Date.parse(iso))/60000:Infinity;
