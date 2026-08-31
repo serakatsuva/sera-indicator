@@ -121,13 +121,32 @@ function dynamicReadiness(setup,audit,agreed){
   return Math.round(Math.max(agreed?75:18,Math.min(agreed?96:74,raw)));
 }
 
+function estimateTiming(setup,finalVerdict,finalConfidence){
+  const aligned=setup.h1.side===setup.h4.side;
+  const bias=aligned?setup.h1.side:'NEUTRE';
+  const activeSide=finalVerdict!=='ATTENDRE'?finalVerdict:bias;
+  const rate=Math.max(setup.h1.atr*.35,setup.h1.atr*(.5+setup.h1.passed*.045+(setup.h4.trendStrong?.12:0)));
+  let minHours,maxHours,tp1Hours=null,tp2Hours=null,tp3Hours=null;
+  if(finalVerdict!=='ATTENDRE'&&setup.levels){
+    const eta=target=>Math.max(1,Math.ceil(Math.abs(target-setup.levels.entry)/rate));
+    tp1Hours=eta(setup.levels.tp1);tp2Hours=eta(setup.levels.tp2);tp3Hours=eta(setup.levels.tp3);
+    minHours=Math.max(1,Math.floor(tp1Hours*.7));maxHours=Math.min(96,Math.max(minHours+1,Math.ceil(tp3Hours*1.35)));
+  }else if(finalConfidence>=65){minHours=3;maxHours=12;
+  }else if(finalConfidence>=45){minHours=6;maxHours=24;
+  }else{minHours=12;maxHours=48;}
+  const style=maxHours<=6?'COURT':maxHours<=24?'MOYEN':'LONG';
+  const expiresInHours=style==='COURT'?3:style==='MOYEN'?8:16;
+  return {bias,side:finalVerdict!=='ATTENDRE'?finalVerdict:activeSide,position_style:style,duration_min_hours:minHours,duration_max_hours:maxHours,tp1_hours:tp1Hours,tp2_hours:tp2Hours,tp3_hours:tp3Hours,expires_in_hours:expiresInHours,recheck_hours:4,is_confirmed:finalVerdict!=='ATTENDRE',basis:'ATR H1, distance aux objectifs, force H1/H4 et volatilité récente'};
+}
+
 function finalize(setup,luna,sol){
   const audit=sol||luna||{verdict:'ATTENDRE',confidence:0,summary:'Analyse OpenAI absente.',confirmations:[],contradictions:['Validation IA absente'],risk:'Inconnu',needs_expert_review:true};
   const aiConfidence=Number(audit.confidence)||0;
   const agreed=setup.technical_verdict!=='ATTENDRE'&&audit.verdict===setup.technical_verdict&&aiConfidence>=75&&!audit.needs_expert_review;
   const finalVerdict=agreed?setup.technical_verdict:'ATTENDRE';
   const finalConfidence=dynamicReadiness(setup,audit,agreed);
-  return {...publicSetup(setup),levels:finalVerdict==='ATTENDRE'?null:setup.levels,final_verdict:finalVerdict,final_confidence:finalConfidence,score_type:agreed?'signal_confidence':'setup_readiness',ai_verdict:audit.verdict,ai_confidence:aiConfidence,ai_summary:audit.summary,ai_confirmations:audit.confirmations||[],ai_contradictions:audit.contradictions||[],ai_risk:audit.risk,needs_expert_review:Boolean(audit.needs_expert_review),ai_tier:sol?DEEP_MODEL+' · validation profonde':SCREENING_MODEL+' · contrôle initial'};
+  const timing=estimateTiming(setup,finalVerdict,finalConfidence);
+  return {...publicSetup(setup),levels:finalVerdict==='ATTENDRE'?null:setup.levels,final_verdict:finalVerdict,final_confidence:finalConfidence,timing,score_type:agreed?'signal_confidence':'setup_readiness',ai_verdict:audit.verdict,ai_confidence:aiConfidence,ai_summary:audit.summary,ai_confirmations:audit.confirmations||[],ai_contradictions:audit.contradictions||[],ai_risk:audit.risk,needs_expert_review:Boolean(audit.needs_expert_review),ai_tier:sol?DEEP_MODEL+' · validation profonde':SCREENING_MODEL+' · contrôle initial'};
 }
 
 async function selfTest(){const candles=Array.from({length:240},(_,i)=>{const base=1000+i*.8,open=base+Math.sin(i/4)*2,close=base+1+Math.sin(i/4)*2,high=Math.max(open,close)+3,low=Math.min(open,close)-3;return{open,high,low,close,epoch:1700000000+i*3600};});const result=inspectCandles(candles);if(!result||!Number.isFinite(result.atr)||!['BUY','SELL'].includes(result.side))throw new Error('Technical engine self-test failed');const setup=technicalSetup(MARKETS[0],result,{...result,trendStrong:true});if(!setup.h1||!setup.h4)throw new Error('H1/H4 assembly failed');console.log('Deriv signal engine self-test passed.');}
