@@ -115,8 +115,20 @@ function render(){
   notice.textContent=fresh
     ?`${payload.markets_count} indices Deriv analysés. BUY/SELL exige l’accord du moteur technique et d’OpenAI; l’exécution reste entièrement manuelle.`
     :"La validation IA est trop ancienne. Tous les verdicts restent sur ATTENDRE jusqu’à la prochaine analyse automatique.";
-  payload.markets.slice().sort((a,b)=>(b.final_confidence||0)-(a.final_confidence||0)).forEach(row=>results.appendChild(resultCard(row,fresh)));
+  payload.markets.slice().sort(compareSignalPriority).forEach(row=>results.appendChild(resultCard(row,fresh)));
   renderSelected();
+}
+
+function signalPriority(row){
+  if(row?.final_verdict==="BUY"||row?.final_verdict==="SELL")return 2;
+  if(row?.technical_verdict==="BUY"||row?.technical_verdict==="SELL")return 1;
+  return 0;
+}
+
+function compareSignalPriority(a,b){
+  return signalPriority(b)-signalPriority(a)
+    ||(Number(b.final_confidence)||0)-(Number(a.final_confidence)||0)
+    ||String(a.market||"").localeCompare(String(b.market||""),"fr");
 }
 
 function renderForexCards(container){
