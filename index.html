@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07111d">
+  <meta name="description" content="Sera Indicator — signaux Deriv H1/H4 validés par OpenAI, sans exécution automatique.">
+  <title>Sera Indicator — Signaux Deriv</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=deriv-20260831-1">
+  <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-1">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="Sera Indicator Deriv">
+      <span class="brand-mark" aria-hidden="true">↗</span>
+      <span><strong>Sera <em>Indicator</em></strong><small>Deriv Synthetic · H1 / H4</small></span>
+    </a>
+    <div class="status-row" aria-live="polite">
+      <span class="status-pill" id="marketStatus"><i></i>Deriv : connexion</span>
+      <span class="status-pill" id="aiStatus"><i></i>OpenAI : vérification</span>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="broker-panel panel signal-only-hero">
+      <div class="section-heading">
+        <div><span class="eyebrow">Deriv · indices synthétiques</span><h1>Signaux uniquement</h1><p>Sera analyse les bougies publiques Deriv H1/H4 et affiche une aide à la décision. L’application ne peut ouvrir, modifier ou fermer aucune position.</p></div>
+        <span class="mode-badge signal-only-badge">AUCUN TRADE AUTOMATIQUE</span>
+      </div>
+      <div class="signal-scope" aria-label="Périmètre de l'application">
+        <div><small>Broker</small><strong>Deriv</strong></div>
+        <div><small>Données</small><strong>WebSocket public</strong></div>
+        <div><small>Décision</small><strong>BUY / SELL / ATTENDRE</strong></div>
+        <div><small>Exécution</small><strong>Manuelle dans Deriv</strong></div>
+      </div>
+    </section>
+
+    <section class="scanner-panel panel">
+      <div class="scanner-heading">
+        <div><span class="eyebrow cyan">Scanner IA</span><h2>Signaux Deriv H1/H4</h2><p>Bougies publiques Deriv, moteur technique, contrôle Luna et validation Sol des meilleurs setups.</p></div>
+        <button class="primary" id="refreshButton" type="button"><span>↻</span> Actualiser les signaux</button>
+      </div>
+      <div class="meta-strip">
+        <span>Dernière analyse <b id="updatedAt">—</b></span>
+        <span>Source <b id="sourceName">Deriv WebSocket</b></span>
+        <span>Modèles <b id="modelName">Luna + Sol</b></span>
+        <span>Mise à jour <b>automatique chaque heure</b></span>
+      </div>
+      <div id="notice" class="notice loading">Chargement des signaux Deriv validés…</div>
+      <div id="results" class="results-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="analysis-grid">
+      <article class="market-card panel">
+        <div class="market-head">
+          <div><span class="eyebrow">DERIV · SYNTHETIC INDICES</span><h2 id="selectedMarket">Boom 300 Index</h2><div class="quote"><strong id="livePrice">—</strong><span id="liveChange">H1/H4</span></div></div>
+          <div class="market-controls"><select id="marketSelect" aria-label="Indice Deriv"></select><span class="timeframe">H1 + H4</span></div>
+        </div>
+        <div class="chart-area" id="chartArea">
+          <svg viewBox="0 0 900 250" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166" stop-opacity=".18"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></linearGradient></defs><path id="chartFillPath" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124 L900 250 L0 250 Z" fill="url(#chartFill)"/><path id="chartLine" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124" fill="none" stroke="#ffd166" stroke-width="4" stroke-linecap="round"/></svg>
+          <span class="verdict-badge wait" id="verdictBadge">ATTENDRE</span>
+        </div>
+        <div class="levels" id="levels">
+          <div><small>Entrée</small><strong>—</strong></div><div class="danger"><small>Stop loss</small><strong>—</strong></div><div><small>TP 1</small><strong>—</strong></div><div><small>TP 2</small><strong>—</strong></div><div><small>TP 3</small><strong>—</strong></div>
+        </div>
+        <div class="technical-grid" id="technicalGrid"></div>
+      </article>
+
+      <aside class="decision-card panel">
+        <div class="decision-title"><div><span class="eyebrow cyan">Signal final</span><h2>Technique + OpenAI</h2></div><span class="ai-chip">Aide à la décision</span></div>
+        <div class="decision-orb wait" id="decisionOrb"><strong>ATTENDRE</strong><small id="decisionConfidence">Validation requise</small></div>
+        <p class="decision-summary" id="decisionSummary">Sera n’affiche BUY ou SELL que lorsque les données Deriv, la tendance H1/H4 et l’audit OpenAI confirment le même sens.</p>
+        <div class="audit-list"><h3>Contrôles du setup</h3><div id="checks"></div></div>
+        <div class="signal-actions" id="signalActions" hidden><button id="copySignal" type="button">Copier le signal</button><button id="shareSignal" type="button">Partager</button></div>
+        <p class="manual-note">Le signal doit être vérifié puis exécuté manuellement sur votre plateforme Deriv.</p>
+      </aside>
+    </section>
+
+    <footer><strong>Application de signaux uniquement.</strong> Aucun accès à votre compte, aucun placement d’ordre et aucune garantie de gain. Vérifiez le risque et la taille de position avant toute exécution manuelle.</footer>
+  </main>
+  <script src="./app.js?v=deriv-20260831-1" defer></script>
+</body>
+</html>

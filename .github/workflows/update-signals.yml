@@ -1,0 +1,67 @@
+name: Sera Indicator — Deriv H1 H4 + OpenAI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - '.github/workflows/update-signals.yml'
+      - 'scripts/update-signals.mjs'
+  schedule:
+    - cron: '5 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sera-indicator-analysis
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Check OpenAI secret
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY is not configured as a Repository secret."
+            exit 1
+          fi
+          echo "OpenAI API key is configured."
+
+      - name: Test Deriv signal engine
+        run: node scripts/update-signals.mjs --self-test
+
+      - name: Analyze Deriv H1 H4 with Luna and Sol
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SCREENING_MODEL: gpt-5.6-luna
+          DEEP_MODEL: gpt-5.6-sol
+        run: node scripts/update-signals.mjs
+
+      - name: Commit validated signals
+        run: |
+          git config user.name "sera-indicator-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/signals.json
+          if git diff --cached --quiet; then
+            echo "No signal changes to commit."
+          else
+            git commit -m "Update Sera Indicator Deriv signals"
+            git fetch origin main
+            git rebase origin/main
+            git push origin main
+          fi
