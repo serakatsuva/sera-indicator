@@ -111,26 +111,28 @@ async function auditMarkets(model,setups,deep=false){
 }
 
 function dynamicReadiness(setup,audit,agreed){
+  const entry=setup.entry_tf,confirmation=setup.confirmation_tf;
   const aiConfidence=Math.max(0,Math.min(100,Number(audit.confidence)||0));
-  const alignment=setup.h1.side===setup.h4.side?8:-10;
-  const structure=(setup.h1.bos||setup.h1.choch?6:0)+(setup.h1.retest?5:0)+(setup.h1.sweep?4:0);
-  const trend=(setup.h1.trendStrong?5:-3)+(setup.h4.trendStrong?8:-6);
-  const momentum=(setup.h1.momentum?4:-3)+(setup.h4.momentum?3:-2);
-  const confluence=(setup.h1.fvg?2:0)+(setup.h1.orderBlock?3:0)+(setup.h1.impulse?2:0);
-  const volatilityRatio=setup.price?Math.abs(setup.h1.atr/setup.price)*100:0;
+  const alignment=entry.side===confirmation.side?8:-10;
+  const structure=(entry.bos||entry.choch?6:0)+(entry.retest?5:0)+(entry.sweep?4:0);
+  const trend=(entry.trendStrong?5:-3)+(confirmation.trendStrong?8:-6);
+  const momentum=(entry.momentum?4:-3)+(confirmation.momentum?3:-2);
+  const confluence=(entry.fvg?2:0)+(entry.orderBlock?3:0)+(entry.impulse?2:0);
+  const volatilityRatio=setup.price?Math.abs(entry.atr/setup.price)*100:0;
   const volatilityPenalty=volatilityRatio>5?7:volatilityRatio>2.5?4:0;
-  const contradictionPenalty=(audit.contradictions?.length||0)*4+(audit.needs_expert_review?8:0)+(setup.h1.spikeRisk?10:0);
+  const contradictionPenalty=(audit.contradictions?.length||0)*4+(audit.needs_expert_review?8:0)+(entry.spikeRisk?10:0);
   const confirmationBonus=Math.min(8,(audit.confirmations?.length||0)*2);
-  const base=setup.technical_confidence*.38+aiConfidence*.32+setup.h1.passed*1.8;
+  const base=setup.technical_confidence*.38+aiConfidence*.32+entry.passed*1.8;
   const raw=base+alignment+structure+trend+momentum+confluence+confirmationBonus-volatilityPenalty-contradictionPenalty;
   return Math.round(Math.max(agreed?75:18,Math.min(agreed?96:74,raw)));
 }
 
 function estimateTiming(setup,finalVerdict,finalConfidence){
-  const aligned=setup.h1.side===setup.h4.side;
-  const bias=aligned?setup.h1.side:'NEUTRE';
+  const entry=setup.entry_tf,confirmation=setup.confirmation_tf;
+  const aligned=entry.side===confirmation.side;
+  const bias=aligned?entry.side:'NEUTRE';
   const activeSide=finalVerdict!=='ATTENDRE'?finalVerdict:bias;
-  const rate=Math.max(setup.h1.atr*.35,setup.h1.atr*(.5+setup.h1.passed*.045+(setup.h4.trendStrong?.12:0)));
+  const rate=Math.max(entry.atr*.35,entry.atr*(.5+entry.passed*.045+(confirmation.trendStrong?.12:0)));
   let minHours,maxHours,tp1Hours=null,tp2Hours=null,tp3Hours=null;
   if(finalVerdict!=='ATTENDRE'&&setup.levels){
     const eta=target=>Math.max(1,Math.ceil(Math.abs(target-setup.levels.entry)/rate));
