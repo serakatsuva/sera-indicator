@@ -105,7 +105,30 @@ async function auditMarkets(model,setups,deep=false){
   const parsed=JSON.parse(extractOutputText(response));return {results:parsed.markets||[],response_id:response.id||null,usage:response.usage||null};
 }
 
-function finalize(setup,luna,sol){const audit=sol||luna||{verdict:'ATTENDRE',confidence:0,summary:'Analyse OpenAI absente.',confirmations:[],contradictions:['Validation IA absente'],risk:'Inconnu',needs_expert_review:true};const agreed=setup.technical_verdict!=='ATTENDRE'&&audit.verdict===setup.technical_verdict&&Number(audit.confidence)>=75&&!audit.needs_expert_review;const finalVerdict=agreed?setup.technical_verdict:'ATTENDRE',finalConfidence=agreed?Math.min(99,Math.round(setup.technical_confidence*.45+Number(audit.confidence)*.55)):Math.min(69,Math.round((setup.technical_confidence+Number(audit.confidence||0))/2));return {...publicSetup(setup),levels:finalVerdict==='ATTENDRE'?null:setup.levels,final_verdict:finalVerdict,final_confidence:finalConfidence,ai_verdict:audit.verdict,ai_confidence:Number(audit.confidence)||0,ai_summary:audit.summary,ai_confirmations:audit.confirmations||[],ai_contradictions:audit.contradictions||[],ai_risk:audit.risk,needs_expert_review:Boolean(audit.needs_expert_review),ai_tier:sol?`${DEEP_MODEL} · validation profonde`:`${SCREENING_MODEL} · contrôle initial`};}
+function dynamicReadiness(setup,audit,agreed){
+  const aiConfidence=Math.max(0,Math.min(100,Number(audit.confidence)||0));
+  const alignment=setup.h1.side===setup.h4.side?8:-10;
+  const structure=(setup.h1.bos||setup.h1.choch?6:0)+(setup.h1.retest?5:0)+(setup.h1.sweep?4:0);
+  const trend=(setup.h1.trendStrong?5:-3)+(setup.h4.trendStrong?8:-6);
+  const momentum=(setup.h1.momentum?4:-3)+(setup.h4.momentum?3:-2);
+  const confluence=(setup.h1.fvg?2:0)+(setup.h1.orderBlock?3:0)+(setup.h1.impulse?2:0);
+  const volatilityRatio=setup.price?Math.abs(setup.h1.atr/setup.price)*100:0;
+  const volatilityPenalty=volatilityRatio>5?7:volatilityRatio>2.5?4:0;
+  const contradictionPenalty=(audit.contradictions?.length||0)*4+(audit.needs_expert_review?8:0)+(setup.h1.spikeRisk?10:0);
+  const confirmationBonus=Math.min(8,(audit.confirmations?.length||0)*2);
+  const base=setup.technical_confidence*.38+aiConfidence*.32+setup.h1.passed*1.8;
+  const raw=base+alignment+structure+trend+momentum+confluence+confirmationBonus-volatilityPenalty-contradictionPenalty;
+  return Math.round(Math.max(agreed?75:18,Math.min(agreed?96:74,raw)));
+}
+
+function finalize(setup,luna,sol){
+  const audit=sol||luna||{verdict:'ATTENDRE',confidence:0,summary:'Analyse OpenAI absente.',confirmations:[],contradictions:['Validation IA absente'],risk:'Inconnu',needs_expert_review:true};
+  const aiConfidence=Number(audit.confidence)||0;
+  const agreed=setup.technical_verdict!=='ATTENDRE'&&audit.verdict===setup.technical_verdict&&aiConfidence>=75&&!audit.needs_expert_review;
+  const finalVerdict=agreed?setup.technical_verdict:'ATTENDRE';
+  const finalConfidence=dynamicReadiness(setup,audit,agreed);
+  return {...publicSetup(setup),levels:finalVerdict==='ATTENDRE'?null:setup.levels,final_verdict:finalVerdict,final_confidence:finalConfidence,score_type:agreed?'signal_confidence':'setup_readiness',ai_verdict:audit.verdict,ai_confidence:aiConfidence,ai_summary:audit.summary,ai_confirmations:audit.confirmations||[],ai_contradictions:audit.contradictions||[],ai_risk:audit.risk,needs_expert_review:Boolean(audit.needs_expert_review),ai_tier:sol?DEEP_MODEL+' · validation profonde':SCREENING_MODEL+' · contrôle initial'};
+}
 
 async function selfTest(){const candles=Array.from({length:240},(_,i)=>{const base=1000+i*.8,open=base+Math.sin(i/4)*2,close=base+1+Math.sin(i/4)*2,high=Math.max(open,close)+3,low=Math.min(open,close)-3;return{open,high,low,close,epoch:1700000000+i*3600};});const result=inspectCandles(candles);if(!result||!Number.isFinite(result.atr)||!['BUY','SELL'].includes(result.side))throw new Error('Technical engine self-test failed');const setup=technicalSetup(MARKETS[0],result,{...result,trendStrong:true});if(!setup.h1||!setup.h4)throw new Error('H1/H4 assembly failed');console.log('Deriv signal engine self-test passed.');}
 
