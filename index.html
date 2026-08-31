@@ -62,18 +62,23 @@
 
     <section class="scanner-panel panel">
       <div class="scanner-heading">
-        <div><span class="eyebrow cyan">Scanner IA</span><h2>Signaux Deriv H1/H4</h2><p>Bougies publiques Deriv, moteur technique, contrôle Luna et validation Sol des meilleurs setups.</p></div>
+        <div><span class="eyebrow cyan">Scanner IA multi-horizon</span><h2>Day trading et Swing Deriv</h2><p>Choisissez votre style : M15/H1 pour le day trading ou H1/H4 pour le swing.</p></div>
         <button class="primary" id="refreshButton" type="button"><span>↻</span> Actualiser les signaux</button>
       </div>
       <div class="meta-strip">
         <span>Dernière analyse <b id="updatedAt">—</b></span>
         <span>Source <b id="sourceName">Deriv WebSocket</b></span>
         <span>Modèles <b id="modelName">Luna + Sol</b></span>
-        <span>Mise à jour <b>automatique chaque heure</b></span>
+        <span>Mise à jour <b id="updateFrequency">toutes les 15 minutes</b></span>
       </div>
       <div class="market-family-filter" role="tablist" aria-label="Type de marché">
         <button class="family-filter active" id="syntheticFilter" type="button" role="tab" aria-selected="true">Indices synthétiques</button>
         <button class="family-filter" id="forexFilter" type="button" role="tab" aria-selected="false">Forex Deriv MT5</button>
+      </div>
+      <div class="trading-mode-filter" role="tablist" aria-label="Style de trading">
+        <button class="mode-filter active" data-mode="all" type="button" role="tab" aria-selected="true">Tous</button>
+        <button class="mode-filter" data-mode="day" type="button" role="tab" aria-selected="false">Day trading <small>M15 + H1</small></button>
+        <button class="mode-filter" data-mode="swing" type="button" role="tab" aria-selected="false">Swing <small>H1 + H4</small></button>
       </div>
       <div id="notice" class="notice loading">Chargement des signaux Deriv validés…</div>
       <div id="results" class="results-grid" aria-live="polite"></div>
@@ -82,8 +87,8 @@
     <section class="analysis-grid">
       <article class="market-card panel">
         <div class="market-head">
-          <div><span class="eyebrow">DERIV · SYNTHETIC INDICES</span><h2 id="selectedMarket">Boom 300 Index</h2><div class="quote"><strong id="livePrice">—</strong><span id="liveChange">H1/H4</span></div></div>
-          <div class="market-controls"><select id="marketSelect" aria-label="Indice Deriv"></select><span class="timeframe">H1 + H4</span></div>
+          <div><span class="eyebrow">DERIV · SYNTHETIC INDICES</span><h2 id="selectedMarket">Boom 300 Index</h2><div class="quote"><strong id="livePrice">—</strong><span id="liveChange">M15/H1</span></div></div>
+          <div class="market-controls"><select id="marketSelect" aria-label="Indice Deriv"></select><span class="timeframe" id="selectedTimeframe">M15 + H1</span></div>
         </div>
         <div class="chart-area" id="chartArea">
           <svg viewBox="0 0 900 250" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166" stop-opacity=".18"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></linearGradient></defs><path id="chartFillPath" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124 L900 250 L0 250 Z" fill="url(#chartFill)"/><path id="chartLine" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124" fill="none" stroke="#ffd166" stroke-width="4" stroke-linecap="round"/></svg>
@@ -103,6 +108,7 @@
           <div><small>Réévaluation</small><strong>—</strong></div>
         </div>
         <p class="timing-note" id="timingNote">Estimation dynamique, jamais une garantie de durée.</p>
+        <div class="position-profile" id="positionProfile"><div><small>Mode</small><strong>—</strong></div><div><small>Durée estimée</small><strong>—</strong></div><div><small>Validité</small><strong>—</strong></div><div><small>Prochaine analyse</small><strong>—</strong></div></div>
         <div class="technical-grid" id="technicalGrid"></div>
       </article>
 
@@ -118,6 +124,6 @@
 
     <footer><strong>Application de signaux uniquement.</strong> Aucun accès à votre compte, aucun placement d’ordre et aucune garantie de gain. Vérifiez le risque et la taille de position avant toute exécution manuelle.</footer>
   </main>
-  <script src="./app.js?v=deriv-20260831-4" defer></script>
+  <script src="./app.js?v=multimode-20260831-1" defer></script>
 </body>
 </html>
