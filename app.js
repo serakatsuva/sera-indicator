@@ -31,6 +31,8 @@ function closeWelcomePopup(){
 const fmt=n=>Number.isFinite(Number(n))?Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):"—";
 const ageMinutes=iso=>iso?(Date.now()-Date.parse(iso))/60000:Infinity;
 const signalClass=value=>value==="BUY"?"buy":value==="SELL"?"sell":"wait";
+const hoursLabel=value=>Number.isFinite(Number(value))?`≈ ${Math.round(Number(value))} h`:"—";
+const durationLabel=timing=>timing?`${timing.duration_min_hours}–${timing.duration_max_hours} h`:"—";
 const hasDerivResults=()=>payload?.ok===true&&payload?.status==="ai_analyzed"&&payload?.source_broker==="Deriv"&&Array.isArray(payload?.markets);
 const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<130;
 
@@ -96,7 +98,7 @@ function renderWaitingCards(container){
   derivMarkets.forEach(name=>{
     const card=document.createElement("button");
     card.className=`result-card${name===selected?" selected":""}`;
-    card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${symbols[name]} · H1/H4</p></div><span class="signal wait">ATTENDRE</span></div><div class="result-score"><strong>—</strong><small>Confiance IA</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
+    card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${symbols[name]} · H1/H4</p></div><span class="signal wait">ATTENDRE</span></div><div class="result-timing"><span>Biais en analyse</span><b>Horizon —</b></div><div class="result-score"><strong>—</strong><small>Préparation du setup</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
     card.onclick=()=>{selected=name;liveQuote=null;$("marketSelect").value=name;renderSelected();highlightSelected();connectLivePrice();};
     container.appendChild(card);
   });
@@ -106,7 +108,7 @@ function resultCard(row,fresh){
   const verdict=fresh?row.final_verdict:"ATTENDRE",confidence=fresh?Number(row.final_confidence)||0:0;
   const card=document.createElement("button");
   card.className=`result-card${row.market===selected?" selected":""}`;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)} · H1/H4</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="result-score"><strong>${confidence}%</strong><small>${row.score_type==="setup_readiness"?"Préparation du setup":escapeHtml(row.ai_tier||"Confiance du signal")}</small></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
+  const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`; card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)} · H1/H4</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="result-timing ${signalClass(verdict)}"><span>${direction}</span><b>${timing?`${timing.position_style} · ${durationLabel(timing)}`:"Horizon en calcul"}</b></div><div class="result-score"><strong>${confidence}%</strong><small>${row.score_type==="setup_readiness"?"Préparation du setup":escapeHtml(row.ai_tier||"Confiance du signal")}</small></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
   card.onclick=()=>{selected=row.market;liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();document.querySelector(".analysis-grid").scrollIntoView({behavior:"smooth",block:"start"});};
   return card;
 }
@@ -132,6 +134,22 @@ function renderSelected(){
   $("technicalGrid").innerHTML=metrics.map(([label,ok])=>`<div class="metric"><small>${label}</small><strong class="${ok?"ok":"no"}">${ok?"Confirmé":"Non confirmé"}</strong></div>`).join("");
   const confirmations=fresh?(row?.ai_confirmations||[]):[],contradictions=fresh?(row?.ai_contradictions||[]):[];
   $("checks").innerHTML=[...confirmations.map(text=>`<div class="check"><i></i><span>${escapeHtml(text)}</span></div>`),...contradictions.map(text=>`<div class="check no"><i></i><span>${escapeHtml(text)}</span></div>`)].join("")||'<div class="check no"><i></i><span>Données Deriv et analyse OpenAI récente requises</span></div>';
+  const timing=row?.timing;
+  const timingValues=timing?[
+    timing.is_confirmed?timing.side:`Biais ${timing.bias}`,
+    timing.position_style,
+    durationLabel(timing),
+    hoursLabel(timing.tp1_hours),
+    hoursLabel(timing.tp2_hours),
+    hoursLabel(timing.tp3_hours),
+    `${timing.expires_in_hours} h`,
+    `toutes les ${timing.recheck_hours} h`
+  ]:["—","—","—","—","—","—","—","—"];
+  $("timingPanel").querySelectorAll("strong").forEach((element,index)=>element.textContent=timingValues[index]);
+  $("timingPanel").className=`timing-panel ${cls}`;
+  $("timingNote").textContent=timing?.is_confirmed
+    ?`Estimation basée sur l’ATR H1, la distance vers les TP et la force H1/H4. Le signal expire après ${timing.expires_in_hours} h sans déclenchement.`
+    :`Aucun trade confirmé. Horizon projeté si le biais ${timing?.bias||"actuel"} est validé; réévaluation automatique à la prochaine analyse.`;
   $("signalActions").hidden=!(fresh&&verdict!=="ATTENDRE");
   drawChart(cls);
   highlightSelected();
