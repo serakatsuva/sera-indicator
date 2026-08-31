@@ -106,7 +106,7 @@ function resultCard(row,fresh){
   const verdict=fresh?row.final_verdict:"ATTENDRE",confidence=fresh?Number(row.final_confidence)||0:0;
   const card=document.createElement("button");
   card.className=`result-card${row.market===selected?" selected":""}`;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)} · H1/H4</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="result-score"><strong>${confidence}%</strong><small>${escapeHtml(row.ai_tier||"OpenAI")}</small></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)} · H1/H4</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="result-score"><strong>${confidence}%</strong><small>${row.score_type==="setup_readiness"?"Préparation du setup":escapeHtml(row.ai_tier||"Confiance du signal")}</small></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
   card.onclick=()=>{selected=row.market;liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();document.querySelector(".analysis-grid").scrollIntoView({behavior:"smooth",block:"start"});};
   return card;
 }
@@ -120,7 +120,7 @@ function renderSelected(){
   $("verdictBadge").textContent=verdict;
   $("decisionOrb").className=`decision-orb ${cls}`;
   $("decisionOrb").querySelector("strong").textContent=verdict;
-  $("decisionConfidence").textContent=fresh?`${row.final_confidence}% de confiance`:"Validation requise";
+  $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% de confiance`):"Validation requise";
   $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend une analyse Deriv H1/H4 et une validation OpenAI récente pour ${selected}.`;
   const currentPrice=liveQuote?.symbol===symbols[selected]?liveQuote.price:row?.price;
   $("livePrice").textContent=fmt(currentPrice);
