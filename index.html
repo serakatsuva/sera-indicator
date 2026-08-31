@@ -9,10 +9,31 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=deriv-20260831-1">
-  <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-1">
+  <link rel="stylesheet" href="./styles.css?v=deriv-20260831-2">
+  <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-2">
+  <link rel="stylesheet" href="./popup.css?v=deriv-20260831-2">
 </head>
 <body>
+  <div class="welcome-overlay" id="welcomePopup" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
+    <div class="welcome-card">
+      <div class="welcome-icon" aria-hidden="true">↗</div>
+      <span class="eyebrow cyan">Bienvenue sur</span>
+      <h1 id="welcomeTitle">Sera Indicator</h1>
+      <p id="welcomeDescription">Un outil d'aide à la décision qui analyse les indices synthétiques Deriv sur les horizons H1 et H4.</p>
+      <div class="welcome-features">
+        <div><span>◈</span><p><strong>Analyse hybride</strong><small>Moteur technique + validation GPT Luna et Sol.</small></p></div>
+        <div><span>↗</span><p><strong>Signaux simples</strong><small>BUY, SELL ou ATTENDRE, avec confiance, entrée, SL et TP1–TP3.</small></p></div>
+        <div><span>◷</span><p><strong>Actualisation horaire</strong><small>Analyse automatique des bougies Deriv H1/H4.</small></p></div>
+        <div><span>⚠</span><p><strong>Signaux uniquement</strong><small>Aucun ordre automatique et aucune garantie de gain. Vérifiez toujours le risque.</small></p></div>
+      </div>
+      <div class="welcome-feedback">
+        <strong>Questions ou feedback écrit</strong>
+        <a href="mailto:serakatsuva@gmail.com">serakatsuva@gmail.com</a>
+        <a href="tel:+243810249291">+243 810 249 291</a>
+      </div>
+      <button class="welcome-continue" id="welcomeContinue" type="button">J'ai compris · Continuer</button>
+    </div>
+  </div>
   <header class="topbar">
     <a class="brand" href="./" aria-label="Sera Indicator Deriv">
       <span class="brand-mark" aria-hidden="true">↗</span>
@@ -81,6 +102,6 @@
 
     <footer><strong>Application de signaux uniquement.</strong> Aucun accès à votre compte, aucun placement d’ordre et aucune garantie de gain. Vérifiez le risque et la taille de position avant toute exécution manuelle.</footer>
   </main>
-  <script src="./app.js?v=deriv-20260831-1" defer></script>
+  <script src="./app.js?v=deriv-20260831-2" defer></script>
 </body>
 </html>
