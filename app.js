@@ -18,6 +18,8 @@ let selected=derivMarkets[0];
 let liveSocket=null;
 let liveQuote=null;
 let marketFamily="synthetic";
+let tradingMode="all";
+let selectedMode="day";
 const welcomePopup=$("welcomePopup");
 const welcomeContinue=$("welcomeContinue");
 document.body.classList.add("popup-open");
@@ -50,6 +52,15 @@ $("copySignal").addEventListener("click",copySignal);
 $("shareSignal").addEventListener("click",shareSignal);
 $("syntheticFilter").addEventListener("click",()=>setMarketFamily("synthetic"));
 $("forexFilter").addEventListener("click",()=>setMarketFamily("forex"));
+document.querySelectorAll(".mode-filter").forEach(button=>button.addEventListener("click",()=>setTradingMode(button.dataset.mode)));
+
+function setTradingMode(mode){
+  tradingMode=mode;
+  if(mode!=="all")selectedMode=mode;
+  document.querySelectorAll(".mode-filter").forEach(button=>{const active=button.dataset.mode===mode;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active));});
+  $("updateFrequency").textContent=mode==="swing"?"chaque heure":"toutes les 15 minutes";
+  render();
+}
 
 function setMarketFamily(family){
   marketFamily=family;
@@ -109,13 +120,14 @@ function render(){
     return;
   }
 
-  setMarketStatus(fresh?"Deriv : données H1/H4":"Deriv : données anciennes",fresh?"live":"error");
+  setMarketStatus(fresh?"Deriv : données multi-horizon":"Deriv : données anciennes",fresh?"live":"error");
   setAiStatus(fresh?"OpenAI : actif":"OpenAI : validation expirée",fresh?"live":"error");
   notice.className=`notice ${fresh?"success":"warning"}`;
   notice.textContent=fresh
     ?`${payload.markets_count} indices Deriv analysés. BUY/SELL exige l’accord du moteur technique et d’OpenAI; l’exécution reste entièrement manuelle.`
     :"La validation IA est trop ancienne. Tous les verdicts restent sur ATTENDRE jusqu’à la prochaine analyse automatique.";
-  payload.markets.slice().sort(compareSignalPriority).forEach(row=>results.appendChild(resultCard(row,fresh)));
+  const rows=payload.markets.filter(row=>tradingMode==="all"||row.mode===tradingMode);
+  rows.slice().sort(compareSignalPriority).forEach(row=>results.appendChild(resultCard(row,fresh)));
   renderSelected();
 }
 
@@ -154,9 +166,11 @@ function renderWaitingCards(container){
 function resultCard(row,fresh){
   const verdict=fresh?row.final_verdict:"ATTENDRE",confidence=fresh?Number(row.final_confidence)||0:0;
   const card=document.createElement("button");
-  card.className=`result-card${row.market===selected?" selected":""}`;
-  const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`; card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)} · H1/H4</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="result-timing ${signalClass(verdict)}"><span>${direction}</span><b>${timing?`${timing.position_style} · ${durationLabel(timing)}`:"Horizon en calcul"}</b></div><div class="result-score"><strong>${confidence}%</strong><small>${row.score_type==="setup_readiness"?"Préparation du setup":escapeHtml(row.ai_tier||"Confiance du signal")}</small></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
-  card.onclick=()=>{selected=row.market;liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();document.querySelector(".analysis-grid").scrollIntoView({behavior:"smooth",block:"start"});};
+  card.className=`result-card${row.market===selected&&row.mode===selectedMode?" selected":""}`;
+  const status=verdict!=="ATTENDRE"?"Confirmé":row.technical_verdict!=="ATTENDRE"?"Détecté · validation IA":"En attente";
+  const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)} · ${escapeHtml(row.timeframes?.join("/")||"H1/H4")}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="card-profile"><span>${row.mode==="day"?"DAY TRADING":"SWING"}</span><span>${escapeHtml(row.duration?.range||durationLabel(timing))}</span></div><div class="result-timing ${signalClass(verdict)}"><span>${direction}</span><b>${status}</b></div><div class="result-score"><strong>${confidence}%</strong><small>${row.score_type==="setup_readiness"?"Préparation du setup":escapeHtml(row.ai_tier||"Confiance du signal")}</small></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
+  card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();document.querySelector(".analysis-grid").scrollIntoView({behavior:"smooth",block:"start"});};
   return card;
 }
 
@@ -175,7 +189,9 @@ function renderSelected(){
     $("checks").innerHTML='<div class="check no"><i></i><span>Flux de bougies Deriv MT5 non connecté</span></div><div class="check no"><i></i><span>Aucun signal ni pourcentage ne sera fabriqué</span></div>';
     $("signalActions").hidden=true;drawChart("wait");highlightSelected();return;
   }
-  const row=hasDerivResults()?payload.markets.find(item=>item.market===selected):null;
+  const candidates=hasDerivResults()?payload.markets.filter(item=>item.market===selected):[];
+  const row=candidates.find(item=>item.mode===selectedMode)||candidates[0]||null;
+  if(row?.mode)selectedMode=row.mode;
   const fresh=Boolean(row)&&resultsAreFresh();
   const verdict=fresh?row.final_verdict:"ATTENDRE",cls=signalClass(verdict);
   $("verdictBadge").className=`verdict-badge ${cls}`;
@@ -183,15 +199,19 @@ function renderSelected(){
   $("decisionOrb").className=`decision-orb ${cls}`;
   $("decisionOrb").querySelector("strong").textContent=verdict;
   $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% de confiance`):"Validation requise";
-  $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend une analyse Deriv H1/H4 et une validation OpenAI récente pour ${selected}.`;
+  $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend une analyse Deriv multi-horizon et une validation OpenAI récente pour ${selected}.`;
+  $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
   const currentPrice=liveQuote?.symbol===symbols[selected]?liveQuote.price:row?.price;
   $("livePrice").textContent=fmt(currentPrice);
   $("liveChange").textContent=liveQuote?.symbol===symbols[selected]?"Prix Deriv live":row?`${row.technical_verdict} technique`:"Deriv · attente";
   const levelValues=verdict!=="ATTENDRE"&&row?.levels?[row.levels.entry,row.levels.sl,row.levels.tp1,row.levels.tp2,row.levels.tp3]:[null,null,null,null,null];
   $("levels").querySelectorAll("strong").forEach((element,index)=>element.textContent=fmt(levelValues[index]));
-  const technical=row?.h1;
-  const metrics=[["Tendance H4",row?.h4?.trendStrong],["H1 ↔ H4",row?.h1?.side&&row?.h1?.side===row?.h4?.side],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Order Block",technical?.orderBlock],["Fair Value Gap",technical?.fvg],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
+  const technical=row?.entry_tf||row?.h1;
+  const confirmation=row?.confirmation_tf||row?.h4;
+  const metrics=[[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Order Block",technical?.orderBlock],["Fair Value Gap",technical?.fvg],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
   $("technicalGrid").innerHTML=metrics.map(([label,ok])=>`<div class="metric"><small>${label}</small><strong class="${ok?"ok":"no"}">${ok?"Confirmé":"Non confirmé"}</strong></div>`).join("");
+  const profile=[row?.mode==="day"?"Day trading":"Swing",row?.duration?.range||"—",row?.duration?.validity||"—",row?.duration?.reanalysis||"—"];
+  $("positionProfile").querySelectorAll("strong").forEach((element,index)=>element.textContent=profile[index]);
   const confirmations=fresh?(row?.ai_confirmations||[]):[],contradictions=fresh?(row?.ai_contradictions||[]):[];
   $("checks").innerHTML=[...confirmations.map(text=>`<div class="check"><i></i><span>${escapeHtml(text)}</span></div>`),...contradictions.map(text=>`<div class="check no"><i></i><span>${escapeHtml(text)}</span></div>`)].join("")||'<div class="check no"><i></i><span>Données Deriv et analyse OpenAI récente requises</span></div>';
   const timing=row?.timing;
@@ -246,7 +266,7 @@ function drawChart(cls){
 function setMarketStatus(text,state){$("marketStatus").textContent="";$("marketStatus").append(document.createElement("i"),document.createTextNode(text));$("marketStatus").className=`status-pill ${state}`;}
 function setAiStatus(text,state){$("aiStatus").textContent="";$("aiStatus").append(document.createElement("i"),document.createTextNode(text));$("aiStatus").className=`status-pill ${state}`;}
 function currentSignalText(){
-  const row=hasDerivResults()?payload.markets.find(item=>item.market===selected):null;
+  const row=hasDerivResults()?payload.markets.find(item=>item.market===selected&&item.mode===selectedMode):null;
   if(!row||!resultsAreFresh()||row.final_verdict==="ATTENDRE")return"";
   return ["SERA INDICATOR — SIGNAL DERIV CONFIRMÉ",`Indice : ${row.market}`,`Signal : ${row.final_verdict}`,`Confiance : ${row.final_confidence}%`,`Entrée : ${fmt(row.levels?.entry)}`,`Stop Loss : ${fmt(row.levels?.sl)}`,`TP1 : ${fmt(row.levels?.tp1)}`,`TP2 : ${fmt(row.levels?.tp2)}`,`TP3 : ${fmt(row.levels?.tp3)}`,`Analyse : ${new Date(payload.updated_at).toLocaleString("fr-FR")}`,`Modèle : ${row.ai_tier}`,"","Signal uniquement — exécution manuelle sur Deriv. Aucun gain garanti.",location.href].join("\n");
 }
