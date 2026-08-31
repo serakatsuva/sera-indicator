@@ -1,0 +1,106 @@
+//@version=6
+indicator("Sera Indicator AI Bridge", "SERA AI", overlay = true, max_labels_count = 300, max_lines_count = 100)
+
+// TradingView detects the technical pre-signal. The webhook sends it to Sera
+// Indicator for the final AI verdict. This script never places an order.
+
+groupTrend = "Tendance H1 / H4"
+fastLen = input.int(20, "EMA rapide", minval = 2, group = groupTrend)
+slowLen = input.int(50, "EMA lente", minval = 5, group = groupTrend)
+macroLen = input.int(200, "EMA macro", minval = 20, group = groupTrend)
+rsiLen = input.int(14, "RSI", minval = 2, group = groupTrend)
+
+groupSetup = "Détection du pré-signal"
+structureLen = input.int(20, "Fenêtre de structure", minval = 5, group = groupSetup)
+minScore = input.int(6, "Confirmations minimales", minval = 4, maxval = 8, group = groupSetup)
+atrLen = input.int(14, "ATR", minval = 2, group = groupSetup)
+slAtr = input.float(1.5, "Distance SL en ATR", minval = 0.5, step = 0.1, group = groupSetup)
+showDetected = input.bool(true, "Afficher les pré-signaux", group = groupSetup)
+
+groupAlerts = "Pont vers Sera Indicator"
+webhookToken = input.string("CHANGE_ME", "Jeton webhook", group = groupAlerts, tooltip = "Utilisez un jeton dédié, jamais votre clé OpenAI.")
+sendDetected = input.bool(true, "Envoyer les pré-signaux au webhook", group = groupAlerts)
+
+emaFast = ta.ema(close, fastLen)
+emaSlow = ta.ema(close, slowLen)
+emaMacro = ta.ema(close, macroLen)
+rsi = ta.rsi(close, rsiLen)
+atr = ta.atr(atrLen)
+
+h1Close = request.security(syminfo.tickerid, "60", close, lookahead = barmerge.lookahead_off)
+h1Fast = request.security(syminfo.tickerid, "60", ta.ema(close, fastLen), lookahead = barmerge.lookahead_off)
+h1Slow = request.security(syminfo.tickerid, "60", ta.ema(close, slowLen), lookahead = barmerge.lookahead_off)
+h1Rsi = request.security(syminfo.tickerid, "60", ta.rsi(close, rsiLen), lookahead = barmerge.lookahead_off)
+h4Close = request.security(syminfo.tickerid, "240", close, lookahead = barmerge.lookahead_off)
+h4Fast = request.security(syminfo.tickerid, "240", ta.ema(close, fastLen), lookahead = barmerge.lookahead_off)
+h4Slow = request.security(syminfo.tickerid, "240", ta.ema(close, slowLen), lookahead = barmerge.lookahead_off)
+h4Macro = request.security(syminfo.tickerid, "240", ta.ema(close, macroLen), lookahead = barmerge.lookahead_off)
+h4Rsi = request.security(syminfo.tickerid, "240", ta.rsi(close, rsiLen), lookahead = barmerge.lookahead_off)
+
+h1Bull = h1Fast > h1Slow and h1Close > h1Fast
+h1Bear = h1Fast < h1Slow and h1Close < h1Fast
+h4Bull = h4Fast > h4Slow and h4Slow > h4Macro and h4Close > h4Fast
+h4Bear = h4Fast < h4Slow and h4Slow < h4Macro and h4Close < h4Fast
+
+priorHigh = ta.highest(high[1], structureLen)
+priorLow = ta.lowest(low[1], structureLen)
+bosBuy = close > priorHigh
+bosSell = close < priorLow
+retestBuy = low <= emaFast and close > emaFast
+retestSell = high >= emaFast and close < emaFast
+momentumBuy = rsi > 52 and rsi < 78 and h1Rsi > 50 and h4Rsi > 50
+momentumSell = rsi < 48 and rsi > 22 and h1Rsi < 50 and h4Rsi < 50
+impulse = math.abs(close - open) / math.max(high - low, syminfo.mintick) > 0.55
+safeVolatility = math.abs(close - open) < atr * 2.2 and (high - low) < atr * 2.8
+
+buyScore = (h1Bull ? 1 : 0) + (h4Bull ? 1 : 0) + (momentumBuy ? 1 : 0) + (bosBuy ? 1 : 0) + (retestBuy ? 1 : 0) + (impulse ? 1 : 0) + (close > emaMacro ? 1 : 0) + (safeVolatility ? 1 : 0)
+sellScore = (h1Bear ? 1 : 0) + (h4Bear ? 1 : 0) + (momentumSell ? 1 : 0) + (bosSell ? 1 : 0) + (retestSell ? 1 : 0) + (impulse ? 1 : 0) + (close < emaMacro ? 1 : 0) + (safeVolatility ? 1 : 0)
+
+buyDetected = barstate.isconfirmed and buyScore >= minScore and h1Bull and h4Bull and not (buyScore[1] >= minScore)
+sellDetected = barstate.isconfirmed and sellScore >= minScore and h1Bear and h4Bear and not (sellScore[1] >= minScore)
+
+buySL = close - atr * slAtr
+sellSL = close + atr * slAtr
+buyRisk = close - buySL
+sellRisk = sellSL - close
+buyTP1 = close + buyRisk * 1.5
+buyTP2 = close + buyRisk * 2.4
+buyTP3 = close + buyRisk * 3.6
+sellTP1 = close - sellRisk * 1.5
+sellTP2 = close - sellRisk * 2.4
+sellTP3 = close - sellRisk * 3.6
+
+plot(emaFast, "EMA 20", color = color.new(color.aqua, 0), linewidth = 2)
+plot(emaSlow, "EMA 50", color = color.new(color.orange, 0), linewidth = 2)
+plot(emaMacro, "EMA 200", color = color.new(color.purple, 15), linewidth = 2)
+plotshape(showDetected and buyDetected, title = "Pré-signal BUY", style = shape.labelup, location = location.belowbar, color = color.new(color.lime, 0), text = "BUY\nIA?", textcolor = color.black, size = size.small)
+plotshape(showDetected and sellDetected, title = "Pré-signal SELL", style = shape.labeldown, location = location.abovebar, color = color.new(color.red, 0), text = "SELL\nIA?", textcolor = color.white, size = size.small)
+
+f_num(float value) => str.tostring(value, format.mintick)
+f_payload(string side, int score, float sl, float tp1, float tp2, float tp3) =>
+    '{"token":"' + webhookToken + '","source":"tradingview","indicator":"sera-ai-bridge-v1","event":"PRE_SIGNAL","ticker":"' + syminfo.tickerid + '","side":"' + side + '","timeframe":"' + timeframe.period + '","bar_time":' + str.tostring(time) + ',"price":' + f_num(close) + ',"score":' + str.tostring(score) + ',"score_max":8,"rsi":' + str.tostring(rsi, "#.##") + ',"atr":' + f_num(atr) + ',"h1_trend":"' + (h1Bull ? "BUY" : h1Bear ? "SELL" : "NEUTRAL") + '","h4_trend":"' + (h4Bull ? "BUY" : h4Bear ? "SELL" : "NEUTRAL") + '","sl":' + f_num(sl) + ',"tp1":' + f_num(tp1) + ',"tp2":' + f_num(tp2) + ',"tp3":' + f_num(tp3) + '}'
+
+if sendDetected and buyDetected
+    alert(f_payload("BUY", buyScore, buySL, buyTP1, buyTP2, buyTP3), alert.freq_once_per_bar_close)
+if sendDetected and sellDetected
+    alert(f_payload("SELL", sellScore, sellSL, sellTP1, sellTP2, sellTP3), alert.freq_once_per_bar_close)
+
+alertcondition(buyDetected, "SERA pré-signal BUY", "Sera Indicator a détecté un pré-signal BUY.")
+alertcondition(sellDetected, "SERA pré-signal SELL", "Sera Indicator a détecté un pré-signal SELL.")
+
+var table panel = table.new(position.top_right, 2, 6, bgcolor = color.new(color.black, 15), frame_color = color.new(color.gray, 40), frame_width = 1)
+if barstate.islast
+    bias = h1Bull and h4Bull ? "BUY" : h1Bear and h4Bear ? "SELL" : "ATTENDRE"
+    score = bias == "BUY" ? buyScore : bias == "SELL" ? sellScore : math.max(buyScore, sellScore)
+    table.cell(panel, 0, 0, "SERA AI", text_color = color.white, bgcolor = color.new(color.blue, 30))
+    table.cell(panel, 1, 0, "PRÉ-SIGNAL", text_color = color.white, bgcolor = color.new(color.blue, 30))
+    table.cell(panel, 0, 1, "H1")
+    table.cell(panel, 1, 1, h1Bull ? "BUY" : h1Bear ? "SELL" : "NEUTRE", text_color = h1Bull ? color.lime : h1Bear ? color.red : color.silver)
+    table.cell(panel, 0, 2, "H4")
+    table.cell(panel, 1, 2, h4Bull ? "BUY" : h4Bear ? "SELL" : "NEUTRE", text_color = h4Bull ? color.lime : h4Bear ? color.red : color.silver)
+    table.cell(panel, 0, 3, "Biais")
+    table.cell(panel, 1, 3, bias, text_color = bias == "BUY" ? color.lime : bias == "SELL" ? color.red : color.orange)
+    table.cell(panel, 0, 4, "Score")
+    table.cell(panel, 1, 4, str.tostring(score) + "/8")
+    table.cell(panel, 0, 5, "IA finale")
+    table.cell(panel, 1, 5, "Voir Sera", text_color = color.aqua)
