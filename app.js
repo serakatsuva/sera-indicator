@@ -10,11 +10,14 @@ const symbols={
   "Volatility 10 Index":"R_10","Volatility 25 Index":"R_25","Volatility 50 Index":"R_50",
   "Volatility 75 Index":"R_75","Volatility 100 Index":"R_100"
 };
+const forexMarkets=["EUR/USD","GBP/USD","USD/JPY","USD/CHF","USD/CAD","AUD/USD","NZD/USD"];
+const forexSymbols={"EUR/USD":"EURUSD","GBP/USD":"GBPUSD","USD/JPY":"USDJPY","USD/CHF":"USDCHF","USD/CAD":"USDCAD","AUD/USD":"AUDUSD","NZD/USD":"NZDUSD"};
 const $=id=>document.getElementById(id);
 let payload=null;
 let selected=derivMarkets[0];
 let liveSocket=null;
 let liveQuote=null;
+let marketFamily="synthetic";
 const welcomePopup=$("welcomePopup");
 const welcomeContinue=$("welcomeContinue");
 document.body.classList.add("popup-open");
@@ -45,9 +48,24 @@ $("marketSelect").addEventListener("change",event=>{
 });
 $("copySignal").addEventListener("click",copySignal);
 $("shareSignal").addEventListener("click",shareSignal);
+$("syntheticFilter").addEventListener("click",()=>setMarketFamily("synthetic"));
+$("forexFilter").addEventListener("click",()=>setMarketFamily("forex"));
+
+function setMarketFamily(family){
+  marketFamily=family;
+  $("syntheticFilter").classList.toggle("active",family==="synthetic");
+  $("forexFilter").classList.toggle("active",family==="forex");
+  $("syntheticFilter").setAttribute("aria-selected",String(family==="synthetic"));
+  $("forexFilter").setAttribute("aria-selected",String(family==="forex"));
+  selected=(family==="synthetic"?derivMarkets:forexMarkets)[0];
+  liveQuote=null; fillMarketSelect();
+  if(family==="synthetic")connectLivePrice();else if(liveSocket){liveSocket.close();liveSocket=null;}
+  render();
+}
 
 function fillMarketSelect(){
-  $("marketSelect").innerHTML=derivMarkets.map(name=>`<option value="${name}">${name}</option>`).join("");
+  const markets=marketFamily==="synthetic"?derivMarkets:forexMarkets;
+  $("marketSelect").innerHTML=markets.map(name=>`<option value="${name}">${name}</option>`).join("");
   $("marketSelect").value=selected;
 }
 
@@ -74,6 +92,13 @@ function render(){
   $("sourceName").textContent=payload?.source||"Deriv WebSocket";
   $("modelName").textContent=payload?.model||"Luna + Sol";
 
+  if(marketFamily==="forex"){
+    setMarketStatus("Forex MT5 : connexion requise","error"); setAiStatus("OpenAI Forex : en attente","error");
+    $("sourceName").textContent="Deriv MT5"; notice.className="notice warning";
+    notice.textContent="Les marchés Forex sont prêts. Connectez le flux Deriv MT5 pour activer les analyses IA sans utiliser de prix fictifs.";
+    renderForexCards(results); renderSelected(); return;
+  }
+
   if(!hasDerivResults()){
     setMarketStatus("Deriv : connexion en cours","error");
     setAiStatus("OpenAI : analyse en attente","error");
@@ -92,6 +117,16 @@ function render(){
     :"La validation IA est trop ancienne. Tous les verdicts restent sur ATTENDRE jusqu’à la prochaine analyse automatique.";
   payload.markets.slice().sort((a,b)=>(b.final_confidence||0)-(a.final_confidence||0)).forEach(row=>results.appendChild(resultCard(row,fresh)));
   renderSelected();
+}
+
+function renderForexCards(container){
+  forexMarkets.forEach(name=>{
+    const card=document.createElement("button");
+    card.className=`result-card forex-pending${name===selected?" selected":""}`;
+    card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${forexSymbols[name]} · H1/H4</p></div><span class="signal wait">EN ATTENTE</span></div><div class="forex-lock">Connexion MT5 requise</div><div class="result-score"><strong>—</strong><small>Analyse IA non lancée</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
+    card.onclick=()=>{selected=name;$("marketSelect").value=name;renderSelected();highlightSelected();document.querySelector(".analysis-grid").scrollIntoView({behavior:"smooth",block:"start"});};
+    container.appendChild(card);
+  });
 }
 
 function renderWaitingCards(container){
@@ -115,6 +150,19 @@ function resultCard(row,fresh){
 
 function renderSelected(){
   $("selectedMarket").textContent=selected;
+  if(marketFamily==="forex"){
+    $("verdictBadge").className="verdict-badge wait";$("verdictBadge").textContent="EN ATTENTE";
+    $("decisionOrb").className="decision-orb wait";$("decisionOrb").querySelector("strong").textContent="ATTENDRE";
+    $("decisionConfidence").textContent="Connexion MT5 requise";
+    $("decisionSummary").textContent=`${selected} est ajouté au scanner. Son analyse H1/H4 par Luna et Sol démarrera uniquement après connexion des vraies bougies Deriv MT5.`;
+    $("livePrice").textContent="—";$("liveChange").textContent="Deriv MT5 · attente";
+    $("levels").querySelectorAll("strong").forEach(element=>element.textContent="—");
+    $("timingPanel").querySelectorAll("strong").forEach(element=>element.textContent="—");
+    $("timingNote").textContent="Durée, expiration et objectifs seront calculés après réception des vraies bougies MT5.";
+    $("technicalGrid").innerHTML=[["Sessions","Londres / New York"],["Tendance","H1 + H4"],["Volatilité","ATR Forex"],["Actualités","Contrôle requis"]].map(([label,value])=>`<div class="metric"><small>${label}</small><strong class="no">${value}</strong></div>`).join("");
+    $("checks").innerHTML='<div class="check no"><i></i><span>Flux de bougies Deriv MT5 non connecté</span></div><div class="check no"><i></i><span>Aucun signal ni pourcentage ne sera fabriqué</span></div>';
+    $("signalActions").hidden=true;drawChart("wait");highlightSelected();return;
+  }
   const row=hasDerivResults()?payload.markets.find(item=>item.market===selected):null;
   const fresh=Boolean(row)&&resultsAreFresh();
   const verdict=fresh?row.final_verdict:"ATTENDRE",cls=signalClass(verdict);
@@ -157,6 +205,7 @@ function renderSelected(){
 
 function connectLivePrice(){
   if(liveSocket){liveSocket.close();liveSocket=null;}
+  if(marketFamily!=="synthetic")return;
   const symbol=symbols[selected];
   if(!symbol)return;
   try{
