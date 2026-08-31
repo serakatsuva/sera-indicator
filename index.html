@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./styles.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
+  <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
 </head>
 <body>
   <div class="welcome-overlay" id="welcomePopup" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -69,6 +70,10 @@
         <span>Source <b id="sourceName">Deriv WebSocket</b></span>
         <span>Modèles <b id="modelName">Luna + Sol</b></span>
         <span>Mise à jour <b>automatique chaque heure</b></span>
+      </div>
+      <div class="market-family-filter" role="tablist" aria-label="Type de marché">
+        <button class="family-filter active" id="syntheticFilter" type="button" role="tab" aria-selected="true">Indices synthétiques</button>
+        <button class="family-filter" id="forexFilter" type="button" role="tab" aria-selected="false">Forex Deriv MT5</button>
       </div>
       <div id="notice" class="notice loading">Chargement des signaux Deriv validés…</div>
       <div id="results" class="results-grid" aria-live="polite"></div>
