@@ -121,11 +121,11 @@ function render(){
   }
 
   setMarketStatus(fresh?"Deriv : données multi-horizon":"Deriv : données anciennes",fresh?"live":"error");
-  setAiStatus(fresh?"OpenAI : actif":"OpenAI : validation expirée",fresh?"live":"error");
+  setAiStatus(fresh?"OpenAI API : active":"OpenAI API : nouvelle analyse en cours",fresh?"live":"error");
   notice.className=`notice ${fresh?"success":"warning"}`;
   notice.textContent=fresh
     ?`${payload.markets_count} indices Deriv analysés. BUY/SELL exige l’accord du moteur technique et d’OpenAI; l’exécution reste entièrement manuelle.`
-    :"La validation IA est trop ancienne. Tous les verdicts restent sur ATTENDRE jusqu’à la prochaine analyse automatique.";
+    :"La validation IA précédente a expiré. Une nouvelle analyse automatique est en cours ; les verdicts restent sur ATTENDRE jusqu’à sa validation.";
   const rows=payload.markets.filter(row=>tradingMode==="all"||row.mode===tradingMode);
   rows.slice().sort(compareSignalPriority).forEach(row=>results.appendChild(resultCard(row,fresh)));
   renderSelected();
