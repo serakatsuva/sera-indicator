@@ -22,11 +22,12 @@ let tradingMode="all";
 let selectedMode="day";
 const welcomePopup=$("welcomePopup");
 const welcomeContinue=$("welcomeContinue");
-document.body.classList.add("popup-open");
+if(localStorage.getItem("seraWelcomeSeen")!=="1") document.body.classList.add("popup-open"); else { welcomePopup.classList.add("closed"); welcomePopup.setAttribute("hidden",""); }
 welcomeContinue.addEventListener("click",closeWelcomePopup);
 welcomePopup.addEventListener("click",event=>{if(event.target===welcomePopup)closeWelcomePopup();});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!welcomePopup.classList.contains("closed"))closeWelcomePopup();});
 function closeWelcomePopup(){
+  localStorage.setItem("seraWelcomeSeen","1");
   welcomePopup.classList.add("closed");
   document.body.classList.remove("popup-open");
   setTimeout(()=>welcomePopup.setAttribute("hidden",""),230);
@@ -35,6 +36,7 @@ function closeWelcomePopup(){
 
 const fmt=n=>Number.isFinite(Number(n))?Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):"—";
 const ageMinutes=iso=>iso?(Date.now()-Date.parse(iso))/60000:Infinity;
+const ageLabel=iso=>{const minutes=Math.max(0,Math.floor(ageMinutes(iso)));if(!Number.isFinite(minutes))return "—";if(minutes<1)return "à l’instant";if(minutes<60)return `${minutes} min`;const hours=Math.floor(minutes/60);if(hours<24)return `${hours} h ${minutes%60} min`;return `${Math.floor(hours/24)} j ${hours%24} h`;};
 const signalClass=value=>value==="BUY"?"buy":value==="SELL"?"sell":"wait";
 const hoursLabel=value=>Number.isFinite(Number(value))?`≈ ${Math.round(Number(value))} h`:"—";
 const durationLabel=timing=>timing?`${timing.duration_min_hours}–${timing.duration_max_hours} h`:"—";
@@ -53,6 +55,7 @@ $("shareSignal").addEventListener("click",shareSignal);
 $("syntheticFilter").addEventListener("click",()=>setMarketFamily("synthetic"));
 $("forexFilter").addEventListener("click",()=>setMarketFamily("forex"));
 document.querySelectorAll(".mode-filter").forEach(button=>button.addEventListener("click",()=>setTradingMode(button.dataset.mode)));
+$("openHelp")?.addEventListener("click",()=>{welcomePopup.removeAttribute("hidden");welcomePopup.classList.remove("closed");document.body.classList.add("popup-open");});
 
 function setTradingMode(mode){
   tradingMode=mode;
@@ -100,6 +103,7 @@ function render(){
   const notice=$("notice"),results=$("results"),fresh=resultsAreFresh();
   results.innerHTML="";
   $("updatedAt").textContent=payload?.updated_at?new Date(payload.updated_at).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"—";
+  $("dataAge").textContent=ageLabel(payload?.updated_at);
   $("sourceName").textContent=payload?.source||"Deriv WebSocket";
   $("modelName").textContent=payload?.model||"Luna + Sol";
 
@@ -121,11 +125,11 @@ function render(){
   }
 
   setMarketStatus(fresh?"Deriv : données multi-horizon":"Deriv : données anciennes",fresh?"live":"error");
-  setAiStatus(fresh?"OpenAI API : active":"OpenAI API : nouvelle analyse en cours",fresh?"live":"error");
+  setAiStatus(fresh?"OpenAI : validation récente":"OpenAI : validation expirée",fresh?"live":"error");
   notice.className=`notice ${fresh?"success":"warning"}`;
   notice.textContent=fresh
-    ?`${payload.markets_count} indices Deriv analysés. BUY/SELL exige l’accord du moteur technique et d’OpenAI; l’exécution reste entièrement manuelle.`
-    :"La validation IA précédente a expiré. Une nouvelle analyse automatique est en cours ; les verdicts restent sur ATTENDRE jusqu’à sa validation.";
+    ?`${payload.markets_count} analyses disponibles. Les signaux confirmés apparaissent en premier ; vérifiez toujours la durée, l’expiration et le risque avant toute décision.`
+    :`Validation expirée depuis ${ageLabel(payload.updated_at)}. Les anciens BUY/SELL sont neutralisés sur ATTENDRE jusqu’à une nouvelle analyse OpenAI.`;
   const rows=payload.markets.filter(row=>tradingMode==="all"||row.mode===tradingMode);
   rows.slice().sort(compareSignalPriority).forEach(row=>results.appendChild(resultCard(row,fresh)));
   renderSelected();
