@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#07111d">
-  <meta name="description" content="Sera Indicator — analyses Deriv Day trading M15/H1 et Swing H1/H4, avec validation IA sécurisée.">
+  <meta name="description" content="Sera Indicator — signaux Deriv multi-horizon avec passerelle sécurisée pour Deriv MT5.">
   <title>Sera Indicator — Signaux Deriv</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +25,7 @@
         <div><span>◈</span><p><strong>Analyse hybride</strong><small>Moteur technique multi-horizon + validation OpenAI lorsque l’API est disponible.</small></p></div>
         <div><span>↗</span><p><strong>Signaux simples</strong><small>BUY, SELL ou ATTENDRE, avec confiance, entrée, SL et TP1–TP3.</small></p></div>
         <div><span>◷</span><p><strong>Actualisation adaptée</strong><small>Day trading toutes les 15 minutes et Swing chaque heure.</small></p></div>
-        <div><span>⚠</span><p><strong>Signaux uniquement</strong><small>Aucun ordre automatique et aucune garantie de gain. Vérifiez toujours le risque.</small></p></div>
+        <div><span>⚠</span><p><strong>Exécution protégée</strong><small>L’EA optionnel fonctionne d’abord sur Démo. Aucun résultat n’est garanti.</small></p></div>
       </div>
       <div class="welcome-feedback">
         <strong>Questions ou feedback écrit</strong>
@@ -49,14 +49,44 @@
   <main class="shell">
     <section class="broker-panel panel signal-only-hero">
       <div class="section-heading">
-        <div><span class="eyebrow">Deriv · indices synthétiques</span><h1>Signaux uniquement</h1><p>Sera analyse les bougies publiques Deriv en M15/H1 et H1/H4, puis classe les opportunités confirmées ou à surveiller. L’application ne peut ouvrir, modifier ou fermer aucune position.</p></div>
-        <span class="mode-badge signal-only-badge">AUCUN TRADE AUTOMATIQUE</span>
+        <div><span class="eyebrow">Deriv · indices synthétiques</span><h1>Analyse et exécution MT5 optionnelle</h1><p>Sera analyse les bougies publiques Deriv en M15/H1 et H1/H4. L’EA MT5 optionnel peut exécuter uniquement les signaux Swing confirmés, avec limites de risque.</p></div>
+        <span class="mode-badge signal-only-badge">DÉMO PAR DÉFAUT</span>
       </div>
       <div class="signal-scope" aria-label="Périmètre de l'application">
         <div><small>Broker</small><strong>Deriv</strong></div>
         <div><small>Données</small><strong>WebSocket public</strong></div>
         <div><small>Décision</small><strong>BUY / SELL / ATTENDRE</strong></div>
-        <div><small>Exécution</small><strong>Manuelle dans Deriv</strong></div>
+        <div><small>Exécution</small><strong>EA Deriv MT5 optionnel</strong></div>
+      </div>
+    </section>
+
+    <section class="execution-panel panel" id="mt5Execution">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow cyan">Exécution Deriv MT5</span>
+          <h2>Passerelle Swing automatique</h2>
+          <p>L’EA Sera s’installe dans Deriv MT5 et surveille uniquement les signaux Swing BUY/SELL confirmés. Le compte Démo est obligatoire au premier démarrage.</p>
+        </div>
+        <span class="mode-badge execution-pending" id="executionStatus">EA NON CONNECTÉ</span>
+      </div>
+      <div class="execution-grid">
+        <div><small>Mode initial</small><strong>Démo uniquement</strong></div>
+        <div><small>Risque</small><strong>0,5 % · max. 1 USD</strong></div>
+        <div><small>Déclenchement</small><strong>Swing confirmé ≥ 75 %</strong></div>
+        <div><small>Protection</small><strong>SL + anti-doublon</strong></div>
+      </div>
+      <div class="execution-actions">
+        <a class="primary download-ea" href="./mt5/Sera_Swing_Executor.mq5" download>Télécharger l’EA MT5</a>
+        <button id="showMt5Setup" type="button">Voir l’installation</button>
+      </div>
+      <div class="mt5-setup" id="mt5Setup" hidden>
+        <ol>
+          <li>Dans MT5 : <strong>Fichier → Ouvrir le dossier des données → MQL5 → Experts</strong>.</li>
+          <li>Copiez le fichier téléchargé, compilez-le dans MetaEditor, puis attachez-le à un graphique.</li>
+          <li>Autorisez WebRequest vers <code>https://serakatsuva.github.io</code> et activez Algo Trading.</li>
+          <li>Laissez <strong>AllowRealAccount = false</strong> pendant les tests sur compte Démo.</li>
+        </ol>
+        <p><strong>Important :</strong> le site ne reçoit jamais votre mot de passe MT5. L’EA utilise uniquement le compte déjà connecté dans votre terminal.</p>
       </div>
     </section>
 
@@ -118,11 +148,12 @@
         <p class="decision-summary" id="decisionSummary">Sera n’affiche BUY ou SELL que lorsque les données Deriv, la tendance H1/H4 et l’audit OpenAI confirment le même sens.</p>
         <div class="audit-list"><h3>Contrôles du setup</h3><div id="checks"></div></div>
         <div class="signal-actions" id="signalActions" hidden><button id="copySignal" type="button">Copier le signal</button><button id="shareSignal" type="button">Partager</button></div>
-        <p class="manual-note">Le signal doit être vérifié puis exécuté manuellement sur votre plateforme Deriv.</p>
+        <p class="manual-note">L’exécution automatique nécessite l’EA Sera actif dans Deriv MT5. Sans EA, aucun ordre n’est envoyé.</p>
       </aside>
     </section>
 
-    <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button><footer><strong>Application de signaux uniquement.</strong> Aucun accès à votre compte, aucun placement d’ordre et aucune garantie de gain. Vérifiez le risque et la taille de position avant toute exécution manuelle.</footer>
+    <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button>
+    <footer><strong>Trading à risque élevé.</strong> L’automatisation ne garantit aucun gain. Testez longuement sur Démo; le passage au compte réel exige une activation volontaire dans l’EA.</footer>
   </main>
   <script src="./app.js?v=economy-20260918-2" defer></script>
 </body>

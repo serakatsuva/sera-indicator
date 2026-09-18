@@ -52,6 +52,11 @@ $("marketSelect").addEventListener("change",event=>{
 });
 $("copySignal").addEventListener("click",copySignal);
 $("shareSignal").addEventListener("click",shareSignal);
+$("showMt5Setup").addEventListener("click",()=>{
+  const panel=$("mt5Setup"),willOpen=panel.hidden;
+  panel.hidden=!willOpen;
+  $("showMt5Setup").textContent=willOpen?"Masquer l’installation":"Voir l’installation";
+});
 $("syntheticFilter").addEventListener("click",()=>setMarketFamily("synthetic"));
 $("forexFilter").addEventListener("click",()=>setMarketFamily("forex"));
 document.querySelectorAll(".mode-filter").forEach(button=>button.addEventListener("click",()=>setTradingMode(button.dataset.mode)));
@@ -129,7 +134,7 @@ function render(){
   setAiStatus(aiActive?"OpenAI : validation récente":fresh?"IA : économie active · technique seulement":"OpenAI : validation expirée",aiActive?"live":fresh?"":"error");
   notice.className=`notice ${aiActive?"success":"warning"}`;
   notice.textContent=aiActive
-    ?`${payload.markets_count} analyses disponibles · ${payload.ai_calls??0} appel(s) IA · ${payload.cached_ai_validations??0} validation(s) réutilisée(s).`
+    ?`${payload.markets_count} analyses disponibles · ${payload.ai_calls??0} appel(s) IA · ${payload.cached_ai_validations??0} validation(s) réutilisée(s). L’EA MT5 peut exécuter uniquement les Swing confirmés.`
     :fresh
       ?`${payload.markets_count} analyses techniques actualisées sans crédit OpenAI. ${payload.technical_candidates??0} candidat(s) détecté(s), mais aucun BUY/SELL n’est confirmé sans validation IA.`
       :`Validation expirée depuis ${ageLabel(payload.updated_at)}. Les anciens BUY/SELL sont neutralisés sur ATTENDRE jusqu’à une nouvelle analyse.`;
