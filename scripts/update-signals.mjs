@@ -153,23 +153,49 @@ function finalize(setup,luna,sol){
   const finalVerdict=agreed?setup.technical_verdict:'ATTENDRE';
   const finalConfidence=dynamicReadiness(setup,audit,agreed);
   const timing=estimateTiming(setup,finalVerdict,finalConfidence);
-  return {...publicSetup(setup),levels:finalVerdict==='ATTENDRE'?null:setup.levels,final_verdict:finalVerdict,final_confidence:finalConfidence,timing,score_type:agreed?'signal_confidence':'setup_readiness',ai_verdict:audit.verdict,ai_confidence:aiConfidence,ai_summary:audit.summary,ai_confirmations:audit.confirmations||[],ai_contradictions:audit.contradictions||[],ai_risk:audit.risk,needs_expert_review:Boolean(audit.needs_expert_review),ai_tier:sol?DEEP_MODEL+' · validation profonde':SCREENING_MODEL+' · contrôle initial'};
+  const aiTier=sol?DEEP_MODEL+' · validation profonde':luna?SCREENING_MODEL+' · contrôle ciblé':'Analyse technique locale · aucun crédit utilisé';
+  return {...publicSetup(setup),levels:finalVerdict==='ATTENDRE'?null:setup.levels,final_verdict:finalVerdict,final_confidence:finalConfidence,timing,score_type:agreed?'signal_confidence':'setup_readiness',ai_verdict:audit.verdict,ai_confidence:aiConfidence,ai_summary:audit.summary,ai_confirmations:audit.confirmations||[],ai_contradictions:audit.contradictions||[],ai_risk:audit.risk,needs_expert_review:Boolean(audit.needs_expert_review),ai_tier:aiTier};
 }
 
 async function selfTest(){const candles=Array.from({length:240},(_,i)=>{const base=1000+i*.8,open=base+Math.sin(i/4)*2,close=base+1+Math.sin(i/4)*2,high=Math.max(open,close)+3,low=Math.min(open,close)-3;return{open,high,low,close,epoch:1700000000+i*900};});const result=inspectCandles(candles);if(!result||!Number.isFinite(result.atr)||!['BUY','SELL'].includes(result.side))throw new Error('Technical engine self-test failed');const setup=technicalSetup(MARKETS[0],result,{...result,trendStrong:true},MODES[0]);if(!setup.entry_tf||!setup.confirmation_tf)throw new Error('Multi-horizon assembly failed');console.log('Deriv multi-horizon signal engine self-test passed.');}
 
+async function readPreviousPayload(){
+  try{return JSON.parse(await fs.readFile(OUTPUT,'utf8'));}catch{return null;}
+}
+
+function reusableAudit(previous,setup){
+  const id=`${setup.symbol}:${setup.mode}`;
+  const row=previous?.markets?.find(item=>item.id===id);
+  if(!row||row.entry_tf?.closedAt!==setup.entry_tf.closedAt||row.confirmation_tf?.closedAt!==setup.confirmation_tf.closedAt)return null;
+  if(!row.ai_verdict||row.ai_tier?.startsWith('Analyse technique locale'))return null;
+  return {id,verdict:row.ai_verdict,confidence:row.ai_confidence,summary:row.ai_summary,confirmations:row.ai_confirmations||[],contradictions:row.ai_contradictions||[],risk:row.ai_risk||'',needs_expert_review:Boolean(row.needs_expert_review)};
+}
+
 async function main(){
   if(process.argv.includes('--self-test'))return selfTest();
-  if(!OPENAI_API_KEY)throw new Error('OPENAI_API_KEY is not configured');
+  const previous=await readPreviousPayload();
   const candles=await fetchAllCandles();
   const setups=MARKETS.flatMap(meta=>MODES.map(mode=>{const entry=inspectCandles(candles.get(`${meta.symbol}:${mode.entry}`)),confirmation=inspectCandles(candles.get(`${meta.symbol}:${mode.confirmation}`));if(!entry||!confirmation)throw new Error(`Insufficient ${mode.id} candles for ${meta.market}`);return technicalSetup(meta,entry,confirmation,mode);}));
-  const luna=await auditMarkets(SCREENING_MODEL,setups,false),lunaMap=new Map(luna.results.map(row=>[String(row.id),row]));
   const setupId=setup=>`${setup.symbol}:${setup.mode}`;
-  const deepCandidates=setups.filter(setup=>setup.technical_verdict!=='ATTENDRE'&&lunaMap.get(setupId(setup))?.verdict===setup.technical_verdict).sort((a,b)=>b.technical_confidence-a.technical_confidence).slice(0,8);
-  let sol={results:[],response_id:null,usage:null};if(deepCandidates.length)sol=await auditMarkets(DEEP_MODEL,deepCandidates,true);
-  const solMap=new Map(sol.results.map(row=>[String(row.id),row])),markets=setups.map(setup=>finalize(setup,lunaMap.get(setupId(setup)),solMap.get(setupId(setup))));
-  const payload={ok:true,status:'ai_analyzed',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',updated_at:new Date().toISOString(),model:`${SCREENING_MODEL} + ${DEEP_MODEL}`,screening_model:SCREENING_MODEL,deep_model:DEEP_MODEL,markets_count:markets.length,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,openai_response_ids:{screening:luna.response_id,deep:sol.response_id},usage:{screening:luna.usage,deep:sol.usage},safety:'Signaux uniquement. Aucun accès au compte et aucun ordre automatique. BUY/SELL exige un accord technique et OpenAI avec confiance IA >= 75.'};
-  await fs.mkdir(path.dirname(OUTPUT),{recursive:true});await fs.writeFile(OUTPUT,JSON.stringify(payload,null,2));console.log(`Wrote ${markets.length} Deriv analyses; ${payload.confirmed_signals} confirmed signals.`);
+  const technicalCandidates=setups.filter(setup=>setup.technical_verdict!=='ATTENDRE'&&setup.technical_confidence>=70&&!setup.entry_tf.spikeRisk).sort((a,b)=>b.technical_confidence-a.technical_confidence).slice(0,6);
+  const reused=new Map(),newCandidates=[];
+  for(const setup of technicalCandidates){const audit=reusableAudit(previous,setup);if(audit)reused.set(setupId(setup),audit);else newCandidates.push(setup);}
+  let luna={results:[],response_id:null,usage:null};
+  if(newCandidates.length){
+    if(!OPENAI_API_KEY)throw new Error('OPENAI_API_KEY is required only because new technical candidates were detected');
+    luna=await auditMarkets(SCREENING_MODEL,newCandidates,false);
+  }
+  const lunaMap=new Map([...reused,...luna.results.map(row=>[String(row.id),row])]);
+  const deepCandidates=technicalCandidates.filter(setup=>setup.technical_confidence>=78&&lunaMap.get(setupId(setup))?.verdict===setup.technical_verdict&&!lunaMap.get(setupId(setup))?.needs_expert_review).slice(0,3);
+  const previousSol=new Map(),newDeep=[];
+  for(const setup of deepCandidates){const audit=reusableAudit(previous,setup);if(audit&&String(previous?.markets?.find(item=>item.id===setupId(setup))?.ai_tier||'').includes('validation profonde'))previousSol.set(setupId(setup),audit);else newDeep.push(setup);}
+  let sol={results:[],response_id:null,usage:null};
+  if(newDeep.length)sol=await auditMarkets(DEEP_MODEL,newDeep,true);
+  const solMap=new Map([...previousSol,...sol.results.map(row=>[String(row.id),row])]);
+  const markets=setups.map(setup=>finalize(setup,lunaMap.get(setupId(setup)),solMap.get(setupId(setup))));
+  const aiCalls=(newCandidates.length?1:0)+(newDeep.length?1:0);
+  const payload={ok:true,status:'ai_analyzed',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',updated_at:new Date().toISOString(),model:aiCalls?`${SCREENING_MODEL} + ${DEEP_MODEL} · mode économique`:'Technique locale · aucun appel OpenAI',screening_model:SCREENING_MODEL,deep_model:DEEP_MODEL,markets_count:markets.length,technical_candidates:technicalCandidates.length,ai_candidates:newCandidates.length,deep_candidates:newDeep.length,ai_calls:aiCalls,cached_ai_validations:reused.size+previousSol.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,openai_response_ids:{screening:luna.response_id,deep:sol.response_id},usage:{screening:luna.usage,deep:sol.usage},safety:'Analyse technique gratuite de tous les marchés. OpenAI intervient uniquement sur les candidats sérieux; aucun ordre automatique.'};
+  await fs.mkdir(path.dirname(OUTPUT),{recursive:true});await fs.writeFile(OUTPUT,JSON.stringify(payload,null,2));console.log(`Wrote ${markets.length} analyses; ${technicalCandidates.length} technical candidates; ${aiCalls} OpenAI calls; ${payload.confirmed_signals} confirmed signals.`);
 }
 
 main().catch(error=>{console.error(error instanceof Error?error.message:error);process.exit(1);});
