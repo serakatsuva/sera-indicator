@@ -180,21 +180,24 @@ async function main(){
   const technicalCandidates=setups.filter(setup=>setup.technical_verdict!=='ATTENDRE'&&setup.technical_confidence>=70&&!setup.entry_tf.spikeRisk).sort((a,b)=>b.technical_confidence-a.technical_confidence).slice(0,6);
   const reused=new Map(),newCandidates=[];
   for(const setup of technicalCandidates){const audit=reusableAudit(previous,setup);if(audit)reused.set(setupId(setup),audit);else newCandidates.push(setup);}
-  let luna={results:[],response_id:null,usage:null};
-  if(newCandidates.length){
-    if(!OPENAI_API_KEY)throw new Error('OPENAI_API_KEY is required only because new technical candidates were detected');
-    luna=await auditMarkets(SCREENING_MODEL,newCandidates,false);
-  }
+  let luna={results:[],response_id:null,usage:null,error:null};
+  if(newCandidates.length&&OPENAI_API_KEY){
+    try{luna=await auditMarkets(SCREENING_MODEL,newCandidates,false);}
+    catch(error){luna.error=error instanceof Error?error.message:String(error);console.warn(`OpenAI screening skipped: ${luna.error}`);}
+  }else if(newCandidates.length){luna.error='OPENAI_API_KEY unavailable';}
   const lunaMap=new Map([...reused,...luna.results.map(row=>[String(row.id),row])]);
   const deepCandidates=technicalCandidates.filter(setup=>setup.technical_confidence>=78&&lunaMap.get(setupId(setup))?.verdict===setup.technical_verdict&&!lunaMap.get(setupId(setup))?.needs_expert_review).slice(0,3);
   const previousSol=new Map(),newDeep=[];
   for(const setup of deepCandidates){const audit=reusableAudit(previous,setup);if(audit&&String(previous?.markets?.find(item=>item.id===setupId(setup))?.ai_tier||'').includes('validation profonde'))previousSol.set(setupId(setup),audit);else newDeep.push(setup);}
-  let sol={results:[],response_id:null,usage:null};
-  if(newDeep.length)sol=await auditMarkets(DEEP_MODEL,newDeep,true);
+  let sol={results:[],response_id:null,usage:null,error:null};
+  if(newDeep.length&&OPENAI_API_KEY){
+    try{sol=await auditMarkets(DEEP_MODEL,newDeep,true);}
+    catch(error){sol.error=error instanceof Error?error.message:String(error);console.warn(`OpenAI deep validation skipped: ${sol.error}`);}
+  }else if(newDeep.length){sol.error='OPENAI_API_KEY unavailable';}
   const solMap=new Map([...previousSol,...sol.results.map(row=>[String(row.id),row])]);
   const markets=setups.map(setup=>finalize(setup,lunaMap.get(setupId(setup)),solMap.get(setupId(setup))));
-  const aiCalls=(newCandidates.length?1:0)+(newDeep.length?1:0);
-  const payload={ok:true,status:'ai_analyzed',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',updated_at:new Date().toISOString(),model:aiCalls?`${SCREENING_MODEL} + ${DEEP_MODEL} · mode économique`:'Technique locale · aucun appel OpenAI',screening_model:SCREENING_MODEL,deep_model:DEEP_MODEL,markets_count:markets.length,technical_candidates:technicalCandidates.length,ai_candidates:newCandidates.length,deep_candidates:newDeep.length,ai_calls:aiCalls,cached_ai_validations:reused.size+previousSol.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,openai_response_ids:{screening:luna.response_id,deep:sol.response_id},usage:{screening:luna.usage,deep:sol.usage},safety:'Analyse technique gratuite de tous les marchés. OpenAI intervient uniquement sur les candidats sérieux; aucun ordre automatique.'};
+  const aiCalls=(luna.response_id?1:0)+(sol.response_id?1:0),aiAttempted=(newCandidates.length?1:0)+(newDeep.length?1:0);
+  const payload={ok:true,status:aiCalls?'ai_analyzed':'technical_only',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',updated_at:new Date().toISOString(),model:aiCalls?`${SCREENING_MODEL} + ${DEEP_MODEL} · mode économique`:'Technique locale · aucun appel OpenAI',screening_model:SCREENING_MODEL,deep_model:DEEP_MODEL,markets_count:markets.length,technical_candidates:technicalCandidates.length,ai_candidates:newCandidates.length,deep_candidates:newDeep.length,ai_calls:aiCalls,ai_attempted:aiAttempted,ai_error:luna.error||sol.error||null,cached_ai_validations:reused.size+previousSol.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,openai_response_ids:{screening:luna.response_id,deep:sol.response_id},usage:{screening:luna.usage,deep:sol.usage},safety:'Analyse technique gratuite de tous les marchés. OpenAI intervient uniquement sur les candidats sérieux; aucun ordre automatique.'};
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});await fs.writeFile(OUTPUT,JSON.stringify(payload,null,2));console.log(`Wrote ${markets.length} analyses; ${technicalCandidates.length} technical candidates; ${aiCalls} OpenAI calls; ${payload.confirmed_signals} confirmed signals.`);
 }
 
