@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#07111d">
-  <meta name="description" content="Sera Indicator — signaux Deriv H1/H4 validés par OpenAI, sans exécution automatique.">
+  <meta name="description" content="Sera Indicator — analyses Deriv Day trading M15/H1 et Swing H1/H4, avec validation IA sécurisée.">
   <title>Sera Indicator — Signaux Deriv</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=deriv-20260831-4">
+  <link rel="stylesheet" href="./styles.css?v=sera-20260918-1">
   <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
@@ -20,11 +20,11 @@
       <div class="welcome-icon" aria-hidden="true">↗</div>
       <span class="eyebrow cyan">Bienvenue sur</span>
       <h1 id="welcomeTitle">Sera Indicator</h1>
-      <p id="welcomeDescription">Un outil d'aide à la décision qui analyse les indices synthétiques Deriv sur les horizons H1 et H4.</p>
+      <p id="welcomeDescription">Un outil d’aide à la décision pour analyser les indices synthétiques Deriv en Day trading M15/H1 et en Swing H1/H4.</p>
       <div class="welcome-features">
-        <div><span>◈</span><p><strong>Analyse hybride</strong><small>Moteur technique + validation GPT Luna et Sol.</small></p></div>
+        <div><span>◈</span><p><strong>Analyse hybride</strong><small>Moteur technique multi-horizon + validation OpenAI lorsque l’API est disponible.</small></p></div>
         <div><span>↗</span><p><strong>Signaux simples</strong><small>BUY, SELL ou ATTENDRE, avec confiance, entrée, SL et TP1–TP3.</small></p></div>
-        <div><span>◷</span><p><strong>Actualisation horaire</strong><small>Analyse automatique des bougies Deriv H1/H4.</small></p></div>
+        <div><span>◷</span><p><strong>Actualisation adaptée</strong><small>Day trading toutes les 15 minutes et Swing chaque heure.</small></p></div>
         <div><span>⚠</span><p><strong>Signaux uniquement</strong><small>Aucun ordre automatique et aucune garantie de gain. Vérifiez toujours le risque.</small></p></div>
       </div>
       <div class="welcome-feedback">
@@ -32,13 +32,13 @@
         <a href="mailto:serakatsuva@gmail.com">serakatsuva@gmail.com</a>
         <a href="tel:+243810249291">+243 810 249 291</a>
       </div>
-      <button class="welcome-continue" id="welcomeContinue" type="button">J'ai compris · Continuer</button>
+      <button class="welcome-continue" id="welcomeContinue" type="button">J’ai compris · Continuer</button>
     </div>
   </div>
   <header class="topbar">
     <a class="brand" href="./" aria-label="Sera Indicator Deriv">
       <span class="brand-mark" aria-hidden="true">↗</span>
-      <span><strong>Sera <em>Indicator</em></strong><small>Deriv Synthetic · H1 / H4</small></span>
+      <span><strong>Sera <em>Indicator</em></strong><small>Deriv · Day M15/H1 · Swing H1/H4</small></span>
     </a>
     <div class="status-row" aria-live="polite">
       <span class="status-pill" id="marketStatus"><i></i>Deriv : connexion</span>
@@ -49,7 +49,7 @@
   <main class="shell">
     <section class="broker-panel panel signal-only-hero">
       <div class="section-heading">
-        <div><span class="eyebrow">Deriv · indices synthétiques</span><h1>Signaux uniquement</h1><p>Sera analyse les bougies publiques Deriv H1/H4 et affiche une aide à la décision. L’application ne peut ouvrir, modifier ou fermer aucune position.</p></div>
+        <div><span class="eyebrow">Deriv · indices synthétiques</span><h1>Signaux uniquement</h1><p>Sera analyse les bougies publiques Deriv en M15/H1 et H1/H4, puis classe les opportunités confirmées ou à surveiller. L’application ne peut ouvrir, modifier ou fermer aucune position.</p></div>
         <span class="mode-badge signal-only-badge">AUCUN TRADE AUTOMATIQUE</span>
       </div>
       <div class="signal-scope" aria-label="Périmètre de l'application">
@@ -66,9 +66,9 @@
         <button class="primary" id="refreshButton" type="button"><span>↻</span> Actualiser les signaux</button>
       </div>
       <div class="meta-strip">
-        <span>Dernière analyse <b id="updatedAt">—</b></span>
+        <span>Dernière analyse <b id="updatedAt">—</b></span><span>Âge des données <b id="dataAge">—</b></span>
         <span>Source <b id="sourceName">Deriv WebSocket</b></span>
-        <span>Modèles <b id="modelName">Luna + Sol</b></span>
+        <span>Validation IA <b id="modelName">OpenAI</b></span>
         <span>Mise à jour <b id="updateFrequency">toutes les 15 minutes</b></span>
       </div>
       <div class="market-family-filter" role="tablist" aria-label="Type de marché">
@@ -122,8 +122,8 @@
       </aside>
     </section>
 
-    <footer><strong>Application de signaux uniquement.</strong> Aucun accès à votre compte, aucun placement d’ordre et aucune garantie de gain. Vérifiez le risque et la taille de position avant toute exécution manuelle.</footer>
+    <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button><footer><strong>Application de signaux uniquement.</strong> Aucun accès à votre compte, aucun placement d’ordre et aucune garantie de gain. Vérifiez le risque et la taille de position avant toute exécution manuelle.</footer>
   </main>
-  <script src="./app.js?v=openai-active-20260902" defer></script>
+  <script src="./app.js?v=sera-20260918-1" defer></script>
 </body>
 </html>
