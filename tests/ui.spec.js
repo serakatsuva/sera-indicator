@@ -103,3 +103,22 @@ test('card action and modal action stay identical after click', async ({ page })
     await expect(page.locator('#signalModal')).toBeHidden();
   }
 });
+
+
+test('signal popup contains realtime candle chart and prediction controls', async ({ page }) => {
+  await page.locator('.result-card').first().click();
+  await expect(page.locator('#signalModal')).toBeVisible();
+  await expect(page.locator('#liveCandlesCanvas')).toBeVisible();
+  await expect(page.locator('#livePriceAxis')).toBeVisible();
+  await expect(page.locator('#predictionPanel')).toBeVisible();
+  await expect(page.locator('#predictionDirection')).toHaveText(/BUY|SELL|NEUTRE/);
+  await expect(page.locator('#predictionStatus')).not.toHaveText('');
+  await expect(page.locator('#predictionAction')).toHaveText(/WAIT|ENTER BUY NOW|ENTER SELL NOW/);
+});
+
+test('realtime chart exposes Japanese candle canvas instead of decorative SVG curve', async ({ page }) => {
+  await page.locator('.result-card').first().click();
+  await expect(page.locator('#liveCandlesCanvas')).toHaveCount(1);
+  await expect(page.locator('#chartLine')).toHaveCount(0);
+  await expect(page.locator('#chartFillPath')).toHaveCount(0);
+});
