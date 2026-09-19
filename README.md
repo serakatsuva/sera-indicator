@@ -148,3 +148,18 @@ Le volume reste calculé à partir de la distance réelle entre l’entrée et l
 Le moteur peut également appliquer un petit bonus de risque après une journée bénéficiaire. À l’inverse, une perte récente ou un drawdown réduit automatiquement le risque.
 
 Le système ne double pas le lot après une perte : **aucune martingale**. Les limites de perte par trade, drawdown journalier, pertes consécutives, marge libre et volume maximum restent actives.
+
+
+## Adaptive Evidence Engine
+
+Sera possède désormais une mémoire d’expérience persistante. À chaque cycle, le moteur :
+
+- enregistre les BUY/SELL confirmés avec leur marché, régime, type de setup, Entry, SL et TP1–TP5 ;
+- rejoue les bougies suivantes de manière conservatrice pour déterminer si le SL, le break-even ou les objectifs ont été atteints ;
+- construit une performance par **marché + mode + type de setup + régime** ;
+- n’utilise cette mémoire qu’après un nombre minimum d’échantillons ;
+- ajuste faiblement la confiance et le score d’exécution, avec un plafonnement strict ;
+- peut rétrograder un `EXECUTE_NOW` en `WAIT_CONFIRMATION` si l’historique comparable devient mauvais ;
+- ne peut jamais créer un BUY/SELL, inverser la direction ou contourner les garde-fous.
+
+Cette couche évite que Sera soit seulement un empilement d’indicateurs : il commence à mesurer ce qui fonctionne réellement dans ses propres décisions.
