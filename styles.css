@@ -336,3 +336,31 @@
   .prediction-panel strong{font-size:7px}
   .live-price-axis{width:54px}
 }
+
+
+/* Keep realtime/AI metadata compact on mobile despite legacy meta-strip rules */
+.compact-meta{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  grid-template-columns:none!important;
+  margin:6px 0!important;
+  min-height:0!important;
+  height:auto!important;
+  max-height:36px!important;
+  align-items:center!important;
+}
+.compact-meta span{
+  flex:0 0 auto!important;
+  min-width:max-content!important;
+  line-height:1.2!important;
+}
+@media(max-width:720px){
+  .meta-strip.compact-meta{
+    display:flex!important;
+    flex-wrap:nowrap!important;
+    grid-template-columns:none!important;
+    max-height:36px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+  }
+}
