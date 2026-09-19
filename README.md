@@ -5,7 +5,7 @@ Sera Indicator est un système d’aide à la décision et d’exécution Deriv 
 ## Fonctionnement
 
 - Les bougies Deriv M15, H1 et H4 sont récupérées depuis le WebSocket public Deriv.
-- Sera Autonomous Engine v3.1 analyse tendance, régime de marché, momentum, structure, liquidité, retest, ATR, mémoire de tendance et risque de spike.
+- Sera Autonomous Engine v3.3 analyse tendance, régime de marché, momentum, structure, liquidité, retest, ATR, mémoire de tendance et risque de spike.
 - OpenAI Luna intervient uniquement comme conseiller/auditeur facultatif lorsqu’il est disponible.
 - Sans Luna, le moteur peut confirmer seul BUY/SELL lorsque au moins 80 % des conditions applicables sont validées, tout en exigeant les garde-fous critiques.
 - Le résultat final reste BUY, SELL ou ATTENDRE. Aucun score ne garantit un gain.
@@ -14,7 +14,7 @@ Sera Indicator est un système d’aide à la décision et d’exécution Deriv 
 
 Le dossier `mt5/` contient `Sera_Swing_Executor.mq5`.
 
-La version **v1.31** est configurée pour fonctionner directement sur le compte MT5 connecté :
+La version **v1.40** est configurée pour fonctionner directement sur le compte MT5 connecté :
 
 - `EnableAutomaticTrading = true`
 - `AllowRealAccount = true`
@@ -24,12 +24,14 @@ La version **v1.31** est configurée pour fonctionner directement sur le compte 
 - lot maximum : **0,02**
 - confiance minimale : **75 %**
 - conditions autonomes minimales : **80 %**
+- score d’exécution minimal : **78 %**
+- état requis pour l’ordre réel : **EXECUTE_NOW**
 - maximum : **1 position Sera ouverte**
 - maximum : **2 entrées Sera par jour**
 - Stop Loss obligatoire
 - anti-doublon persistant par setup
 
-L’EA résout le symbole MT5 à partir du nom de marché et du code Deriv avant toute tentative d’ordre. Si aucun symbole valide n’est trouvé, aucun ordre n’est envoyé.
+L’EA résout le symbole MT5 à partir du nom de marché et du code Deriv avant toute tentative d’ordre. Un BUY/SELL directionnel ne suffit plus : l’ordre réel exige aussi l’état `EXECUTE_NOW` calculé par le moteur. Si aucun symbole valide n’est trouvé, aucun ordre n’est envoyé.
 
 GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le terminal MT5 déjà authentifié et lit les signaux publiés dans `data/signals.json`.
 
