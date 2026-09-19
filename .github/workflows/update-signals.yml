@@ -83,6 +83,9 @@ jobs:
       - name: Test open-source ensemble
         run: python scripts/open_source_ensemble.py --self-test
 
+      - name: Validate Gmail alert script
+        run: python -m py_compile scripts/send_gmail_alerts.py
+
       - name: Analyze Deriv with autonomous engine and optional Luna
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
