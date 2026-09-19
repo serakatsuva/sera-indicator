@@ -5,7 +5,7 @@ const OPENAI_API_KEY=process.env.OPENAI_API_KEY||'';
 const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
-const ENGINE_VERSION='Sera Autonomous Engine v3.1';
+const ENGINE_VERSION='Sera Autonomous Engine v3.2';
 
 const MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -319,16 +319,21 @@ function autonomousDecision(setup){
   const trending=e.regime==='TRENDING'||c.regime==='TRENDING';
   const rangeLike=e.regime==='RANGE'||e.regime==='TRANSITION';
 
+  const breakoutContinuation=trending&&aligned&&e.trendStrong&&c.trendStrong&&(e.bos||e.choch)&&e.impulse;
+  const pullbackContinuation=trending&&aligned&&e.trendStrong&&c.trendStrong&&e.retest;
+  const reversalSetup=rangeLike&&e.sweep&&e.rejection&&(e.choch||e.bos);
+  const setupType=breakoutContinuation?'BREAKOUT_CONTINUATION':pullbackContinuation?'PULLBACK_CONTINUATION':reversalSetup?'REVERSAL':'GENERIC';
+
   const strategies=[
     {id:'trend',name:'Trend following',weight:18,applicable:trending,support:aligned&&e.trendStrong&&c.trendStrong},
     {id:'structure',name:'SMC structure',weight:15,applicable:true,support:Boolean(e.bos||e.choch)},
-    {id:'liquidity',name:'Liquidity sweep',weight:10,applicable:true,support:Boolean(e.sweep)},
-    {id:'breakout',name:'Breakout + impulse',weight:11,applicable:trending,support:Boolean((e.bos||e.choch)&&e.impulse)},
-    {id:'pullback',name:'Break & retest',weight:11,applicable:trending,support:Boolean(e.retest&&e.trendStrong)},
+    {id:'liquidity',name:'Liquidity sweep',weight:10,applicable:setupType==='REVERSAL'||setupType==='PULLBACK_CONTINUATION',support:Boolean(e.sweep)},
+    {id:'breakout',name:'Breakout + impulse',weight:11,applicable:setupType==='BREAKOUT_CONTINUATION'||(trending&&setupType==='GENERIC'),support:Boolean((e.bos||e.choch)&&e.impulse)},
+    {id:'pullback',name:'Break & retest',weight:11,applicable:setupType==='PULLBACK_CONTINUATION'||(trending&&setupType==='GENERIC'),support:Boolean(e.retest&&e.trendStrong)},
     {id:'momentum',name:'Momentum',weight:10,applicable:true,support:Boolean(e.momentum&&e.impulse)},
     {id:'imbalance',name:'FVG / Order Block',weight:8,applicable:true,support:Boolean(e.fvg||e.orderBlock)},
-    {id:'rejection',name:'Price rejection',weight:6,applicable:true,support:Boolean(e.rejection)},
-    {id:'range',name:'Range reversal',weight:12,applicable:rangeLike,support:Boolean(e.sweep&&e.rejection&&(e.choch||e.bos)&&e.momentum)},
+    {id:'rejection',name:'Price rejection',weight:6,applicable:setupType==='REVERSAL'||setupType==='PULLBACK_CONTINUATION',support:Boolean(e.rejection)},
+    {id:'range',name:'Range reversal',weight:12,applicable:setupType==='REVERSAL',support:Boolean(e.sweep&&e.rejection&&(e.choch||e.bos)&&e.momentum)},
     {id:'memory',name:'Trend memory',weight:8,applicable:true,support:Boolean(m.persistence&&!m.flip)},
     {id:'volatility',name:'Volatility control',weight:8,applicable:true,support:Boolean(!e.spikeRisk&&e.volatilityExpansion>.55&&e.volatilityExpansion<2.6)},
     {id:'family',name:'Boom/Crash guard',weight:8,applicable:true,support:Boolean(!adverse||(e.sweep&&(e.bos||e.choch)))}
@@ -367,11 +372,11 @@ function autonomousDecision(setup){
   const missing=strategies.filter(s=>s.applicable&&!s.support).map(s=>s.name);
   const confidence=signal?Math.round(clamp(score,75,95)):Math.round(clamp(score,18,74));
   const summary=signal
-    ?`${verdict} autonome: ${conditionsPassed}/${conditionsTotal} conditions validées (${conditionPassPercent}%), consensus pondéré ${Math.round(consensus*100)}%, régime ${e.regime}, horizons ${aligned?'alignés':'non alignés'}.`
-    :`ATTENDRE autonome: ${conditionsPassed}/${conditionsTotal} conditions validées (${conditionPassPercent}%), consensus ${Math.round(consensus*100)}%, score ${score}/100. Seuil autonome requis: au moins 80% des conditions + garde-fous critiques.`;
+    ?`${verdict} autonome · ${setupType}: ${conditionsPassed}/${conditionsTotal} conditions pertinentes validées (${conditionPassPercent}%), consensus pondéré ${Math.round(consensus*100)}%, régime ${e.regime}, horizons ${aligned?'alignés':'non alignés'}.`
+    :`ATTENDRE autonome · ${setupType}: ${conditionsPassed}/${conditionsTotal} conditions pertinentes validées (${conditionPassPercent}%), consensus ${Math.round(consensus*100)}%, score ${score}/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques.`;
 
   return {
-    verdict,confidence,score,consensus:Math.round(consensus*100),condition_pass_percent:conditionPassPercent,
+    verdict,confidence,score,consensus:Math.round(consensus*100),setup_type:setupType,condition_pass_percent:conditionPassPercent,
     conditions_passed:conditionsPassed,conditions_total:conditionsTotal,minimum_conditions_percent:minimumConditions,
     condition_gate:conditionGate,side,aligned,
     active_strategies:active,missing_strategies:missing,
@@ -484,7 +489,7 @@ async function main(){
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:reused.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
-    safety:'Sera Autonomous Engine exige au moins 80% des conditions locales applicables et les garde-fous critiques avant un BUY/SELL autonome. Luna est un conseiller facultatif. Aucun score ne garantit un gain.'
+    safety:'Sera Autonomous Engine exige au moins 80% des conditions pertinentes pour le type de setup détecté et les garde-fous critiques avant un BUY/SELL autonome. Luna est un conseiller facultatif. Aucun score ne garantit un gain.'
   };
 
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
