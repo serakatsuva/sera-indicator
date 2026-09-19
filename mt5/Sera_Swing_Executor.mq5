@@ -129,14 +129,33 @@ uint SeraHash(const string id)
    return hash;
 }
 
-void MarkHandled(const string id){ GlobalVariableSet("SERA_TRADE_"+IntegerToString((int)SeraHash(id)),TimeCurrent()); }
-bool WasHandled(const string id){ return GlobalVariableCheck("SERA_TRADE_"+IntegerToString((int)SeraHash(id))); }
-void MarkAlerted(const string id){ GlobalVariableSet("SERA_ALERT_"+IntegerToString((int)SeraHash(id)),TimeCurrent()); }
-bool WasAlerted(const string id){ return GlobalVariableCheck("SERA_ALERT_"+IntegerToString((int)SeraHash(id))); }
-
-void SendTrendAlert(const string market,const string verdict,const double confidence,const string signal_id)
+string StateKey(const string prefix,const string id)
 {
-   if(!EnableTrendWatch || WasAlerted(signal_id)) return;
+   return prefix+IntegerToString((int)SeraHash(id));
+}
+
+int StoredState(const string prefix,const string id)
+{
+   string key=StateKey(prefix,id);
+   if(!GlobalVariableCheck(key)) return 0;
+   return (int)GlobalVariableGet(key);
+}
+
+void StoreState(const string prefix,const string id,const int state)
+{
+   GlobalVariableSet(StateKey(prefix,id),(double)state);
+}
+
+int VerdictState(const string verdict)
+{
+   if(verdict=="BUY") return 1;
+   if(verdict=="SELL") return -1;
+   return 0;
+}
+
+void SendTrendAlert(const string market,const string verdict,const double confidence)
+{
+   if(!EnableTrendWatch) return;
    string message="Sera Trend Watch: "+market+" "+verdict+" Swing H1/H4 confirme a "+DoubleToString(confidence,0)+"%";
    if(EnableTerminalAlert) Alert(message);
    if(EnablePushNotification)
@@ -145,7 +164,6 @@ void SendTrendAlert(const string market,const string verdict,const double confid
       if(!SendNotification(message)) Print("Sera: notification push non envoyee, erreur=",GetLastError());
    }
    Print(message);
-   MarkAlerted(signal_id);
 }
 
 void Evaluate(const string json)
@@ -170,14 +188,21 @@ void Evaluate(const string json)
       string object=ExtractObjectAt(json,cursor); if(object=="") break;
       string mode=JsonString(object,"mode"),verdict=JsonString(object,"final_verdict");
       double confidence=JsonNumber(object,"final_confidence");
-      if(mode=="swing" && (verdict=="BUY" || verdict=="SELL") && confidence>=MinimumConfidence)
+      if(mode=="swing")
       {
-         string signal_id=JsonString(object,"id")+":"+TimeToString(generated,TIME_DATE|TIME_MINUTES);
+         string setup_id=JsonString(object,"id");
          string symbol=JsonString(object,"market");
+         int state=VerdictState(verdict);
+         bool confirmed=(state!=0 && confidence>=MinimumConfidence);
 
-         SendTrendAlert(symbol,verdict,confidence,signal_id);
+         int previous_alert_state=StoredState("SERA_ALERTSTATE_",setup_id);
+         if(confirmed && state!=previous_alert_state) SendTrendAlert(symbol,verdict,confidence);
+         if(state!=previous_alert_state) StoreState("SERA_ALERTSTATE_",setup_id,state);
 
-         if(can_trade && OpenSeraPositions()<MaximumOpenPositions && TradesToday()<MaximumTradesPerDay && !WasHandled(signal_id) && SymbolSelect(symbol,true))
+         int previous_trade_state=StoredState("SERA_TRADESTATE_",setup_id);
+         if(state==0 && previous_trade_state!=0) StoreState("SERA_TRADESTATE_",setup_id,0);
+
+         if(confirmed && can_trade && state!=previous_trade_state && OpenSeraPositions()<MaximumOpenPositions && TradesToday()<MaximumTradesPerDay && SymbolSelect(symbol,true))
          {
             int levels_pos=StringFind(object,"\"levels\"");
             string levels=levels_pos>=0?ExtractObjectAt(object,StringFind(object,"{",levels_pos)):"";
@@ -191,7 +216,7 @@ void Evaluate(const string json)
                {
                   trade.SetExpertMagicNumber(MagicNumber); trade.SetDeviationInPoints(DeviationPoints);
                   bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,tp,"Sera Swing"):trade.Sell(volume,symbol,0,sl,tp,"Sera Swing");
-                  if(sent){ MarkHandled(signal_id); Print("Sera: ",verdict," ",symbol," volume=",volume," SL=",sl," TP=",tp); return; }
+                  if(sent){ StoreState("SERA_TRADESTATE_",setup_id,state); Print("Sera: ",verdict," ",symbol," volume=",volume," SL=",sl," TP=",tp); return; }
                   Print("Sera: ordre refuse: ",trade.ResultRetcodeDescription());
                }
             }
