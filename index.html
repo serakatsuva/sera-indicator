@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=sera-20260919-trendwatch-1">
+  <link rel="stylesheet" href="./styles.css?v=sera-20260919-family-ui-1">
   <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
@@ -102,14 +102,26 @@
         <span>Validation IA <b id="modelName">OpenAI</b></span>
         <span>Mise à jour <b id="updateFrequency">toutes les 15 minutes</b></span>
       </div>
-      <div class="market-family-filter" role="tablist" aria-label="Type de marché">
-        <button class="family-filter active" id="syntheticFilter" type="button" role="tab" aria-selected="true">Indices synthétiques</button>
-        <button class="family-filter" id="forexFilter" type="button" role="tab" aria-selected="false">Forex Deriv MT5</button>
-      </div>
-      <div class="trading-mode-filter" role="tablist" aria-label="Style de trading">
-        <button class="mode-filter active" data-mode="all" type="button" role="tab" aria-selected="true">Tous</button>
-        <button class="mode-filter" data-mode="day" type="button" role="tab" aria-selected="false">Day trading <small>M15 + H1</small></button>
-        <button class="mode-filter" data-mode="swing" type="button" role="tab" aria-selected="false">Swing <small>H1 + H4</small></button>
+      <div class="scanner-controls">
+        <div class="control-group">
+          <span class="control-label">Marché</span>
+          <div class="market-family-filter compact-tabs" role="tablist" aria-label="Type de marché">
+            <button class="family-filter active" id="syntheticFilter" type="button" role="tab" aria-selected="true">Synthétiques</button>
+            <button class="family-filter" id="forexFilter" type="button" role="tab" aria-selected="false">Forex MT5</button>
+          </div>
+        </div>
+        <div class="control-group synthetic-family-group" id="syntheticFamilyGroup">
+          <span class="control-label">Famille</span>
+          <div class="index-family-filter" id="indexFamilyFilter" role="tablist" aria-label="Famille d'indices"></div>
+        </div>
+        <div class="control-group">
+          <span class="control-label">Horizon</span>
+          <div class="trading-mode-filter compact-tabs" role="tablist" aria-label="Style de trading">
+            <button class="mode-filter active" data-mode="all" type="button" role="tab" aria-selected="true">Tous</button>
+            <button class="mode-filter" data-mode="day" type="button" role="tab" aria-selected="false">Day <small>M15/H1</small></button>
+            <button class="mode-filter" data-mode="swing" type="button" role="tab" aria-selected="false">Swing <small>H1/H4</small></button>
+          </div>
+        </div>
       </div>
 
       <div class="trend-watch-panel" id="trendWatchPanel">
@@ -181,6 +193,6 @@
     <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button>
     <footer><strong>Trading à risque élevé.</strong> L’automatisation ne garantit aucun gain. Testez longuement sur Démo; le passage au compte réel exige une activation volontaire dans l’EA.</footer>
   </main>
-  <script src="./app.js?v=smartengine-20260919-1" defer></script>
+  <script src="./app.js?v=family-ui-20260919-1" defer></script>
 </body>
 </html>
