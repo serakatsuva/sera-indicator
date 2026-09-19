@@ -871,7 +871,7 @@ function currentSignalText(){
     `Consensus OSS : ${Number.isFinite(Number(row.model_ensemble_consensus))&&Number(row.model_models_available)>0?`${row.model_ensemble_direction||"NEUTRAL"} ${Math.round(Number(row.model_ensemble_consensus))}%`:"aucun vote fiable"} · ${Number(row.model_models_available)||0} vote(s) fiable(s)`,
     `Modèle : ${row.ai_tier}`,
     "",
-    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera v1.50 n’exécute que si l’état est EXECUTE_NOW, applique le garde-fou open source et gère progressivement la protection des objectifs. Aucun gain garanti.",
+    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera EA Swing Intelligent v1.70 n’exécute que si l’état est EXECUTE_NOW, applique le garde-fou open source et gère progressivement la protection des objectifs. Aucun gain garanti.",
     location.href
   ].join("\n");
 }
