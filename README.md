@@ -128,3 +128,23 @@ Pour activer l’envoi, configurer les trois Repository Secrets suivants dans Gi
 - `GMAIL_ALERT_TO` : adresse qui reçoit les alertes.
 
 Les secrets ne sont pas écrits dans le dépôt ni affichés dans les logs.
+
+
+## Sera EA Swing Intelligent v1.70
+
+Le robot MT5 porte désormais le nom **Sera EA Swing Intelligent**.
+
+### Ordres Swing intelligents
+
+- `EXECUTE_NOW` : ordre BUY/SELL au marché si tous les garde-fous passent.
+- `WAIT_RETRACE` avec BUY/SELL final confirmé : l’EA peut placer un **Buy Limit** ou **Sell Limit** dans la zone d’entrée calculée.
+- Les pending orders ont une expiration automatique et sont supprimés si le setup devient invalide, change de sens ou passe à `EXECUTE_NOW`.
+- Un simple setup détecté sans BUY/SELL final confirmé ne suffit pas pour placer un ordre réel.
+
+### Lot adaptatif, sans martingale
+
+Le volume reste calculé à partir de la distance réelle entre l’entrée et le Stop Loss. Le risque de base est **0,50 %** et peut augmenter progressivement jusqu’à **0,75 % maximum** lorsque l’équité progresse par paliers et que le compte reste sain.
+
+Le moteur peut également appliquer un petit bonus de risque après une journée bénéficiaire. À l’inverse, une perte récente ou un drawdown réduit automatiquement le risque.
+
+Le système ne double pas le lot après une perte : **aucune martingale**. Les limites de perte par trade, drawdown journalier, pertes consécutives, marge libre et volume maximum restent actives.
