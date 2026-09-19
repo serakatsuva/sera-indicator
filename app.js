@@ -319,10 +319,11 @@ function resultCard(row,fresh){
   const verdict=fresh?row.final_verdict:"ATTENDRE",confidence=fresh?Number(row.final_confidence)||0:0;
   const card=document.createElement("button");
   card.className=`result-card${row.market===selected&&row.mode===selectedMode?" selected":""}`;
-  const status=verdict!=="ATTENDRE"?"Confirmé":row.technical_verdict!=="ATTENDRE"?"Détecté · validation IA":"En attente";
+  const conditions=Number(row?.decision_engine?.condition_pass_percent)||0;
+  const status=verdict!=="ATTENDRE"?"Confirmé":conditions>=80?"80% atteint · garde-fou en attente":row.technical_verdict!=="ATTENDRE"?"Setup détecté":"En attente";
   const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`;
   const swingBadge=row.mode==="swing"?`<div class="swing-duration-badge ${String(row.timing?.swing_class||"court").toLowerCase()}">${escapeHtml(swingBadgeText(row))}</div>`:"";
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(row.intelligence?.regime||"Analyse")}</b></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>Conditions ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
   card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();openSignalModal(row.market);};
   return card;
 }
@@ -372,7 +373,7 @@ function renderSelected(){
   $("levels").querySelectorAll("strong").forEach((element,index)=>element.textContent=fmt(levelValues[index]));
   const technical=row?.entry_tf||row?.h1;
   const confirmation=row?.confirmation_tf||row?.h4;
-  const metrics=[["Consensus stratégies",Number(row?.decision_engine?.consensus)>=62],[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["Régime directionnel",row?.intelligence?.regime==="TRENDING"],["Mémoire tendance",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
+  const metrics=[[`Conditions ${Number(row?.decision_engine?.condition_pass_percent)||0}% / 80%`,Number(row?.decision_engine?.condition_pass_percent)>=80],["Consensus stratégies",Number(row?.decision_engine?.consensus)>=62],[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["Régime directionnel",row?.intelligence?.regime==="TRENDING"],["Mémoire tendance",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
   $("technicalGrid").innerHTML=metrics.map(([label,ok])=>`<div class="metric"><small>${label}</small><strong class="${ok?"ok":"no"}">${ok?"Confirmé":"Non confirmé"}</strong></div>`).join("");
   const profile=[row?.mode==="day"?"Day trading":"Swing",row?.duration?.range||"—",row?.duration?.validity||"—",row?.duration?.reanalysis||"—"];
   $("positionProfile").querySelectorAll("strong").forEach((element,index)=>element.textContent=profile[index]);
@@ -555,7 +556,7 @@ function setAiStatus(text,state){$("aiStatus").textContent="";$("aiStatus").appe
 function currentSignalText(){
   const row=hasDerivResults()?payload.markets.find(item=>item.market===selected&&item.mode===selectedMode):null;
   if(!row||!resultsAreFresh()||row.final_verdict==="ATTENDRE")return"";
-  return ["SERA INDICATOR — SIGNAL DERIV CONFIRMÉ",`Indice : ${row.market}`,`Signal : ${row.final_verdict}`,`Confiance : ${row.final_confidence}%`,`Entrée : ${fmt(row.levels?.entry)}`,`Stop Loss : ${fmt(row.levels?.sl)}`,`TP1 : ${fmt(row.levels?.tp1)}`,`TP2 : ${fmt(row.levels?.tp2)}`,`TP3 : ${fmt(row.levels?.tp3)}`,`Analyse : ${new Date(payload.updated_at).toLocaleString("fr-FR")}`,`Modèle : ${row.ai_tier}`,"","Signal d’aide à la décision — l’EA Sera v1.20 peut exécuter automatiquement sur le compte MT5 réel connecté. Aucun gain garanti.",location.href].join("\n");
+  return ["SERA INDICATOR — SIGNAL DERIV CONFIRMÉ",`Indice : ${row.market}`,`Signal : ${row.final_verdict}`,`Confiance : ${row.final_confidence}%`,`Entrée : ${fmt(row.levels?.entry)}`,`Stop Loss : ${fmt(row.levels?.sl)}`,`TP1 : ${fmt(row.levels?.tp1)}`,`TP2 : ${fmt(row.levels?.tp2)}`,`TP3 : ${fmt(row.levels?.tp3)}`,`Analyse : ${new Date(payload.updated_at).toLocaleString("fr-FR")}`,`Modèle : ${row.ai_tier}`,"","Signal autonome — au moins 80% des conditions locales sont requises; l’EA Sera v1.31 peut exécuter sur le compte MT5 réel connecté. Aucun gain garanti.",location.href].join("\n");
 }
 async function copySignal(){const text=currentSignalText();if(!text)return;await navigator.clipboard.writeText(text);$("copySignal").textContent="Copié ✓";setTimeout(()=>$("copySignal").textContent="Copier le signal",1500);}
 async function shareSignal(){const text=currentSignalText();if(!text)return;if(navigator.share)await navigator.share({title:"Signal Deriv — Sera Indicator",text,url:location.href});else await navigator.clipboard.writeText(text);}
