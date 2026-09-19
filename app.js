@@ -17,6 +17,11 @@ let payload=null;
 let selected=derivMarkets[0];
 let liveSocket=null;
 let liveQuote=null;
+const liveQuotes=new Map();
+const liveTickHistory=new Map();
+const liveCandles=new Map();
+let liveUiFrame=0;
+let liveReconnectTimer=null;
 let marketFamily="synthetic";
 let selectedIndexFamily=localStorage.getItem("seraIndexFamily")||"all";
 let tradingMode="all";
@@ -115,11 +120,10 @@ const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<130;
 $("refreshButton").addEventListener("click",()=>loadSignals(true));
 $("marketSelect").addEventListener("change",event=>{
   selected=event.target.value;
-  liveQuote=null;
+  liveQuote=liveQuotes.get(selected)?{symbol:symbols[selected],price:liveQuotes.get(selected).price}:null;
   renderSelected();
   if(signalModal&&!signalModal.hidden)$("signalModalTitle").textContent=selected;
   renderTrendWatchUi();
-  connectLivePrice();
 });
 $("copySignal").addEventListener("click",copySignal);
 $("shareSignal").addEventListener("click",shareSignal);
@@ -188,7 +192,7 @@ function setTradingMode(mode){
   tradingMode=mode;
   if(mode!=="all")selectedMode=mode;
   document.querySelectorAll(".mode-filter").forEach(button=>{const active=button.dataset.mode===mode;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active));});
-  $("updateFrequency").textContent=mode==="swing"?"chaque heure":"toutes les 15 minutes";
+  $("updateFrequency").textContent="Ticks live · IA ~5 min";
   render();
 }
 
@@ -401,8 +405,11 @@ function resultCard(row,fresh){
   const pipsMini=row.mode==="swing"&&swingDistance?`<div class="swing-pips-mini">${signedDistance(swingDistance.estimated_swing_price_distance,detectedSide||verdict)} · ${pipsLabel(swingDistance.estimated_swing_pips_points)}</div>`:"";
   const action=simpleActionState(row);
   const actionChip=`<div class="trade-action-chip ${action.side} ${action.blink?"blink":""}"><i></i><strong>${escapeHtml(action.label)}</strong><span>${escapeHtml(action.detail)}</span></div>`;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${setupMarker}${pipsMini}</div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${actionChip}${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
-  card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();openSignalModal(row.market);};
+  const live=liveScannerState(row);
+  card.dataset.liveMarket=row.market;
+  card.dataset.liveMode=row.mode;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${setupMarker}${pipsMini}</div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><span><i></i> LIVE</span><b data-live-price>${live.price}</b><strong data-live-motion>${escapeHtml(live.label)}</strong></div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
+  card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=liveQuotes.get(row.market)?{symbol:symbols[row.market],price:liveQuotes.get(row.market).price}:null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();openSignalModal(row.market);};
   return card;
 }
 
@@ -810,32 +817,139 @@ function playTrendAlertSound(verdict){
   }catch{}
 }
 
+function candleBucket(epoch,seconds){
+  return Math.floor(epoch/seconds)*seconds;
+}
+
+function updateLiveCandle(market,price,epoch=Date.now()/1000){
+  const key=`${market}:M1`,bucket=candleBucket(Number(epoch)||Date.now()/1000,60);
+  const current=liveCandles.get(key);
+  if(!current||current.epoch!==bucket){
+    liveCandles.set(key,{epoch:bucket,open:price,high:price,low:price,close:price,ticks:1});
+  }else{
+    current.high=Math.max(current.high,price);
+    current.low=Math.min(current.low,price);
+    current.close=price;
+    current.ticks+=1;
+  }
+}
+
+function recordLiveTick(market,price,epoch){
+  const now=Number(epoch)||Date.now()/1000;
+  const history=liveTickHistory.get(market)||[];
+  history.push({price:Number(price),epoch:now});
+  while(history.length>90||history.length>2&&now-history[0].epoch>120)history.shift();
+  liveTickHistory.set(market,history);
+  updateLiveCandle(market,Number(price),now);
+}
+
+function liveScannerState(row){
+  const quote=liveQuotes.get(row?.market);
+  if(!quote)return{price:"—",label:"Connexion…",cls:"wait",deltaPct:0,momentum:0};
+
+  const history=liveTickHistory.get(row.market)||[];
+  const latest=Number(quote.price),first=Number(history[0]?.price??latest);
+  const recent=history.filter(t=>quote.epoch-t.epoch<=15);
+  const recentFirst=Number(recent[0]?.price??latest);
+  const deltaPct=first?((latest-first)/first)*100:0;
+  const momentum=recentFirst?((latest-recentFirst)/recentFirst)*100:0;
+  const candle=liveCandles.get(`${row.market}:M1`);
+  const range=candle?Math.max(0,candle.high-candle.low):0;
+  const atr=Math.max(Number(row?.entry_tf?.atr)||0,Number.EPSILON);
+  const rangeAtr=range/atr;
+  const side=setupSide(row);
+  const proposal=liveEntryProposal(row);
+
+  if(proposal?.live_state==="IN_ENTRY_ZONE"&&hasDetectedSetup(row))
+    return{price:fmtEntry(latest),label:`ZONE ${side} · tick live`,cls:side.toLowerCase(),deltaPct,momentum};
+  if(Math.abs(momentum)>=0.05||rangeAtr>=0.22){
+    const rising=momentum>0;
+    const aligned=(side==="BUY"&&rising)||(side==="SELL"&&!rising);
+    return{price:fmtEntry(latest),label:`${aligned?"ACCÉLÉRATION SETUP":"MOUVEMENT FORT"} ${rising?"↑":"↓"}`,cls:aligned?side.toLowerCase():"watch",deltaPct,momentum};
+  }
+  if(Math.abs(deltaPct)>=0.02)
+    return{price:fmtEntry(latest),label:`MOUVEMENT ${deltaPct>0?"↑":"↓"} ${Math.abs(deltaPct).toFixed(3)}%`,cls:"watch",deltaPct,momentum};
+  return{price:fmtEntry(latest),label:"Bougie en formation",cls:"live",deltaPct,momentum};
+}
+
+function updateLiveScannerDom(market){
+  document.querySelectorAll(`.result-card[data-live-market="${CSS.escape(market)}"]`).forEach(card=>{
+    const mode=card.dataset.liveMode;
+    const row=payload?.markets?.find(item=>item.market===market&&item.mode===mode);
+    if(!row)return;
+    const live=liveScannerState(row);
+    const strip=card.querySelector("[data-live-scan]");
+    if(strip)strip.className=`live-scan-row ${live.cls}`;
+    const price=card.querySelector("[data-live-price]");
+    if(price)price.textContent=live.price;
+    const motion=card.querySelector("[data-live-motion]");
+    if(motion)motion.textContent=live.label;
+  });
+}
+
+function scheduleLiveUi(market){
+  if(liveUiFrame)return;
+  liveUiFrame=requestAnimationFrame(()=>{
+    liveUiFrame=0;
+    updateLiveScannerDom(market);
+    if(market===selected){
+      const quote=liveQuotes.get(market);
+      if(quote){
+        liveQuote={symbol:symbols[market],price:quote.price};
+        $("livePrice").textContent=fmt(quote.price);
+        const row=selectedSignalRow();
+        const live=liveScannerState(row);
+        $("liveChange").textContent=`Live · ${live.label}`;
+        renderLiveEntry(row);
+        renderTradeAction(row);
+      }
+    }
+  });
+}
+
 function connectLivePrice(){
-  if(liveSocket){liveSocket.close();liveSocket=null;}
+  if(liveReconnectTimer){clearTimeout(liveReconnectTimer);liveReconnectTimer=null;}
+  if(liveSocket){try{liveSocket.close();}catch{} liveSocket=null;}
   if(marketFamily!=="synthetic")return;
-  const symbol=symbols[selected];
-  if(!symbol)return;
+
   try{
     const socket=new WebSocket("wss://api.derivws.com/trading/v1/options/ws/public");
     liveSocket=socket;
-    socket.addEventListener("open",()=>socket.send(JSON.stringify({ticks:symbol,subscribe:1,req_id:900})));
+    socket.addEventListener("open",()=>{
+      let req=900;
+      for(const market of availableSyntheticMarkets()){
+        const symbol=symbols[market];
+        if(symbol)socket.send(JSON.stringify({ticks:symbol,subscribe:1,req_id:++req,passthrough:{market}}));
+      }
+      setMarketStatus("Deriv : scanner live connecté","live");
+    });
     socket.addEventListener("message",event=>{
-      const message=JSON.parse(event.data);
-      if(message.error){setMarketStatus("Deriv : flux interrompu","error");return;}
-      if(message.tick?.quote){
-        liveQuote={symbol,price:Number(message.tick.quote)};
-        if(symbol===symbols[selected]){
-          $("livePrice").textContent=fmt(liveQuote.price);
-          $("liveChange").textContent="Prix Deriv live";
-          setMarketStatus("Deriv : Live","live");
-          const row=selectedSignalRow();
-          renderLiveEntry(row);
-          renderTradeAction(row);
-        }
+      let message;
+      try{message=JSON.parse(event.data);}catch{return;}
+      if(message.error){setMarketStatus("Deriv : flux partiellement interrompu","error");return;}
+      if(!message.tick?.quote)return;
+      const symbol=String(message.echo_req?.ticks||message.tick.symbol||"");
+      const market=Object.keys(symbols).find(name=>symbols[name]===symbol);
+      if(!market)return;
+      const price=Number(message.tick.quote),epoch=Number(message.tick.epoch)||Date.now()/1000;
+      if(!Number.isFinite(price))return;
+      liveQuotes.set(market,{price,epoch,symbol});
+      recordLiveTick(market,price,epoch);
+      scheduleLiveUi(market);
+      setMarketStatus("Deriv : Live temps réel","live");
+    });
+    socket.addEventListener("close",()=>{
+      if(liveSocket===socket)liveSocket=null;
+      if(marketFamily==="synthetic"){
+        setMarketStatus("Deriv : reconnexion live…","error");
+        liveReconnectTimer=setTimeout(connectLivePrice,2500);
       }
     });
-    socket.addEventListener("error",()=>setMarketStatus("Deriv : flux indisponible","error"));
-  }catch{setMarketStatus("Deriv : flux indisponible","error");}
+    socket.addEventListener("error",()=>setMarketStatus("Deriv : flux live indisponible","error"));
+  }catch{
+    setMarketStatus("Deriv : flux live indisponible","error");
+    liveReconnectTimer=setTimeout(connectLivePrice,3000);
+  }
 }
 
 function ensureMarketOption(name){
@@ -871,7 +985,7 @@ function currentSignalText(){
     `Consensus OSS : ${Number.isFinite(Number(row.model_ensemble_consensus))&&Number(row.model_models_available)>0?`${row.model_ensemble_direction||"NEUTRAL"} ${Math.round(Number(row.model_ensemble_consensus))}%`:"aucun vote fiable"} · ${Number(row.model_models_available)||0} vote(s) fiable(s)`,
     `Modèle : ${row.ai_tier}`,
     "",
-    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera EA Swing Intelligent v1.70 n’exécute que si l’état est EXECUTE_NOW, applique le garde-fou open source et gère progressivement la protection des objectifs. Aucun gain garanti.",
+    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera EA Swing Intelligent v1.71 n’exécute que si l’état est EXECUTE_NOW, applique le garde-fou open source et gère progressivement la protection des objectifs. Aucun gain garanti.",
     location.href
   ].join("\n");
 }
@@ -885,3 +999,4 @@ renderTrendWatchUi();
 loadSignals();
 connectLivePrice();
 setInterval(()=>loadSignals(false),20000);
+setInterval(()=>{if(marketFamily==="synthetic"&&(!liveSocket||liveSocket.readyState>1))connectLivePrice();},5000);
