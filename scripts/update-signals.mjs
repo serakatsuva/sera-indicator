@@ -5,7 +5,7 @@ const OPENAI_API_KEY=process.env.OPENAI_API_KEY||'';
 const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
-const ENGINE_VERSION='Sera Smart Engine v2.0';
+const ENGINE_VERSION='Sera Autonomous Engine v3.0';
 
 const MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -205,14 +205,14 @@ function publicSetup(setup){
     id:`${setup.symbol}:${setup.mode}`,market:setup.market,symbol:setup.symbol,family:setup.family,spikeBias:setup.spikeBias,mode:setup.mode,
     mode_label:setup.mode_label,timeframes:setup.timeframes,duration:setup.duration,price:setup.price,technical_verdict:setup.technical_verdict,
     technical_confidence:setup.technical_confidence,levels:setup.levels,entry_tf:clean(setup.entry_tf),confirmation_tf:clean(setup.confirmation_tf),
-    intelligence:setup.intelligence,trend_memory:setup.trend_memory,risk:setup.risk
+    intelligence:setup.intelligence,trend_memory:setup.trend_memory,decision_engine:setup.autonomous||null,risk:setup.risk
   };
 }
 
 async function auditMarkets(model,setups){
   const instructions=`Tu es Luna, auditeur final de Sera Smart Engine pour les indices synthétiques Deriv.
 Le moteur local a déjà analysé tendance, régime de marché, structure, liquidité, retest, momentum, ATR, risque de spike, mémoire de tendance et particularités Boom/Crash/Volatility.
-Ton rôle est de CHALLENGER le setup, pas de fabriquer un trade.
+Ton rôle est d'auditer une décision déjà prise par le moteur autonome. Tu aides à identifier des contradictions ou confirmer la qualité; tu ne pilotes pas le moteur local.
 Règles strictes:
 1. Ne transforme jamais ATTENDRE en BUY/SELL.
 2. N'inverse jamais le sens technique proposé.
@@ -301,45 +301,113 @@ function estimateTiming(setup,finalVerdict,finalConfidence){
   };
 }
 
+
+function buildLevels(setup,verdict){
+  if(verdict!=='BUY'&&verdict!=='SELL')return null;
+  const entryTf=setup.entry_tf,entry=entryTf.price,atrMultiplier=setup.mode==='day'?1.2:1.5;
+  const structural=verdict==='BUY'
+    ?Math.min(entry-entryTf.atr*atrMultiplier,entryTf.swingLow)
+    :Math.max(entry+entryTf.atr*atrMultiplier,entryTf.swingHigh);
+  const distance=Math.max(Math.abs(entry-structural),entryTf.atr),direction=verdict==='BUY'?1:-1;
+  return {entry,sl:structural,tp1:entry+direction*distance*1.5,tp2:entry+direction*distance*2.4,tp3:entry+direction*distance*3.6};
+}
+
+function autonomousDecision(setup){
+  const e=setup.entry_tf,c=setup.confirmation_tf,m=setup.trend_memory||{},side=e.side;
+  const aligned=side===c.side;
+  const adverse=(setup.family==='boom'&&side==='SELL')||(setup.family==='crash'&&side==='BUY');
+  const trending=e.regime==='TRENDING'||c.regime==='TRENDING';
+  const rangeLike=e.regime==='RANGE'||e.regime==='TRANSITION';
+
+  const strategies=[
+    {id:'trend',name:'Trend following',weight:18,applicable:trending,support:aligned&&e.trendStrong&&c.trendStrong},
+    {id:'structure',name:'SMC structure',weight:15,applicable:true,support:Boolean(e.bos||e.choch)},
+    {id:'liquidity',name:'Liquidity sweep',weight:10,applicable:true,support:Boolean(e.sweep)},
+    {id:'breakout',name:'Breakout + impulse',weight:11,applicable:trending,support:Boolean((e.bos||e.choch)&&e.impulse)},
+    {id:'pullback',name:'Break & retest',weight:11,applicable:trending,support:Boolean(e.retest&&e.trendStrong)},
+    {id:'momentum',name:'Momentum',weight:10,applicable:true,support:Boolean(e.momentum&&e.impulse)},
+    {id:'imbalance',name:'FVG / Order Block',weight:8,applicable:true,support:Boolean(e.fvg||e.orderBlock)},
+    {id:'rejection',name:'Price rejection',weight:6,applicable:true,support:Boolean(e.rejection)},
+    {id:'range',name:'Range reversal',weight:12,applicable:rangeLike,support:Boolean(e.sweep&&e.rejection&&(e.choch||e.bos)&&e.momentum)},
+    {id:'memory',name:'Trend memory',weight:8,applicable:true,support:Boolean(m.persistence&&!m.flip)},
+    {id:'volatility',name:'Volatility control',weight:8,applicable:true,support:Boolean(!e.spikeRisk&&e.volatilityExpansion>.55&&e.volatilityExpansion<2.6)},
+    {id:'family',name:'Boom/Crash guard',weight:8,applicable:true,support:Boolean(!adverse||(e.sweep&&(e.bos||e.choch)))}
+  ];
+
+  const applicable=strategies.filter(s=>s.applicable);
+  const possible=applicable.reduce((sum,s)=>sum+s.weight,0)||1;
+  const supportWeight=applicable.filter(s=>s.support).reduce((sum,s)=>sum+s.weight,0);
+  const consensus=supportWeight/possible;
+
+  const quality=(Number(e.trendQuality)||0)*.42+(Number(c.trendQuality)||0)*.38+(Number(setup.intelligence?.local_score)||0)*.20;
+  let score=consensus*72+quality*.28;
+  if(aligned)score+=4;else score-=14;
+  if(m.persistence)score+=3;
+  if(m.flip)score-=14;
+  if(e.spikeRisk)score-=24;
+  if(e.regime==='RANGE'&&!strategies.find(s=>s.id==='range')?.support)score-=10;
+  if(adverse)score-=5;
+  score=Math.round(clamp(score,0,97));
+
+  const minimumConsensus=setup.mode==='swing'?.62:.66;
+  const minimumScore=setup.mode==='swing'?74:76;
+  const confirmationGate=setup.mode==='swing'?c.trendQuality>=58:c.trendQuality>=54;
+  const adverseGate=!adverse||(score>=84&&e.sweep&&(e.bos||e.choch));
+  const riskGate=!e.spikeRisk&&!m.flip&&setup.risk?.specific_guard!==false;
+  const signal=aligned&&confirmationGate&&adverseGate&&riskGate&&consensus>=minimumConsensus&&score>=minimumScore;
+  const verdict=signal?side:'ATTENDRE';
+
+  const active=strategies.filter(s=>s.applicable&&s.support).map(s=>s.name);
+  const missing=strategies.filter(s=>s.applicable&&!s.support).map(s=>s.name);
+  const confidence=signal?Math.round(clamp(score,75,95)):Math.round(clamp(score,18,74));
+  const summary=signal
+    ?`${verdict} autonome: ${active.length}/${applicable.length} familles de stratégie convergent (${Math.round(consensus*100)}% de consensus), régime ${e.regime}, confirmation multi-timeframe ${aligned?'alignée':'non alignée'}.`
+    :`ATTENDRE autonome: consensus ${Math.round(consensus*100)}%, score ${score}/100. Le moteur exige davantage de convergence avant une décision exécutable.`;
+
+  return {
+    verdict,confidence,score,consensus:Math.round(consensus*100),side,aligned,
+    active_strategies:active,missing_strategies:missing,
+    strategies:strategies.map(s=>({id:s.id,name:s.name,weight:s.weight,applicable:s.applicable,support:s.support})),
+    risk_gate:riskGate,adverse_gate:adverseGate,confirmation_gate:confirmationGate,summary
+  };
+}
+
 function finalize(setup,luna){
-  const audit=luna||{verdict:'ATTENDRE',confidence:0,summary:'Luna indisponible: décision autonome soumise aux seuils renforcés du Smart Engine.',confirmations:[],contradictions:[],risk:'Contrôle local renforcé',needs_expert_review:false};
-  const aiConfidence=Number(audit.confidence)||0;
-  const lunaAgreed=Boolean(luna)&&setup.technical_verdict!=='ATTENDRE'&&audit.verdict===setup.technical_verdict&&aiConfidence>=75&&!audit.needs_expert_review&&!setup.trend_memory?.flip;
+  const engine=setup.autonomous||autonomousDecision(setup);
+  const localConfirmed=engine.verdict!=='ATTENDRE';
+  const audit=luna||null;
+  const aiConfidence=Number(audit?.confidence)||0;
+  const aiMatches=Boolean(audit)&&localConfirmed&&audit.verdict===engine.verdict&&!audit.needs_expert_review;
+  const aiCaution=Boolean(audit)&&localConfirmed&&(audit.verdict==='ATTENDRE'||audit.needs_expert_review||((audit.contradictions||[]).length>=2));
 
-  const localThreshold=setup.mode==='swing'?86:88;
-  const localAutonomous=!luna
-    &&setup.technical_verdict!=='ATTENDRE'
-    &&setup.intelligence.local_score>=localThreshold
-    &&setup.trend_memory?.candidate_score>=92
-    &&setup.entry_tf.trendQuality>=80
-    &&setup.confirmation_tf.trendQuality>=80
-    &&setup.entry_tf.regime==='TRENDING'
-    &&setup.confirmation_tf.regime==='TRENDING'
-    &&setup.intelligence.aligned
-    &&setup.intelligence.stability
-    &&!setup.entry_tf.spikeRisk
-    &&!setup.trend_memory?.flip
-    &&setup.entry_tf.passed>=6
-    &&(!setup.intelligence.adverse_spike_direction||setup.entry_tf.sweep);
+  let finalConfidence=engine.confidence+(aiMatches?Math.min(3,Math.max(1,Math.round((aiConfidence-70)/10))):0)-(aiCaution?4:0);
+  finalConfidence=Math.round(clamp(finalConfidence,localConfirmed?75:18,localConfirmed?96:74));
+  const finalVerdict=localConfirmed&&finalConfidence>=75?engine.verdict:'ATTENDRE';
+  const levels=finalVerdict==='ATTENDRE'?null:buildLevels(setup,finalVerdict);
+  const timing=estimateTiming({...setup,levels},finalVerdict,finalConfidence);
 
-  const confirmed=lunaAgreed||localAutonomous;
-  const finalVerdict=confirmed?setup.technical_verdict:'ATTENDRE';
-  const finalConfidence=localAutonomous
-    ?Math.round(clamp(setup.intelligence.local_score+(setup.trend_memory?.persistence?2:0),75,94))
-    :dynamicReadiness(setup,audit,lunaAgreed);
-  const timing=estimateTiming(setup,finalVerdict,finalConfidence);
-  const confirmationSource=lunaAgreed?'luna_audited':localAutonomous?'smart_local':'none';
-  const aiTier=luna?`${SCREENING_MODEL} · audit final`:localAutonomous?`${ENGINE_VERSION} · confirmation autonome renforcée`:'Sera Smart Engine local · setup non confirmé';
-  const summary=luna?audit.summary:localAutonomous
-    ?`Signal confirmé localement par ${ENGINE_VERSION}: régime directionnel fort, alignement multi-timeframe, qualité de tendance élevée et mémoire stable.`
-    :audit.summary;
-  const confirmations=luna?(audit.confirmations||[]):localAutonomous?[
-    'Régime directionnel confirmé sur les deux horizons',
-    'Alignement multi-timeframe stable',
-    'Score local et qualité de tendance au-dessus du seuil renforcé',
-    'Aucun flip récent ni risque de spike détecté'
-  ]:[];
-  return {...publicSetup(setup),levels:finalVerdict==='ATTENDRE'?null:setup.levels,final_verdict:finalVerdict,final_confidence:finalConfidence,timing,confirmation_source:confirmationSource,score_type:confirmed?'signal_confidence':'setup_readiness',ai_verdict:luna?audit.verdict:'ATTENDRE',ai_confidence:aiConfidence,ai_summary:summary,ai_confirmations:confirmations,ai_contradictions:audit.contradictions||[],ai_risk:audit.risk,needs_expert_review:Boolean(luna&&audit.needs_expert_review),ai_tier:aiTier};
+  const advisorStatus=!audit?'offline':aiMatches?'confirmed':aiCaution?'caution':'neutral';
+  const confirmationSource=finalVerdict==='ATTENDRE'?'none':audit?'autonomous_plus_ai':'autonomous_engine';
+  const aiTier=audit?`${ENGINE_VERSION} + ${SCREENING_MODEL} advisor`:`${ENGINE_VERSION} · autonome`;
+  const summary=audit
+    ?`${engine.summary} Luna: ${audit.summary}`
+    :engine.summary;
+
+  const localConfirmations=engine.active_strategies.slice(0,6).map(name=>`Stratégie locale: ${name}`);
+  const aiConfirmations=audit?.confirmations||[];
+  const contradictions=[
+    ...engine.missing_strategies.slice(0,4).map(name=>`À renforcer: ${name}`),
+    ...(audit?.contradictions||[])
+  ];
+
+  return {
+    ...publicSetup(setup),levels,final_verdict:finalVerdict,final_confidence:finalConfidence,timing,
+    decision_engine:engine,confirmation_source:confirmationSource,score_type:finalVerdict!=='ATTENDRE'?'signal_confidence':'setup_readiness',
+    ai_verdict:audit?.verdict||'INDISPONIBLE',ai_confidence:aiConfidence,ai_summary:summary,
+    ai_confirmations:[...localConfirmations,...aiConfirmations].slice(0,8),ai_contradictions:contradictions.slice(0,8),
+    ai_risk:audit?.risk||'Audit IA non disponible; décision locale autonome.',needs_expert_review:Boolean(audit?.needs_expert_review),
+    ai_tier:aiTier,ai_advisor_status:advisorStatus
+  };
 }
 
 async function selfTest(){
@@ -374,12 +442,14 @@ async function main(){
     if(!entry||!confirmation)throw new Error(`Insufficient ${mode.id} candles for ${meta.market}`);
     return technicalSetup(meta,entry,confirmation,mode);
   }));
-  const setups=rawSetups.map(setup=>attachTrendMemory(setup,previous));
+  const setups=rawSetups
+    .map(setup=>attachTrendMemory(setup,previous))
+    .map(setup=>({...setup,autonomous:autonomousDecision(setup)}));
   const setupId=setup=>`${setup.symbol}:${setup.mode}`;
 
   const technicalCandidates=setups
-    .filter(setup=>setup.technical_verdict!=='ATTENDRE'&&setup.technical_confidence>=72&&setup.intelligence.local_score>=68&&!setup.entry_tf.spikeRisk&&!setup.trend_memory.flip)
-    .sort((a,b)=>(b.trend_memory?.candidate_score||0)-(a.trend_memory?.candidate_score||0))
+    .filter(setup=>setup.autonomous.verdict!=='ATTENDRE'&&setup.autonomous.confidence>=75)
+    .sort((a,b)=>b.autonomous.confidence-a.autonomous.confidence)
     .slice(0,5);
 
   const reused=new Map(),newCandidates=[];
@@ -399,14 +469,14 @@ async function main(){
   const aiCalls=luna.response_id?1:0;
 
   const payload={
-    ok:true,status:aiCalls||reused.size?'ai_analyzed':markets.some(m=>m.confirmation_source==='smart_local')?'smart_local':'technical_only',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',
+    ok:true,status:aiCalls||reused.size?'ai_analyzed':'autonomous_analyzed',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',
     updated_at:new Date().toISOString(),engine_version:ENGINE_VERSION,
     model:aiCalls||reused.size?`${ENGINE_VERSION} + ${SCREENING_MODEL}`:`${ENGINE_VERSION} · local`,
     screening_model:SCREENING_MODEL,deep_model:null,markets_count:markets.length,technical_candidates:technicalCandidates.length,
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:reused.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
-    safety:'Sera Smart Engine analyse localement tous les marchés. Sans Luna, seuls les setups dépassant des seuils autonomes renforcés peuvent être confirmés. Aucun score ne garantit un gain.'
+    safety:'Sera Autonomous Engine prend sa décision localement par consensus multi-stratégies. Luna est un conseiller facultatif. Aucun score ni consensus ne garantit un gain.'
   };
 
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
