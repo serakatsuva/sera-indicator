@@ -1,5 +1,5 @@
 #property copyright "Sera Indicator"
-#property version   "1.50"
+#property version   "1.60"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -27,6 +27,11 @@ input int MaximumSpreadRiskPercent=12;
 input int MaximumSignalAgeMinutes=90;
 input int MaximumOpenPositions=1;
 input int MaximumTradesPerDay=2;
+input double MaximumDailyLossUSD=3.00;
+input double MaximumDailyDrawdownPercent=3.00;
+input int MaximumConsecutiveLosses=2;
+input double MinimumFreeMarginPercent=25.0;
+input bool EnforceBrokerStopsLevel=true;
 input int PollEverySeconds=30;
 input long MagicNumber=26091801;
 input int DeviationPoints=30;
@@ -123,10 +128,16 @@ int OpenSeraPositions()
    return total;
 }
 
-int TradesToday()
+datetime StartOfDay()
 {
    datetime now=TimeCurrent(); MqlDateTime part; TimeToStruct(now,part);
-   part.hour=0; part.min=0; part.sec=0; datetime start=StructToTime(part);
+   part.hour=0; part.min=0; part.sec=0;
+   return StructToTime(part);
+}
+
+int TradesToday()
+{
+   datetime now=TimeCurrent(); datetime start=StartOfDay();
    if(!HistorySelect(start,now)) return 0;
    int total=0;
    for(int i=0;i<HistoryDealsTotal();i++)
@@ -135,6 +146,70 @@ int TradesToday()
       if(ticket>0 && HistoryDealGetInteger(ticket,DEAL_MAGIC)==MagicNumber && HistoryDealGetInteger(ticket,DEAL_ENTRY)==DEAL_ENTRY_IN) total++;
    }
    return total;
+}
+
+double DailyNetProfit()
+{
+   datetime now=TimeCurrent(); if(!HistorySelect(StartOfDay(),now)) return 0.0;
+   double pnl=0.0;
+   for(int i=0;i<HistoryDealsTotal();i++)
+   {
+      ulong ticket=HistoryDealGetTicket(i);
+      if(ticket<=0 || HistoryDealGetInteger(ticket,DEAL_MAGIC)!=MagicNumber) continue;
+      long entry=HistoryDealGetInteger(ticket,DEAL_ENTRY);
+      if(entry==DEAL_ENTRY_OUT || entry==DEAL_ENTRY_OUT_BY)
+         pnl+=HistoryDealGetDouble(ticket,DEAL_PROFIT)+HistoryDealGetDouble(ticket,DEAL_SWAP)+HistoryDealGetDouble(ticket,DEAL_COMMISSION);
+   }
+   return pnl;
+}
+
+int ConsecutiveLosses()
+{
+   datetime now=TimeCurrent(); if(!HistorySelect(StartOfDay(),now)) return 0;
+   int losses=0;
+   for(int i=HistoryDealsTotal()-1;i>=0;i--)
+   {
+      ulong ticket=HistoryDealGetTicket(i);
+      if(ticket<=0 || HistoryDealGetInteger(ticket,DEAL_MAGIC)!=MagicNumber) continue;
+      long entry=HistoryDealGetInteger(ticket,DEAL_ENTRY);
+      if(entry!=DEAL_ENTRY_OUT && entry!=DEAL_ENTRY_OUT_BY) continue;
+      double pnl=HistoryDealGetDouble(ticket,DEAL_PROFIT)+HistoryDealGetDouble(ticket,DEAL_SWAP)+HistoryDealGetDouble(ticket,DEAL_COMMISSION);
+      if(pnl<0) losses++;
+      else break;
+   }
+   return losses;
+}
+
+bool RiskCircuitOpen()
+{
+   double daily=DailyNetProfit();
+   if(daily<=-MaximumDailyLossUSD){ Print("Sera circuit breaker: perte journaliere ",daily); return true; }
+
+   double balance=AccountInfoDouble(ACCOUNT_BALANCE),equity=AccountInfoDouble(ACCOUNT_EQUITY);
+   if(balance>0)
+   {
+      double dd=MathMax(0.0,(balance-equity)/balance*100.0);
+      if(dd>=MaximumDailyDrawdownPercent){ Print("Sera circuit breaker: drawdown ",dd,"%"); return true; }
+   }
+
+   if(ConsecutiveLosses()>=MaximumConsecutiveLosses){ Print("Sera circuit breaker: pertes consecutives"); return true; }
+
+   double free=AccountInfoDouble(ACCOUNT_MARGIN_FREE),equityNow=AccountInfoDouble(ACCOUNT_EQUITY);
+   double freePct=equityNow>0?free/equityNow*100.0:0.0;
+   if(AccountInfoDouble(ACCOUNT_MARGIN)>0 && freePct<MinimumFreeMarginPercent){ Print("Sera circuit breaker: marge libre ",freePct,"%"); return true; }
+
+   return false;
+}
+
+bool BrokerStopsValid(const string symbol,const string verdict,const double entry,const double sl,const double tp)
+{
+   if(!EnforceBrokerStopsLevel) return true;
+   double point=SymbolInfoDouble(symbol,SYMBOL_POINT);
+   double minDistance=(double)SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL)*point;
+   if(minDistance<=0) return true;
+   if(verdict=="BUY") return (entry-sl)>=minDistance && (tp-entry)>=minDistance;
+   if(verdict=="SELL") return (sl-entry)>=minDistance && (entry-tp)>=minDistance;
+   return false;
 }
 
 double SafeVolume(const string symbol,const double entry,const double sl)
@@ -281,7 +356,7 @@ void Evaluate(const string json)
    if(generated==0 || TimeGMT()-generated>MaximumSignalAgeMinutes*60){ Comment("Sera Trend Watch: signal global expire"); return; }
 
    bool source_allows_trade=(status=="ai_analyzed")||(status=="autonomous_analyzed"&&AllowAutonomousExecution)||(status=="smart_local"&&AllowAutonomousExecution);
-   bool can_trade=EnableAutomaticTrading&&source_allows_trade;
+   bool can_trade=EnableAutomaticTrading&&source_allows_trade&&!RiskCircuitOpen();
    if(can_trade && AccountInfoInteger(ACCOUNT_TRADE_MODE)!=ACCOUNT_TRADE_MODE_DEMO && !AllowRealAccount)
    {
       can_trade=false;
@@ -366,14 +441,21 @@ void Evaluate(const string json)
                   else if(DynamicFinalTarget && confidence>=85 && execution_score>=85 && tp4>0) final_tp=tp4;
 
                   bool final_valid=verdict=="BUY"?final_tp>price:final_tp<price;
-                  double volume=(levels_valid&&spread_ok&&chase_ok&&final_valid)?SafeVolume(symbol,price,sl):0;
+                  bool broker_stops_ok=BrokerStopsValid(symbol,verdict,price,sl,final_tp);
+                  double trial_volume=(levels_valid&&spread_ok&&chase_ok&&final_valid&&broker_stops_ok)?SafeVolume(symbol,price,sl):0;
+                  double required_margin=0.0;
+                  bool margin_ok=trial_volume>0 && OrderCalcMargin(verdict=="BUY"?ORDER_TYPE_BUY:ORDER_TYPE_SELL,symbol,trial_volume,price,required_margin)
+                     && required_margin<=AccountInfoDouble(ACCOUNT_MARGIN_FREE)*0.50;
+                  double volume=margin_ok?trial_volume:0;
                   if(!spread_ok) Print("Sera: entree ignoree, spread trop grand par rapport au risque.");
                   if(!chase_ok) Print("Sera: entree ignoree, prix trop eloigne de l'entree calculee.");
+                  if(!broker_stops_ok) Print("Sera: entree ignoree, SL/TP trop proches pour les regles du broker.");
+                  if(trial_volume>0 && !margin_ok) Print("Sera: entree ignoree, marge libre insuffisante.");
                   if(volume>0)
                   {
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera Swing v1.50"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera Swing v1.50");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera Swing v1.60"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera Swing v1.60");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -405,8 +487,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera v1.50 — "+mode+" — EXECUTE_NOW + OSS + Smart TP management");
-   Print("Sera v1.50: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", smart management=",EnableSmartPositionManagement);
+   Comment("Sera v1.60 — "+mode+" — EXECUTE_NOW + OSS + Risk Circuit");
+   Print("Sera v1.60: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", smart management=",EnableSmartPositionManagement,", daily loss max=",MaximumDailyLossUSD);
    return INIT_SUCCEEDED;
 }
 
