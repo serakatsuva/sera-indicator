@@ -284,9 +284,11 @@ function saveTrendWatchSnapshots(){
 }
 
 function trendWatchRows(){
-  if(marketFamily!=="synthetic"||!hasDerivResults()||!resultsAreFresh())return[];
+  if(!hasDerivResults()||!resultsAreFresh())return[];
   const swings=payload.markets.filter(row=>row.mode==="swing");
-  return trendWatchScope==="all"?swings:swings.filter(row=>row.market===selected);
+  if(trendWatchScope==="all")return swings;
+  if(marketFamily!=="synthetic")return[];
+  return swings.filter(row=>row.market===selected);
 }
 
 function trendLabel(tf){
