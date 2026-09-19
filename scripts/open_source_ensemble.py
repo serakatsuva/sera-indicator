@@ -32,7 +32,7 @@ import pandas as pd
 DEFAULT_SIGNALS = Path("data/signals.json")
 DEFAULT_CANDLES = Path("/tmp/sera-candles.json")
 DEFAULT_CACHE = Path("data/open-source-ai.json")
-MODEL_VERSION = "Sera OSS Ensemble v1.0"
+MODEL_VERSION = "Sera OSS Ensemble v1.1"
 
 
 def clamp(value: float, low: float, high: float) -> float:
@@ -350,6 +350,9 @@ def model_weight(result: dict[str, Any]) -> float:
 
 
 def combine_models(models: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    configured = len(models)
+    connected_statuses = {"ok", "low_quality", "warming_up", "pending", "not_selected"}
+    connected = {k: v for k, v in models.items() if v.get("status") in connected_statuses}
     valid = {k: v for k, v in models.items() if v.get("status") == "ok"}
     buy_weight = 0.0
     sell_weight = 0.0
@@ -374,11 +377,14 @@ def combine_models(models: dict[str, dict[str, Any]]) -> dict[str, Any]:
     confidences = [safe_float(x.get("confidence"), 50.0) for x in valid.values()]
     return {
         "direction": direction,
-        "consensus": round(consensus * 100.0, 1),
+        "consensus": round(consensus * 100.0, 1) if directional > 0 else None,
+        "configured_models": configured,
+        "connected_models": len(connected),
         "available_models": len(valid),
+        "reliable_models": len(valid),
         "directional_models": sum(1 for x in valid.values() if x.get("direction") in ("BUY", "SELL")),
         "neutral_models": neutral,
-        "mean_confidence": round(float(np.mean(confidences)), 1) if confidences else 0.0,
+        "mean_confidence": round(float(np.mean(confidences)), 1) if confidences else None,
         "buy_weight": round(buy_weight, 3),
         "sell_weight": round(sell_weight, 3),
     }
@@ -454,16 +460,10 @@ def run(signals_path: Path, candles_path: Path, cache_path: Path, foundation: bo
         lgb = fit_lightgbm(rows, horizon)
         core[row_id] = {"xgboost": xgb, "lightgbm": lgb}
 
-    # Foundation models are most useful on the strongest current candidates.
-    ranked = sorted(
-        signals["markets"],
-        key=lambda row: (
-            1 if row.get("mode") == "swing" else 0,
-            safe_float((row.get("decision_engine") or {}).get("score")),
-        ),
-        reverse=True,
-    )
-    selected_ids = {str(row.get("id")) for row in ranked[:8]}
+    # Keep both foundation models connected to every analyzed market.
+    # Model weights are cached by GitHub Actions, so this avoids false "0%" states
+    # caused by markets being skipped on non-foundation cycles.
+    selected_ids = {str(row.get("id")) for row in signals["markets"]}
 
     for row in signals["markets"]:
         row_id = str(row.get("id") or "")
@@ -490,9 +490,9 @@ def run(signals_path: Path, candles_path: Path, cache_path: Path, foundation: bo
         chronos_result = chronos_map.get(row_id) if foundation else prior.get("chronos2")
         timesfm_result = timesfm_map.get(row_id) if foundation else prior.get("timesfm25")
         if not chronos_result:
-            chronos_result = {"status": "not_selected" if row_id not in selected_ids else "pending", "direction": "NEUTRAL"}
+            chronos_result = {"status": "pending", "direction": "NEUTRAL"}
         if not timesfm_result:
-            timesfm_result = {"status": "not_selected" if row_id not in selected_ids else "pending", "direction": "NEUTRAL"}
+            timesfm_result = {"status": "pending", "direction": "NEUTRAL"}
 
         models = {
             "xgboost": core[row_id]["xgboost"],
@@ -516,7 +516,9 @@ def run(signals_path: Path, candles_path: Path, cache_path: Path, foundation: bo
         "foundation": ["Chronos-2 small", "TimesFM 2.5 200M"],
         "browser_advisor": "Qwen3-0.6B via WebLLM",
         "foundation_ran": bool(foundation),
-        "policy": "Models can confirm or pause execution timing; they cannot create a trade against the autonomous engine or bypass risk gates.",
+        "connection_mode": "persistent_all_models",
+        "configured_models": 4,
+        "policy": "All four free models stay connected on each analysis cycle. Only reliable votes enter consensus; low-quality outputs remain visible but cannot influence execution.",
     }
     signals["model"] = str(signals.get("model") or "Sera Autonomous Engine") + " + OSS Ensemble"
     signals["model_ensemble_updated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
