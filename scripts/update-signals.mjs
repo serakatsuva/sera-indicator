@@ -4,6 +4,7 @@ import path from 'node:path';
 const OPENAI_API_KEY=process.env.OPENAI_API_KEY||'';
 const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
+const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
 const ENGINE_VERSION='Sera Autonomous Engine v3.3';
 
@@ -571,6 +572,13 @@ async function main(){
     safety:"Sera Autonomous Engine exige au moins 80% des conditions pertinentes et distingue le signal directionnel du timing d’entrée. L’EA n’agit que sur EXECUTE_NOW avec les garde-fous critiques. Luna reste facultative."
   };
 
+  if(CANDLES_OUTPUT){
+    const series={};
+    for(const [key,rows] of candles.entries())series[key]=rows;
+    const candlePayload={updated_at:payload.updated_at,source:'Deriv WebSocket',series};
+    await fs.mkdir(path.dirname(CANDLES_OUTPUT),{recursive:true});
+    await fs.writeFile(CANDLES_OUTPUT,JSON.stringify(candlePayload));
+  }
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
   await fs.writeFile(OUTPUT,JSON.stringify(payload,null,2));
   console.log(`Wrote ${markets.length} analyses; ${technicalCandidates.length} smart candidates; ${aiCalls} Luna call(s); ${payload.confirmed_signals} confirmed signals.`);
