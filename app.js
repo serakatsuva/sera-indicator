@@ -134,7 +134,7 @@ function render(){
   $("updatedAt").textContent=payload?.updated_at?new Date(payload.updated_at).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"—";
   $("dataAge").textContent=ageLabel(payload?.updated_at);
   $("sourceName").textContent=payload?.source||"Deriv WebSocket";
-  $("modelName").textContent=payload?.model||"Luna + Sol";
+  $("modelName").textContent=payload?.model||"Sera Smart Engine + Luna";
   renderTrendWatchUi();
 
   if(marketFamily==="forex"){
@@ -217,7 +217,7 @@ function renderSelected(){
     $("verdictBadge").className="verdict-badge wait";$("verdictBadge").textContent="EN ATTENTE";
     $("decisionOrb").className="decision-orb wait";$("decisionOrb").querySelector("strong").textContent="ATTENDRE";
     $("decisionConfidence").textContent="Connexion MT5 requise";
-    $("decisionSummary").textContent=`${selected} est ajouté au scanner. Son analyse H1/H4 par Luna et Sol démarrera uniquement après connexion des vraies bougies Deriv MT5.`;
+    $("decisionSummary").textContent=`${selected} est ajouté au scanner. Son analyse H1/H4 par Sera Smart Engine + Luna démarrera uniquement après connexion des vraies bougies Deriv MT5.`;
     $("livePrice").textContent="—";$("liveChange").textContent="Deriv MT5 · attente";
     $("levels").querySelectorAll("strong").forEach(element=>element.textContent="—");
     $("timingPanel").querySelectorAll("strong").forEach(element=>element.textContent="—");
@@ -245,7 +245,7 @@ function renderSelected(){
   $("levels").querySelectorAll("strong").forEach((element,index)=>element.textContent=fmt(levelValues[index]));
   const technical=row?.entry_tf||row?.h1;
   const confirmation=row?.confirmation_tf||row?.h4;
-  const metrics=[[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Order Block",technical?.orderBlock],["Fair Value Gap",technical?.fvg],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
+  const metrics=[[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["Régime directionnel",row?.intelligence?.regime==="TRENDING"],["Mémoire tendance",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
   $("technicalGrid").innerHTML=metrics.map(([label,ok])=>`<div class="metric"><small>${label}</small><strong class="${ok?"ok":"no"}">${ok?"Confirmé":"Non confirmé"}</strong></div>`).join("");
   const profile=[row?.mode==="day"?"Day trading":"Swing",row?.duration?.range||"—",row?.duration?.validity||"—",row?.duration?.reanalysis||"—"];
   $("positionProfile").querySelectorAll("strong").forEach((element,index)=>element.textContent=profile[index]);
