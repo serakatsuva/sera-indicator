@@ -49,6 +49,10 @@ const signalClass=value=>value==="BUY"?"buy":value==="SELL"?"sell":"wait";
 const hoursLabel=value=>Number.isFinite(Number(value))?`≈ ${Math.round(Number(value))} h`:"—";
 const durationLabel=timing=>timing?`${timing.duration_min_hours}–${timing.duration_max_hours} h`:"—";
 const swingDurationLabel=timing=>timing?.swing_days_label||durationLabel(timing);
+const executionLabel=row=>{
+  const state=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
+  return ({EXECUTE_NOW:"EXÉCUTER MAINTENANT",WAIT_RETRACE:"ATTENDRE RETRACEMENT",WAIT_CONFIRMATION:"ATTENDRE CONFIRMATION",BLOCKED_RISK:"BLOQUÉ RISQUE"})[state]||state;
+};
 const swingBadgeText=row=>{
   if(row?.mode!=="swing")return"";
   const timing=row?.timing;
@@ -321,7 +325,8 @@ function resultCard(row,fresh){
   card.className=`result-card${row.market===selected&&row.mode===selectedMode?" selected":""}`;
   const conditions=Number(row?.decision_engine?.condition_pass_percent)||0;
   const setupType=String(row?.decision_engine?.setup_type||"GENERIC").replaceAll("_"," ");
-  const status=verdict!=="ATTENDRE"?"Confirmé":conditions>=80?"80% atteint · garde-fou en attente":row.technical_verdict!=="ATTENDRE"?"Setup détecté":"En attente";
+  const execState=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
+  const status=verdict!=="ATTENDRE"?executionLabel(row):conditions>=80?"80% atteint · garde-fou en attente":row.technical_verdict!=="ATTENDRE"?"Setup détecté":"En attente";
   const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`;
   const swingBadge=row.mode==="swing"?`<div class="swing-duration-badge ${String(row.timing?.swing_class||"court").toLowerCase()}">${escapeHtml(swingBadgeText(row))}</div>`:"";
   card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(setupType)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
@@ -353,7 +358,7 @@ function renderSelected(){
   $("verdictBadge").textContent=verdict;
   $("decisionOrb").className=`decision-orb ${cls}`;
   $("decisionOrb").querySelector("strong").textContent=verdict;
-  $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% de confiance`):"Validation requise";
+  $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`):"Validation requise";
   $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend le prochain consensus multi-stratégies pour ${selected}. Luna reste un conseiller facultatif.`;
   $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
   const swingBadge=$("swingDurationBadge");
@@ -374,7 +379,7 @@ function renderSelected(){
   $("levels").querySelectorAll("strong").forEach((element,index)=>element.textContent=fmt(levelValues[index]));
   const technical=row?.entry_tf||row?.h1;
   const confirmation=row?.confirmation_tf||row?.h4;
-  const metrics=[[`Conditions ${Number(row?.decision_engine?.condition_pass_percent)||0}% / 80%`,Number(row?.decision_engine?.condition_pass_percent)>=80],["Consensus stratégies",Number(row?.decision_engine?.consensus)>=62],[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["Régime directionnel",row?.intelligence?.regime==="TRENDING"],["Mémoire tendance",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
+  const metrics=[[`Entrée: ${executionLabel(row)}`,row?.execution_state==="EXECUTE_NOW"],[`Score exécution ${Number(row?.execution_score)||0}% / 78%`,Number(row?.execution_score)>=78],[`Conditions ${Number(row?.decision_engine?.condition_pass_percent)||0}% / 80%`,Number(row?.decision_engine?.condition_pass_percent)>=80],["Consensus stratégies",Number(row?.decision_engine?.consensus)>=62],[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["Régime directionnel",row?.intelligence?.regime==="TRENDING"],["Mémoire tendance",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
   $("technicalGrid").innerHTML=metrics.map(([label,ok])=>`<div class="metric"><small>${label}</small><strong class="${ok?"ok":"no"}">${ok?"Confirmé":"Non confirmé"}</strong></div>`).join("");
   const profile=[row?.mode==="day"?"Day trading":"Swing",row?.duration?.range||"—",row?.duration?.validity||"—",row?.duration?.reanalysis||"—"];
   $("positionProfile").querySelectorAll("strong").forEach((element,index)=>element.textContent=profile[index]);
@@ -395,8 +400,8 @@ function renderSelected(){
   $("timingPanel").className=`timing-panel ${cls}`;
   $("timingNote").textContent=timing?.is_confirmed
     ?row?.mode==="swing"
-      ?`${swingBadgeText(row)}. Estimation basée sur l’ATR, la persistance de tendance H1/H4 et la distance vers les objectifs; ce n’est pas une durée garantie.`
-      :`Estimation basée sur l’ATR H1, la distance vers les TP et la force H1/H4. Le signal expire après ${timing.expires_in_hours} h sans déclenchement.`
+      ?`${swingBadgeText(row)} · ${executionLabel(row)}. ${row?.execution?.reason||"Estimation basée sur l’ATR, la persistance de tendance H1/H4 et la distance vers les objectifs."}`
+      :`${executionLabel(row)}. ${row?.execution?.reason||`Le signal expire après ${timing.expires_in_hours} h sans déclenchement.`}`
     :row?.mode==="swing"
       ?`${swingBadgeText(row)} selon le biais ${timing?.bias||"actuel"}. Projection réévaluée chaque heure tant que le signal n’est pas confirmé.`
       :`Aucun trade confirmé. Horizon projeté si le biais ${timing?.bias||"actuel"} est validé; réévaluation automatique à la prochaine analyse.`;
@@ -445,7 +450,7 @@ function renderTrendWatchUi(){
   $("watchTrendH4").textContent=trendLabel(row?.confirmation_tf);
   const aligned=Boolean(row?.entry_tf?.side&&row?.entry_tf?.side===row?.confirmation_tf?.side);
   $("watchSetupState").textContent=row?.final_verdict&&row.final_verdict!=="ATTENDRE"
-    ?`${row.final_verdict} confirmé · ${row.final_confidence}%`
+    ?`${row.final_verdict} · ${executionLabel(row)} · ${row.final_confidence}%`
     :aligned?`Biais ${row.entry_tf.side} · validation en attente`:"H1/H4 non alignés";
   $("watchLastAlert").textContent=trendWatchLastAlert||"Aucune";
 
@@ -469,6 +474,7 @@ function signalSnapshot(row){
     updated_at:payload?.updated_at||"",
     verdict:row?.final_verdict||"ATTENDRE",
     confidence:Number(row?.final_confidence)||0,
+    execution:row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION",
     h1:row?.entry_tf?.side||"NEUTRE",
     h4:row?.confirmation_tf?.side||"NEUTRE"
   };
@@ -482,7 +488,9 @@ function evaluateTrendWatch(){
     const id=row.id||`${row.symbol}:swing`,current=signalSnapshot(row),previous=trendWatchSnapshots[id]||null;
     const watched=trendWatchEnabled&&watchedIds.has(row.id);
     const isSignal=current.verdict==="BUY"||current.verdict==="SELL";
-    if(watched&&isSignal&&previous&&previous.verdict!==current.verdict){
+    const becameExecutable=current.execution==="EXECUTE_NOW"&&previous&&previous.execution!=="EXECUTE_NOW";
+    const directionChanged=previous&&previous.verdict!==current.verdict;
+    if(watched&&isSignal&&previous&&(directionChanged||becameExecutable)){
       notifyTrendSignal(row,previous.verdict);
     }
     trendWatchSnapshots[id]=current;
@@ -492,7 +500,7 @@ function evaluateTrendWatch(){
 }
 
 function notifyTrendSignal(row,previousVerdict){
-  const text=`${row.market}: ${row.final_verdict} Swing H1/H4 confirmé à ${row.final_confidence}% (avant: ${previousVerdict||"ATTENDRE"}).`;
+  const text=`${row.market}: ${row.final_verdict} Swing H1/H4 à ${row.final_confidence}% · ${executionLabel(row)} (avant: ${previousVerdict||"ATTENDRE"}).`;
   const now=new Date().toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
   trendWatchLastAlert=`${now} · ${row.market} ${row.final_verdict}`;
   localStorage.setItem("seraTrendWatchLastAlert",trendWatchLastAlert);
@@ -557,7 +565,24 @@ function setAiStatus(text,state){$("aiStatus").textContent="";$("aiStatus").appe
 function currentSignalText(){
   const row=hasDerivResults()?payload.markets.find(item=>item.market===selected&&item.mode===selectedMode):null;
   if(!row||!resultsAreFresh()||row.final_verdict==="ATTENDRE")return"";
-  return ["SERA INDICATOR — SIGNAL DERIV CONFIRMÉ",`Indice : ${row.market}`,`Signal : ${row.final_verdict}`,`Confiance : ${row.final_confidence}%`,`Entrée : ${fmt(row.levels?.entry)}`,`Stop Loss : ${fmt(row.levels?.sl)}`,`TP1 : ${fmt(row.levels?.tp1)}`,`TP2 : ${fmt(row.levels?.tp2)}`,`TP3 : ${fmt(row.levels?.tp3)}`,`Analyse : ${new Date(payload.updated_at).toLocaleString("fr-FR")}`,`Modèle : ${row.ai_tier}`,"","Signal autonome — au moins 80% des conditions locales sont requises; l’EA Sera v1.31 peut exécuter sur le compte MT5 réel connecté. Aucun gain garanti.",location.href].join("\n");
+  return [
+    "SERA INDICATOR — SIGNAL DERIV CONFIRMÉ",
+    `Indice : ${row.market}`,
+    `Signal : ${row.final_verdict}`,
+    `Confiance : ${row.final_confidence}%`,
+    `État entrée : ${executionLabel(row)}`,
+    `Score exécution : ${row.execution_score??0}%`,
+    `Entrée : ${fmt(row.levels?.entry)}`,
+    `Stop Loss : ${fmt(row.levels?.sl)}`,
+    `TP1 : ${fmt(row.levels?.tp1)}`,
+    `TP2 : ${fmt(row.levels?.tp2)}`,
+    `TP3 : ${fmt(row.levels?.tp3)}`,
+    `Analyse : ${new Date(payload.updated_at).toLocaleString("fr-FR")}`,
+    `Modèle : ${row.ai_tier}`,
+    "",
+    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera v1.40 n’exécute que si l’état est EXECUTE_NOW. Aucun gain garanti.",
+    location.href
+  ].join("\n");
 }
 async function copySignal(){const text=currentSignalText();if(!text)return;await navigator.clipboard.writeText(text);$("copySignal").textContent="Copié ✓";setTimeout(()=>$("copySignal").textContent="Copier le signal",1500);}
 async function shareSignal(){const text=currentSignalText();if(!text)return;if(navigator.share)await navigator.share({title:"Signal Deriv — Sera Indicator",text,url:location.href});else await navigator.clipboard.writeText(text);}
