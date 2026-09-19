@@ -404,7 +404,7 @@ function executionAssessment(setup,engine,verdict,levels){
   const extreme=verdict==='BUY'?rsi>=72:verdict==='SELL'?rsi<=28:false;
 
   const baseLimit=setup.mode==='swing'?1.25:1.05;
-  const familyAdjustment=setup.family==='volatility'?0:(setup.family==='boom'||setup.family==='crash'?.10:.05);
+  const familyAdjustment=setup.family==='volatility'?0:((setup.family==='boom'||setup.family==='crash')?.10:.05);
   const adverse=Boolean(setup.intelligence?.adverse_spike_direction);
   const maxExtensionAtr=Math.max(.85,baseLimit+familyAdjustment-(adverse?.18:0));
 
@@ -568,7 +568,7 @@ async function main(){
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:reused.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
-    safety:'Sera Autonomous Engine exige au moins 80% des conditions pertinentes et distingue le signal directionnel du timing d'entrée. L'EA n'agit que sur EXECUTE_NOW avec les garde-fous critiques. Luna reste facultative.'
+    safety:"Sera Autonomous Engine exige au moins 80% des conditions pertinentes et distingue le signal directionnel du timing d’entrée. L’EA n’agit que sur EXECUTE_NOW avec les garde-fous critiques. Luna reste facultative."
   };
 
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
