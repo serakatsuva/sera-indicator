@@ -18,6 +18,7 @@ let selected=derivMarkets[0];
 let liveSocket=null;
 let liveQuote=null;
 let marketFamily="synthetic";
+let selectedIndexFamily=localStorage.getItem("seraIndexFamily")||"all";
 let tradingMode="all";
 let selectedMode="day";
 let trendWatchEnabled=localStorage.getItem("seraTrendWatchEnabled")==="1";
@@ -66,6 +67,10 @@ $("showMt5Setup").addEventListener("click",()=>{
 });
 $("syntheticFilter").addEventListener("click",()=>setMarketFamily("synthetic"));
 $("forexFilter").addEventListener("click",()=>setMarketFamily("forex"));
+$("indexFamilyFilter")?.addEventListener("click",event=>{
+  const button=event.target.closest("[data-family]");
+  if(button)setIndexFamily(button.dataset.family);
+});
 document.querySelectorAll(".mode-filter").forEach(button=>button.addEventListener("click",()=>setTradingMode(button.dataset.mode)));
 $("openHelp")?.addEventListener("click",()=>{welcomePopup.removeAttribute("hidden");welcomePopup.classList.remove("closed");document.body.classList.add("popup-open");});
 $("trendWatchToggle")?.addEventListener("change",event=>{
@@ -93,21 +98,93 @@ function setTradingMode(mode){
   render();
 }
 
+function marketFamilyKey(name,row=null){
+  const family=String(row?.family||"").toLowerCase();
+  if(family==="boom"||/^boom\b/i.test(name))return"boom";
+  if(family==="crash"||/^crash\b/i.test(name))return"crash";
+  if(family==="volatility"||/^volatility\b/i.test(name))return"volatility";
+  if(family==="jump"||/^jump\b/i.test(name))return"jump";
+  if(family==="step"||/^step\b/i.test(name))return"step";
+  if(family==="range"||/range/i.test(name))return"range";
+  return"other";
+}
+
+function familyLabel(key){
+  return({all:"Tous les indices",boom:"Boom",crash:"Crash",volatility:"Volatility",jump:"Jump",step:"Step",range:"Range",other:"Autres"})[key]||key;
+}
+
+function availableSyntheticMarkets(){
+  const fromPayload=hasDerivResults()
+    ?[...new Set(payload.markets.map(row=>row.market).filter(Boolean))]
+    :derivMarkets;
+  return fromPayload.length?fromPayload:derivMarkets;
+}
+
+function marketsForIndexFamily(){
+  const markets=availableSyntheticMarkets();
+  if(selectedIndexFamily==="all")return markets;
+  return markets.filter(name=>{
+    const row=hasDerivResults()?payload.markets.find(item=>item.market===name):null;
+    return marketFamilyKey(name,row)===selectedIndexFamily;
+  });
+}
+
+function renderIndexFamilyFilter(){
+  const host=$("indexFamilyFilter"),group=$("syntheticFamilyGroup");
+  if(!host||!group)return;
+  group.hidden=marketFamily!=="synthetic";
+  if(marketFamily!=="synthetic")return;
+
+  const markets=availableSyntheticMarkets();
+  const keys=["boom","crash","volatility","jump","step","range","other"];
+  const counts=Object.fromEntries(keys.map(key=>[key,markets.filter(name=>{
+    const row=hasDerivResults()?payload.markets.find(item=>item.market===name):null;
+    return marketFamilyKey(name,row)===key;
+  }).length]));
+  const visible=["all",...keys.filter(key=>counts[key]>0)];
+  if(!visible.includes(selectedIndexFamily))selectedIndexFamily="all";
+
+  host.innerHTML=visible.map(key=>{
+    const active=key===selectedIndexFamily;
+    const count=key==="all"?markets.length:counts[key];
+    return `<button type="button" class="index-family-button${active?" active":""}" data-family="${key}" role="tab" aria-selected="${active}"><span>${familyLabel(key)}</span><small>${count}</small></button>`;
+  }).join("");
+}
+
+function setIndexFamily(family){
+  selectedIndexFamily=family||"all";
+  localStorage.setItem("seraIndexFamily",selectedIndexFamily);
+  const markets=marketsForIndexFamily();
+  if(markets.length&&!markets.includes(selected)){
+    selected=markets[0];
+    liveQuote=null;
+  }
+  fillMarketSelect();
+  render();
+  if(marketFamily==="synthetic")connectLivePrice();
+}
+
 function setMarketFamily(family){
   marketFamily=family;
   $("syntheticFilter").classList.toggle("active",family==="synthetic");
   $("forexFilter").classList.toggle("active",family==="forex");
   $("syntheticFilter").setAttribute("aria-selected",String(family==="synthetic"));
   $("forexFilter").setAttribute("aria-selected",String(family==="forex"));
-  selected=(family==="synthetic"?derivMarkets:forexMarkets)[0];
-  liveQuote=null; fillMarketSelect();
+  if(family==="synthetic"){
+    const markets=marketsForIndexFamily();
+    selected=markets[0]||derivMarkets[0];
+  }else selected=forexMarkets[0];
+  liveQuote=null;
+  renderIndexFamilyFilter();
+  fillMarketSelect();
   if(family==="synthetic")connectLivePrice();else if(liveSocket){liveSocket.close();liveSocket=null;}
   render();
 }
 
 function fillMarketSelect(){
-  const markets=marketFamily==="synthetic"?derivMarkets:forexMarkets;
+  const markets=marketFamily==="synthetic"?marketsForIndexFamily():forexMarkets;
   $("marketSelect").innerHTML=markets.map(name=>`<option value="${name}">${name}</option>`).join("");
+  if(markets.length&&!markets.includes(selected))selected=markets[0];
   $("marketSelect").value=selected;
 }
 
@@ -135,6 +212,7 @@ function render(){
   $("dataAge").textContent=ageLabel(payload?.updated_at);
   $("sourceName").textContent=payload?.source||"Deriv WebSocket";
   $("modelName").textContent=payload?.model||"Sera Smart Engine + Luna";
+  renderIndexFamilyFilter();
   renderTrendWatchUi();
 
   if(marketFamily==="forex"){
@@ -166,8 +244,10 @@ function render(){
       :fresh
         ?`${payload.markets_count} analyses Smart Engine actualisées. ${payload.technical_candidates??0} candidat(s) existent, mais aucun ne dépasse encore les seuils nécessaires pour un signal final.`
         :`Validation expirée depuis ${ageLabel(payload.updated_at)}. Les anciens BUY/SELL sont neutralisés sur ATTENDRE jusqu’à une nouvelle analyse.`;
-  const rows=payload.markets.filter(row=>tradingMode==="all"||row.mode===tradingMode);
+  const allowedMarkets=new Set(marketsForIndexFamily());
+  const rows=payload.markets.filter(row=>allowedMarkets.has(row.market)&&(tradingMode==="all"||row.mode===tradingMode));
   rows.slice().sort(compareSignalPriority).forEach(row=>results.appendChild(resultCard(row,fresh)));
+  $("visibleResultsCount")?.remove?.();
   renderSelected();
 }
 
@@ -194,7 +274,7 @@ function renderForexCards(container){
 }
 
 function renderWaitingCards(container){
-  derivMarkets.forEach(name=>{
+  marketsForIndexFamily().forEach(name=>{
     const card=document.createElement("button");
     card.className=`result-card${name===selected?" selected":""}`;
     card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${symbols[name]} · H1/H4</p></div><span class="signal wait">ATTENDRE</span></div><div class="result-timing"><span>Biais en analyse</span><b>Horizon —</b></div><div class="result-score"><strong>—</strong><small>Préparation du setup</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
@@ -209,7 +289,7 @@ function resultCard(row,fresh){
   card.className=`result-card${row.market===selected&&row.mode===selectedMode?" selected":""}`;
   const status=verdict!=="ATTENDRE"?"Confirmé":row.technical_verdict!=="ATTENDRE"?"Détecté · validation IA":"En attente";
   const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)} · ${escapeHtml(row.timeframes?.join("/")||"H1/H4")}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="card-profile"><span>${row.mode==="day"?"DAY TRADING":"SWING"}</span><span>${escapeHtml(row.duration?.range||durationLabel(timing))}</span></div><div class="result-timing ${signalClass(verdict)}"><span>${direction}</span><b>${status}</b></div><div class="result-score"><strong>${confidence}%</strong><small>${row.score_type==="setup_readiness"?"Préparation du setup":escapeHtml(row.ai_tier||"Confiance du signal")}</small></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(row.intelligence?.regime||"Analyse")}</b></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
   card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();document.querySelector(".analysis-grid").scrollIntoView({behavior:"smooth",block:"start"});};
   return card;
 }
@@ -433,6 +513,7 @@ async function copySignal(){const text=currentSignalText();if(!text)return;await
 async function shareSignal(){const text=currentSignalText();if(!text)return;if(navigator.share)await navigator.share({title:"Signal Deriv — Sera Indicator",text,url:location.href});else await navigator.clipboard.writeText(text);}
 function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));}
 
+renderIndexFamilyFilter();
 fillMarketSelect();
 renderTrendWatchUi();
 loadSignals();
