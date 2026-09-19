@@ -31,3 +31,31 @@
 .trend-watch-grid small{display:block;color:#697b91;font-size:8px;text-transform:uppercase;letter-spacing:.1em}.trend-watch-grid strong{display:block;margin-top:4px;font-size:11px;color:#d8e5f2}
 .trend-watch-alert{margin-top:12px;border-radius:10px;padding:11px 12px;font:800 11px var(--mono);line-height:1.5}.trend-watch-alert.buy{color:var(--green);background:rgba(56,232,187,.08);border:1px solid rgba(56,232,187,.22)}.trend-watch-alert.sell{color:#ff9caf;background:rgba(255,107,132,.08);border:1px solid rgba(255,107,132,.22)}
 @media(max-width:720px){.trend-watch-head{display:block}.trend-watch-state{margin-top:10px}.trend-watch-controls>*{width:100%}.trend-watch-controls label{justify-content:flex-start}.trend-watch-controls select,.trend-watch-controls button{flex:1}.trend-watch-grid{grid-template-columns:repeat(2,1fr)}}
+
+
+/* Family navigation & lighter scanner — 2026-09-19 */
+.scanner-panel{padding:18px}
+.scanner-controls{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:end;margin:14px 0}
+.control-group{min-width:0}.control-label{display:block;margin:0 0 6px 2px;color:#63758b;font-size:8px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+.compact-tabs{margin:0;display:flex;gap:6px;flex-wrap:wrap}
+.market-family-filter.compact-tabs .family-filter,.compact-tabs .mode-filter{min-height:36px;padding:7px 11px;border-radius:9px}
+.index-family-filter{display:flex;gap:6px;overflow-x:auto;padding:1px 1px 4px;scrollbar-width:thin}
+.index-family-button{display:inline-flex;align-items:center;gap:7px;min-height:36px;white-space:nowrap;border:1px solid var(--line);border-radius:9px;background:rgba(0,0,0,.13);color:#8fa0b4;padding:7px 10px;font:700 10px var(--sans);cursor:pointer}
+.index-family-button small{display:grid;place-items:center;min-width:19px;height:19px;border-radius:999px;background:rgba(255,255,255,.055);font:700 8px var(--mono);color:#71849a}
+.index-family-button.active{border-color:rgba(84,216,255,.28);background:rgba(84,216,255,.09);color:#dff6ff}
+.index-family-button.active small{background:rgba(84,216,255,.14);color:var(--cyan)}
+.results-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.result-card{padding:12px;border-radius:12px;background:rgba(255,255,255,.018);box-shadow:none}
+.result-card:hover,.result-card.selected{transform:none;background:rgba(84,216,255,.035)}
+.result-card h3{font-size:13px}.result-card .symbol{font-size:8px}
+.compact-signal-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;margin-top:11px}
+.compact-signal-row span{font:700 8px var(--mono);color:#73879d}.compact-signal-row b{font-size:9px;color:#9aacbf}.compact-signal-row strong{font:800 16px var(--mono)}
+.result-timing{margin-top:8px;display:flex;justify-content:space-between;gap:8px;font-size:9px;color:#8293a7}
+.result-timing b{font-size:8px;text-transform:uppercase;letter-spacing:.06em}
+.meta-strip{margin:12px 0 10px}.meta-strip span{padding:6px 8px}
+.trend-watch-panel{padding:12px;margin:10px 0}.trend-watch-head h3{font-size:13px}.trend-watch-head p{font-size:10px}
+.trend-watch-grid{margin-top:9px}.trend-watch-grid>div{padding:7px 9px}
+@media(max-width:1100px){.scanner-controls{grid-template-columns:1fr 1fr}.synthetic-family-group{grid-column:1/-1;grid-row:2}.results-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:800px){.results-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.scanner-panel{padding:13px}.scanner-controls{grid-template-columns:1fr}.synthetic-family-group{grid-column:auto;grid-row:auto}.index-family-filter{margin-right:-4px}.results-grid{grid-template-columns:1fr 1fr;gap:7px}.result-card{padding:10px}.result-card h3{font-size:12px}.compact-signal-row{grid-template-columns:1fr auto}.compact-signal-row b{display:none}.compact-signal-row strong{font-size:14px}.result-timing b{display:none}}
+@media(max-width:380px){.results-grid{grid-template-columns:1fr}}
