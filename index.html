@@ -26,7 +26,7 @@
         <div><span>↗</span><p><strong>Signaux simples</strong><small>BUY, SELL ou ATTENDRE, avec confiance, entrée, SL et TP1–TP3.</small></p></div>
         <div><span>◷</span><p><strong>Actualisation adaptée</strong><small>Day trading toutes les 15 minutes et Swing chaque heure.</small></p></div>
         <div><span>◎</span><p><strong>Trend Watch</strong><small>Surveille H1/H4 et vous alerte lorsqu’un nouveau BUY/SELL confirmé apparaît.</small></p></div>
-        <div><span>⚠</span><p><strong>Exécution protégée</strong><small>L’EA optionnel fonctionne d’abord sur Démo. Aucun résultat n’est garanti.</small></p></div>
+        <div><span>⚠</span><p><strong>Exécution réelle protégée</strong><small>L’EA est configuré pour le compte réel avec limites de risque strictes. Aucun résultat n’est garanti.</small></p></div>
       </div>
       <div class="welcome-feedback">
         <strong>Questions ou feedback écrit</strong>
@@ -51,7 +51,7 @@
     <section class="broker-panel panel signal-only-hero">
       <div class="section-heading">
         <div><span class="eyebrow">Deriv · indices synthétiques</span><h1>Analyse et exécution MT5 optionnelle</h1><p>Sera analyse les bougies publiques Deriv en M15/H1 et H1/H4. L’EA MT5 optionnel peut exécuter uniquement les signaux Swing confirmés, avec limites de risque.</p></div>
-        <span class="mode-badge signal-only-badge">DÉMO PAR DÉFAUT</span>
+        <span class="mode-badge signal-only-badge">MODE RÉEL</span>
       </div>
       <div class="signal-scope" aria-label="Périmètre de l'application">
         <div><small>Broker</small><strong>Deriv</strong></div>
@@ -66,14 +66,14 @@
         <div>
           <span class="eyebrow cyan">Exécution Deriv MT5</span>
           <h2>Passerelle Swing automatique</h2>
-          <p>L’EA Sera s’installe dans Deriv MT5 et surveille uniquement les signaux Swing BUY/SELL confirmés. Le compte Démo est obligatoire au premier démarrage.</p>
+          <p>L’EA Sera s’installe dans Deriv MT5 et surveille les signaux Swing BUY/SELL confirmés. Il est configuré pour fonctionner directement sur un compte réel, avec gestion du risque, Stop Loss et limites d’exposition.</p>
         </div>
-        <span class="mode-badge execution-pending" id="executionStatus">EA NON CONNECTÉ</span>
+        <span class="mode-badge execution-pending" id="executionStatus">EA RÉEL · NON CONNECTÉ</span>
       </div>
       <div class="execution-grid">
-        <div><small>Mode initial</small><strong>Démo uniquement</strong></div>
+        <div><small>Mode initial</small><strong>Compte réel</strong></div>
         <div><small>Risque</small><strong>0,5 % · max. 1 USD</strong></div>
-        <div><small>Déclenchement</small><strong>Swing confirmé ≥ 75 %</strong></div>
+        <div><small>Déclenchement</small><strong>Auto · Swing confirmé ≥ 75 %</strong></div>
         <div><small>Protection</small><strong>SL + anti-doublon</strong></div>
       </div>
       <div class="execution-actions">
@@ -85,9 +85,9 @@
           <li>Dans MT5 : <strong>Fichier → Ouvrir le dossier des données → MQL5 → Experts</strong>.</li>
           <li>Copiez le fichier téléchargé, compilez-le dans MetaEditor, puis attachez-le à un graphique.</li>
           <li>Autorisez WebRequest vers <code>https://serakatsuva.github.io</code> et activez Algo Trading.</li>
-          <li>Laissez <strong>AllowRealAccount = false</strong> pendant les tests sur compte Démo.</li>
+          <li>La version v1.20 est prête pour le réel : <strong>EnableAutomaticTrading = true</strong> et <strong>AllowRealAccount = true</strong>. Vérifiez toujours le symbole, le volume et les limites de risque avant de laisser l’EA fonctionner sans surveillance.</li>
         </ol>
-        <p><strong>Important :</strong> le site ne reçoit jamais votre mot de passe MT5. L’EA utilise uniquement le compte déjà connecté dans votre terminal.</p>
+        <p><strong>Important :</strong> le site ne reçoit jamais votre mot de passe MT5. L’EA utilise uniquement le compte déjà connecté dans votre terminal. En compte réel, toute perte est réelle : les protections limitent l’exposition mais n’éliminent pas le risque.</p>
       </div>
     </section>
 
@@ -205,8 +205,8 @@
     </div>
 
     <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button>
-    <footer><strong>Trading à risque élevé.</strong> L’automatisation ne garantit aucun gain. Testez longuement sur Démo; le passage au compte réel exige une activation volontaire dans l’EA.</footer>
+    <footer><strong>Trading réel à risque élevé.</strong> Sera fournit une aide à la décision et l’EA peut exécuter automatiquement sur le compte MT5 connecté. Les limites de risque réduisent l’exposition mais ne garantissent aucun gain.</footer>
   </main>
-  <script src="./app.js?v=detail-modal-20260919-1" defer></script>
+  <script src="./app.js?v=real-mode-20260919-1" defer></script>
 </body>
 </html>
