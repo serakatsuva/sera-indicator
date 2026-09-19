@@ -151,6 +151,14 @@ $("trendWatchSound")?.addEventListener("change",event=>{
   localStorage.setItem("seraTrendWatchSound",trendWatchSound?"1":"0");
 });
 $("enableBrowserAlerts")?.addEventListener("click",requestBrowserAlerts);
+$("watchOptionsToggle")?.addEventListener("click",()=>{
+  const panel=$("trendWatchOptions"),button=$("watchOptionsToggle");
+  if(!panel||!button)return;
+  const open=panel.hidden;
+  panel.hidden=!open;
+  button.setAttribute("aria-expanded",String(open));
+  button.textContent=open?"Fermer":"Options";
+});
 $("qwenAdvisorButton")?.addEventListener("click",runQwenAdvisor);
 $("closeSignalModal")?.addEventListener("click",closeSignalModal);
 $("signalModalBackdrop")?.addEventListener("click",closeSignalModal);
