@@ -21,6 +21,12 @@ required = {
     "broker stop check": "BrokerStopsValid",
     "smart position management": "ManageSeraPosition",
     "five targets": 'JsonNumber(levels,"tp5")',
+    "smart buy limit": "trade.BuyLimit",
+    "smart sell limit": "trade.SellLimit",
+    "adaptive risk": "AdaptiveRiskPercent",
+    "adaptive loss cap": "AdaptiveLossCap",
+    "pending cancellation": "CancelSeraPendingOrder",
+    "EA intelligent name": "Sera EA Swing Intelligent",
 }
 for name, token in required.items():
     if token not in text:
