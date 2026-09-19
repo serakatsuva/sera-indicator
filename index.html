@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=sera-20260918-1">
+  <link rel="stylesheet" href="./styles.css?v=sera-20260919-trendwatch-1">
   <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
@@ -25,6 +25,7 @@
         <div><span>◈</span><p><strong>Analyse hybride</strong><small>Moteur technique multi-horizon + validation OpenAI lorsque l’API est disponible.</small></p></div>
         <div><span>↗</span><p><strong>Signaux simples</strong><small>BUY, SELL ou ATTENDRE, avec confiance, entrée, SL et TP1–TP3.</small></p></div>
         <div><span>◷</span><p><strong>Actualisation adaptée</strong><small>Day trading toutes les 15 minutes et Swing chaque heure.</small></p></div>
+        <div><span>◎</span><p><strong>Trend Watch</strong><small>Surveille H1/H4 et vous alerte lorsqu’un nouveau BUY/SELL confirmé apparaît.</small></p></div>
         <div><span>⚠</span><p><strong>Exécution protégée</strong><small>L’EA optionnel fonctionne d’abord sur Démo. Aucun résultat n’est garanti.</small></p></div>
       </div>
       <div class="welcome-feedback">
@@ -110,6 +111,31 @@
         <button class="mode-filter" data-mode="day" type="button" role="tab" aria-selected="false">Day trading <small>M15 + H1</small></button>
         <button class="mode-filter" data-mode="swing" type="button" role="tab" aria-selected="false">Swing <small>H1 + H4</small></button>
       </div>
+
+      <div class="trend-watch-panel" id="trendWatchPanel">
+        <div class="trend-watch-head">
+          <div>
+            <span class="eyebrow cyan">Trend Watch · Swing H1/H4</span>
+            <h3>Surveillance de tendance & alerte de position</h3>
+            <p>Surveille l’alignement H1/H4 et signale uniquement un nouveau BUY/SELL final confirmé. L’exécution reste gérée par l’EA MT5.</p>
+          </div>
+          <span class="trend-watch-state off" id="trendWatchState"><i></i><span id="trendWatchStatus">Désactivée</span></span>
+        </div>
+        <div class="trend-watch-controls">
+          <label class="watch-switch"><input id="trendWatchToggle" type="checkbox"><span>Surveillance active</span></label>
+          <label><span>Portée</span><select id="trendWatchScope"><option value="selected">Indice sélectionné</option><option value="all">Tous les indices</option></select></label>
+          <label class="watch-check"><input id="trendWatchSound" type="checkbox" checked><span>Son</span></label>
+          <button id="enableBrowserAlerts" type="button">Notifications navigateur</button>
+        </div>
+        <div class="trend-watch-grid">
+          <div><small>Tendance H1</small><strong id="watchTrendH1">—</strong></div>
+          <div><small>Tendance H4</small><strong id="watchTrendH4">—</strong></div>
+          <div><small>État</small><strong id="watchSetupState">En attente</strong></div>
+          <div><small>Dernière alerte</small><strong id="watchLastAlert">Aucune</strong></div>
+        </div>
+        <div class="trend-watch-alert" id="trendWatchAlert" hidden role="status" aria-live="assertive"></div>
+      </div>
+
       <div id="notice" class="notice loading">Chargement des signaux Deriv validés…</div>
       <div id="results" class="results-grid" aria-live="polite"></div>
     </section>
@@ -155,6 +181,6 @@
     <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button>
     <footer><strong>Trading à risque élevé.</strong> L’automatisation ne garantit aucun gain. Testez longuement sur Démo; le passage au compte réel exige une activation volontaire dans l’EA.</footer>
   </main>
-  <script src="./app.js?v=economy-20260918-2" defer></script>
+  <script src="./app.js?v=trendwatch-20260919-1" defer></script>
 </body>
 </html>
