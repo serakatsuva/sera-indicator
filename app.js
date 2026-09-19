@@ -27,6 +27,7 @@ let trendWatchSound=localStorage.getItem("seraTrendWatchSound")!=="0";
 let trendWatchSnapshots=loadTrendWatchSnapshots();
 let trendWatchLastAlert=localStorage.getItem("seraTrendWatchLastAlert")||"";
 let trendWatchBannerTimer=null;
+const signalModal=$("signalModal");
 const welcomePopup=$("welcomePopup");
 const welcomeContinue=$("welcomeContinue");
 if(localStorage.getItem("seraWelcomeSeen")!=="1") document.body.classList.add("popup-open"); else { welcomePopup.classList.add("closed"); welcomePopup.setAttribute("hidden",""); }
@@ -55,6 +56,7 @@ $("marketSelect").addEventListener("change",event=>{
   selected=event.target.value;
   liveQuote=null;
   renderSelected();
+  if(signalModal&&!signalModal.hidden)$("signalModalTitle").textContent=selected;
   renderTrendWatchUi();
   connectLivePrice();
 });
@@ -89,6 +91,28 @@ $("trendWatchSound")?.addEventListener("change",event=>{
   localStorage.setItem("seraTrendWatchSound",trendWatchSound?"1":"0");
 });
 $("enableBrowserAlerts")?.addEventListener("click",requestBrowserAlerts);
+$("closeSignalModal")?.addEventListener("click",closeSignalModal);
+$("signalModalBackdrop")?.addEventListener("click",closeSignalModal);
+document.addEventListener("keydown",event=>{
+  if(event.key==="Escape"&&signalModal&&!signalModal.hidden)closeSignalModal();
+});
+
+function openSignalModal(marketName){
+  if(!signalModal)return;
+  $("signalModalTitle").textContent=marketName||selected||"Détail de l’indice";
+  signalModal.hidden=false;
+  signalModal.setAttribute("aria-hidden","false");
+  document.body.classList.add("signal-modal-open");
+  requestAnimationFrame(()=>signalModal.classList.add("open"));
+}
+
+function closeSignalModal(){
+  if(!signalModal)return;
+  signalModal.classList.remove("open");
+  signalModal.setAttribute("aria-hidden","true");
+  document.body.classList.remove("signal-modal-open");
+  setTimeout(()=>{signalModal.hidden=true;},160);
+}
 
 function setTradingMode(mode){
   tradingMode=mode;
@@ -268,7 +292,7 @@ function renderForexCards(container){
     const card=document.createElement("button");
     card.className=`result-card forex-pending${name===selected?" selected":""}`;
     card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${forexSymbols[name]} · H1/H4</p></div><span class="signal wait">EN ATTENTE</span></div><div class="forex-lock">Connexion MT5 requise</div><div class="result-score"><strong>—</strong><small>Analyse IA non lancée</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
-    card.onclick=()=>{selected=name;$("marketSelect").value=name;renderSelected();highlightSelected();document.querySelector(".analysis-grid").scrollIntoView({behavior:"smooth",block:"start"});};
+    card.onclick=()=>{selected=name;$("marketSelect").value=name;renderSelected();highlightSelected();openSignalModal(name);};
     container.appendChild(card);
   });
 }
@@ -278,7 +302,7 @@ function renderWaitingCards(container){
     const card=document.createElement("button");
     card.className=`result-card${name===selected?" selected":""}`;
     card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${symbols[name]} · H1/H4</p></div><span class="signal wait">ATTENDRE</span></div><div class="result-timing"><span>Biais en analyse</span><b>Horizon —</b></div><div class="result-score"><strong>—</strong><small>Préparation du setup</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
-    card.onclick=()=>{selected=name;liveQuote=null;$("marketSelect").value=name;renderSelected();highlightSelected();connectLivePrice();};
+    card.onclick=()=>{selected=name;liveQuote=null;$("marketSelect").value=name;renderSelected();highlightSelected();connectLivePrice();openSignalModal(name);};
     container.appendChild(card);
   });
 }
@@ -290,7 +314,7 @@ function resultCard(row,fresh){
   const status=verdict!=="ATTENDRE"?"Confirmé":row.technical_verdict!=="ATTENDRE"?"Détecté · validation IA":"En attente";
   const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`;
   card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(row.intelligence?.regime||"Analyse")}</b></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
-  card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();document.querySelector(".analysis-grid").scrollIntoView({behavior:"smooth",block:"start"});};
+  card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();openSignalModal(row.market);};
   return card;
 }
 
