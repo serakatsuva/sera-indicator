@@ -6,7 +6,7 @@ const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
-const ENGINE_VERSION='Sera Autonomous Engine v3.6';
+const ENGINE_VERSION='Sera Autonomous Engine v3.7';
 
 const MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -29,6 +29,19 @@ const MODES=[
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const average=values=>values.length?values.reduce((a,b)=>a+b,0)/values.length:0;
+const stddev=values=>{
+  if(!values.length)return 0;
+  const mean=average(values);
+  return Math.sqrt(average(values.map(v=>(v-mean)**2)));
+};
+const correlation=(a,b)=>{
+  const n=Math.min(a.length,b.length);
+  if(n<5)return 0;
+  const x=a.slice(-n),y=b.slice(-n),mx=average(x),my=average(y);
+  const cov=average(x.map((v,i)=>(v-mx)*(y[i]-my)));
+  const sx=stddev(x),sy=stddev(y);
+  return sx&&sy?cov/(sx*sy):0;
+};
 
 function emaValue(values,period){
   const k=2/(period+1);
@@ -71,6 +84,67 @@ function inspectCandles(candles){
   const momentum=bullish?rsi>52&&rsi<78:rsi<48&&rsi>22;
   const trendStrong=bullish?ema20>ema50&&ema50>=ema200:ema20<ema50&&ema50<=ema200;
 
+  // Additional independent confirmations: ADX/DMI, MACD, Bollinger, Donchian,
+  // trend efficiency, lag autocorrelation, market structure and candle patterns.
+  const dmPlus=[],dmMinus=[],tr14=[];
+  for(let i=normalized.length-14;i<normalized.length;i++){
+    const up=normalized[i].high-normalized[i-1].high;
+    const down=normalized[i-1].low-normalized[i].low;
+    dmPlus.push(up>down&&up>0?up:0);
+    dmMinus.push(down>up&&down>0?down:0);
+    tr14.push(trSeries[i]);
+  }
+  const trSum=Math.max(tr14.reduce((a,b)=>a+b,0),.0000001);
+  const plusDI=100*dmPlus.reduce((a,b)=>a+b,0)/trSum;
+  const minusDI=100*dmMinus.reduce((a,b)=>a+b,0)/trSum;
+  const dx=100*Math.abs(plusDI-minusDI)/Math.max(plusDI+minusDI,.0000001);
+  const adx=dx;
+  const dmiAligned=bullish?plusDI>minusDI:minusDI>plusDI;
+
+  const ema12=emaValue(closes,12),ema26=emaValue(closes,26),macd=ema12-ema26;
+  const macdSeries=[];
+  for(let i=Math.max(30,closes.length-30);i<=closes.length;i++){
+    const sub=closes.slice(0,i);
+    macdSeries.push(emaValue(sub,12)-emaValue(sub,26));
+  }
+  const macdSignal=emaValue(macdSeries.slice(-9),Math.min(9,macdSeries.length));
+  const macdHistogram=macd-macdSignal;
+  const macdAligned=bullish?macdHistogram>0:macdHistogram<0;
+
+  const bbSlice=closes.slice(-20),bbMean=average(bbSlice),bbStd=stddev(bbSlice);
+  const bollingerWidth=bbMean?((bbStd*4)/Math.abs(bbMean)):0;
+  const bbWidths=[];
+  for(let i=Math.max(25,closes.length-45);i<=closes.length;i++){
+    const win=closes.slice(Math.max(0,i-20),i),m=average(win);
+    bbWidths.push(m?(stddev(win)*4)/Math.abs(m):0);
+  }
+  const bbBaseline=average(bbWidths.slice(0,-5))||bollingerWidth;
+  const squeeze=bollingerWidth<bbBaseline*.72;
+  const squeezeRelease=bollingerWidth>bbBaseline*.95&&volatilityExpansion>1.05;
+
+  const donchianHigh=Math.max(...highs.slice(-21,-1)),donchianLow=Math.min(...lows.slice(-21,-1));
+  const donchianBreakout=bullish?last.close>donchianHigh:last.close<donchianLow;
+
+  const efficiencyWindow=closes.slice(-21);
+  const netMove=Math.abs(efficiencyWindow.at(-1)-efficiencyWindow[0]);
+  const pathMove=efficiencyWindow.slice(1).reduce((sum,v,i)=>sum+Math.abs(v-efficiencyWindow[i]),0);
+  const efficiencyRatio=pathMove?netMove/pathMove:0;
+
+  const returns=closes.slice(-31).slice(1).map((v,i)=>v/closes.slice(-31)[i]-1);
+  const autocorrelationLag1=correlation(returns.slice(1),returns.slice(0,-1));
+
+  const older=normalized.slice(-18,-10),newer=normalized.slice(-9,-1);
+  const olderHigh=Math.max(...older.map(c=>c.high)),olderLow=Math.min(...older.map(c=>c.low));
+  const newerHigh=Math.max(...newer.map(c=>c.high)),newerLow=Math.min(...newer.map(c=>c.low));
+  const hhhl=newerHigh>olderHigh&&newerLow>olderLow;
+  const lhll=newerHigh<olderHigh&&newerLow<olderLow;
+  const marketStructureAligned=bullish?hhhl:lhll;
+
+  const prev=normalized.at(-2);
+  const bullishEngulf=last.close>last.open&&prev.close<prev.open&&last.close>=prev.open&&last.open<=prev.close;
+  const bearishEngulf=last.close<last.open&&prev.close>prev.open&&last.open>=prev.close&&last.close<=prev.open;
+  const engulfing=bullish?bullishEngulf:bearishEngulf;
+
   const lowerWick=Math.min(last.open,last.close)-last.low,upperWick=last.high-Math.max(last.open,last.close);
   const rejection=bullish?(lowerWick/range>.28&&last.close>last.open):(upperWick/range>.28&&last.close<last.open);
   const spikeRisk=body>atr*2.2||range>atr*2.8;
@@ -88,11 +162,15 @@ function inspectCandles(candles){
   else if(compression)regime='COMPRESSION';
   else if(emaSpreadAtr<.24&&Math.abs(emaSlopeAtr)<.10)regime='RANGE';
 
-  const checks=[trendStrong,momentum,bos||choch,sweep,impulse,fvg,retest,orderBlock,rejection,!spikeRisk];
+  const checks=[
+    trendStrong,momentum,bos||choch,sweep,impulse,fvg,retest,orderBlock,rejection,!spikeRisk,
+    adx>=20&&dmiAligned,macdAligned,donchianBreakout||squeezeRelease,efficiencyRatio>=.30,marketStructureAligned
+  ];
   const passed=checks.filter(Boolean).length;
   const structureScore=(bos||choch?18:0)+(sweep?11:0)+(retest?11:0)+(orderBlock?8:0)+(fvg?6:0);
-  const trendScore=(trendStrong?22:5)+clamp(emaSpreadAtr*9,0,12)+clamp(Math.abs(emaSlopeAtr)*16,0,10);
-  const momentumScore=momentum?12:4;
+  const trendScore=(trendStrong?20:5)+clamp(emaSpreadAtr*8,0,11)+clamp(Math.abs(emaSlopeAtr)*14,0,9)
+    +(adx>=20&&dmiAligned?7:0)+(marketStructureAligned?5:0)+(efficiencyRatio>=.30?4:0);
+  const momentumScore=(momentum?9:3)+(macdAligned?5:0)+(donchianBreakout?4:0)+(squeezeRelease?3:0);
   const executionScore=(impulse?7:2)+(rejection?6:1);
   const regimePenalty=regime==='SPIKE_RISK'?24:regime==='RANGE'?12:regime==='COMPRESSION'?6:0;
   const trendQuality=Math.round(clamp(trendScore+momentumScore+executionScore+structureScore-regimePenalty,0,100));
@@ -100,7 +178,11 @@ function inspectCandles(candles){
   return {
     side,confidence:Math.round(clamp(38+passed*4.8+trendQuality*.16,0,96)),passed,bos,choch,sweep,impulse,fvg,retest,
     orderBlock,momentum,rejection,trendStrong,spikeRisk,regime,trendQuality,emaSpreadAtr,emaSlopeAtr,volatilityExpansion,
-    compression,ema20,ema50,ema200,rsi,atr,swingHigh,swingLow,closedAt:last.epoch,price:last.close,
+    compression,ema20,ema50,ema200,rsi,atr,swingHigh,swingLow,
+    adx,plusDI,minusDI,dmiAligned,macd,macdSignal,macdHistogram,macdAligned,
+    bollingerWidth,squeeze,squeezeRelease,donchianBreakout,efficiencyRatio,autocorrelationLag1,
+    hhhl,lhll,marketStructureAligned,engulfing,
+    closedAt:last.epoch,price:last.close,
     change:((last.close/closes.at(-2))-1)*100
   };
 }
@@ -207,7 +289,13 @@ function publicSetup(setup){
     fvg:value.fvg,retest:value.retest,orderBlock:value.orderBlock,momentum:value.momentum,rejection:value.rejection,trendStrong:value.trendStrong,
     spikeRisk:value.spikeRisk,regime:value.regime,trendQuality:value.trendQuality,emaSpreadAtr:value.emaSpreadAtr,emaSlopeAtr:value.emaSlopeAtr,
     volatilityExpansion:value.volatilityExpansion,ema20:value.ema20,ema50:value.ema50,ema200:value.ema200,rsi:value.rsi,atr:value.atr,
-    swingHigh:value.swingHigh,swingLow:value.swingLow,closedAt:value.closedAt,price:value.price,change:value.change
+    swingHigh:value.swingHigh,swingLow:value.swingLow,
+    adx:value.adx,plusDI:value.plusDI,minusDI:value.minusDI,dmiAligned:value.dmiAligned,
+    macd:value.macd,macdSignal:value.macdSignal,macdHistogram:value.macdHistogram,macdAligned:value.macdAligned,
+    bollingerWidth:value.bollingerWidth,squeeze:value.squeeze,squeezeRelease:value.squeezeRelease,
+    donchianBreakout:value.donchianBreakout,efficiencyRatio:value.efficiencyRatio,autocorrelationLag1:value.autocorrelationLag1,
+    hhhl:value.hhhl,lhll:value.lhll,marketStructureAligned:value.marketStructureAligned,engulfing:value.engulfing,
+    closedAt:value.closedAt,price:value.price,change:value.change
   });
   return {
     id:`${setup.symbol}:${setup.mode}`,market:setup.market,symbol:setup.symbol,family:setup.family,spikeBias:setup.spikeBias,mode:setup.mode,
@@ -382,7 +470,14 @@ function autonomousDecision(setup){
     {id:'range',name:'Range reversal',weight:12,applicable:setupType==='REVERSAL',support:Boolean(e.sweep&&e.rejection&&(e.choch||e.bos)&&e.momentum)},
     {id:'memory',name:'Trend memory',weight:8,applicable:true,support:Boolean(m.persistence&&!m.flip)},
     {id:'volatility',name:'Volatility control',weight:8,applicable:true,support:Boolean(!e.spikeRisk&&e.volatilityExpansion>.55&&e.volatilityExpansion<2.6)},
-    {id:'family',name:'Boom/Crash guard',weight:8,applicable:true,support:Boolean(!adverse||(e.sweep&&(e.bos||e.choch)))}
+    {id:'family',name:'Boom/Crash guard',weight:8,applicable:true,support:Boolean(!adverse||(e.sweep&&(e.bos||e.choch)))},
+    {id:'adx',name:'ADX / DMI trend strength',weight:9,applicable:trending,support:Boolean(e.adx>=20&&e.dmiAligned)},
+    {id:'macd',name:'MACD momentum alignment',weight:8,applicable:trending||setupType==='BREAKOUT_CONTINUATION',support:Boolean(e.macdAligned)},
+    {id:'donchian',name:'Donchian breakout',weight:8,applicable:setupType==='BREAKOUT_CONTINUATION'||(trending&&setupType==='GENERIC'),support:Boolean(e.donchianBreakout)},
+    {id:'bollinger',name:'Bollinger squeeze release',weight:7,applicable:e.compression||setupType==='BREAKOUT_CONTINUATION',support:Boolean(e.squeezeRelease)},
+    {id:'efficiency',name:'Trend efficiency ratio',weight:7,applicable:trending,support:Boolean(e.efficiencyRatio>=.30)},
+    {id:'marketstructure',name:'HH/HL or LH/LL structure',weight:9,applicable:true,support:Boolean(e.marketStructureAligned)},
+    {id:'candles',name:'Engulfing confirmation',weight:5,applicable:setupType==='REVERSAL'||setupType==='PULLBACK_CONTINUATION',support:Boolean(e.engulfing)}
   ];
 
   const applicable=strategies.filter(s=>s.applicable);
