@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=sera-20260919-live-entry-1">
+  <link rel="stylesheet" href="./styles.css?v=sera-20260919-clear-action-1">
   <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
@@ -173,6 +173,11 @@
           <svg viewBox="0 0 900 250" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166" stop-opacity=".18"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></linearGradient></defs><path id="chartFillPath" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124 L900 250 L0 250 Z" fill="url(#chartFill)"/><path id="chartLine" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124" fill="none" stroke="#ffd166" stroke-width="4" stroke-linecap="round"/></svg>
           <span class="verdict-badge wait" id="verdictBadge">ATTENDRE</span>
           <span class="setup-direction wait" id="setupDirectionBadge"><i></i> SETUP EN ATTENTE</span>
+          <div class="trade-action-box wait" id="tradeActionBox" role="status" aria-live="polite">
+            <i></i>
+            <strong id="tradeActionLabel">WAIT</strong>
+            <span id="tradeActionDetail">ATTENDRE</span>
+          </div>
           <div class="live-entry-box" id="liveEntryBox" hidden>
             <small>Entrée proposée live</small>
             <strong id="liveEntryValue">—</strong>
@@ -207,7 +212,7 @@
       <aside class="decision-card panel">
         <div class="decision-title"><div><span class="eyebrow cyan">Signal final</span><h2>Sera Autonomous Engine + Luna Advisor</h2></div><span class="ai-chip">Aide à la décision</span></div>
         <div class="decision-orb wait" id="decisionOrb"><strong>ATTENDRE</strong><small id="decisionConfidence">Validation requise</small></div>
-        <p class="decision-summary" id="decisionSummary">Sera peut confirmer BUY ou SELL sans OpenAI avec au moins 80 % des conditions pertinentes. Il distingue ensuite le biais du timing d’entrée : EXECUTE NOW, ATTENDRE RETRACEMENT ou ATTENDRE CONFIRMATION. Luna reste un conseiller facultatif.</p>
+        <p class="decision-summary" id="decisionSummary">Sera peut confirmer BUY ou SELL sans OpenAI avec au moins 80 % des conditions pertinentes. Le panneau principal indique simplement BUY, SELL ou WAIT. BUY/SELL clignote uniquement lorsque l’entrée est réellement prête ou que le prix est dans la zone d’entrée. Luna reste un conseiller facultatif.</p>
         <div class="oss-ai-panel">
           <div class="oss-ai-head">
             <div><small>Ensemble open source</small><strong id="modelEnsembleSummary">En attente</strong></div>
@@ -222,7 +227,7 @@
         </div>
         <div class="audit-list"><h3>Contrôles du setup</h3><div id="checks"></div></div>
         <div class="signal-actions" id="signalActions" hidden><button id="copySignal" type="button">Copier le signal</button><button id="shareSignal" type="button">Partager</button></div>
-        <p class="manual-note">L’EA Sera v1.50 est configuré pour l’exécution automatique sur le compte MT5 réel connecté. Sans EA actif, aucun ordre n’est envoyé.</p>
+        <p class="manual-note">L’EA Sera v1.60 est configuré pour l’exécution automatique sur le compte MT5 réel connecté. Sans EA actif, aucun ordre n’est envoyé.</p>
       </aside>
           </section>
         </div>
@@ -232,6 +237,6 @@
     <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button>
     <footer><strong>Trading réel à risque élevé.</strong> Sera fournit une aide à la décision et l’EA peut exécuter automatiquement sur le compte MT5 connecté. Les limites de risque réduisent l’exposition mais ne garantissent aucun gain.</footer>
   </main>
-  <script src="./app.js?v=live-entry-v160-20260919-1" defer></script>
+  <script src="./app.js?v=clear-action-v161-20260919-1" defer></script>
 </body>
 </html>
