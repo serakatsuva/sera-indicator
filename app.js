@@ -918,12 +918,6 @@ function updateLiveScannerDom(market){
   });
 }
 
-function selectedSignalRow(){
-  if(!hasDerivResults())return null;
-  const candidates=payload.markets.filter(item=>item.market===selected);
-  return candidates.find(item=>item.mode===selectedMode)||candidates[0]||null;
-}
-
 function predictionState(row){
   if(!row)return{prediction:"NEUTRE",status:"WAIT",action:"WAIT",side:"wait"};
   const final=row.final_verdict==="BUY"||row.final_verdict==="SELL"?row.final_verdict:null;
