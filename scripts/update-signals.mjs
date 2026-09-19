@@ -6,7 +6,7 @@ const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
-const ENGINE_VERSION='Sera Autonomous Engine v3.3';
+const ENGINE_VERSION='Sera Autonomous Engine v3.4';
 
 const MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -122,7 +122,14 @@ function technicalSetup(meta,entryTf,confirmationTf,mode){
     const entry=entryTf.price,atrMultiplier=mode.id==='day'?1.2:1.5;
     const structural=verdict==='BUY'?Math.min(entry-entryTf.atr*atrMultiplier,entryTf.swingLow):Math.max(entry+entryTf.atr*atrMultiplier,entryTf.swingHigh);
     const distance=Math.max(Math.abs(entry-structural),entryTf.atr),direction=verdict==='BUY'?1:-1;
-    levels={entry,sl:structural,tp1:entry+direction*distance*1.5,tp2:entry+direction*distance*2.4,tp3:entry+direction*distance*3.6};
+    levels={
+      entry,sl:structural,
+      tp1:entry+direction*distance*1.5,
+      tp2:entry+direction*distance*2.4,
+      tp3:entry+direction*distance*3.6,
+      tp4:entry+direction*distance*4.8,
+      tp5:entry+direction*distance*6.0
+    };
   }
 
   const reasons=[
@@ -272,13 +279,16 @@ function estimateTiming(setup,finalVerdict,finalConfidence){
   const activeSide=finalVerdict!=='ATTENDRE'?finalVerdict:bias;
   const regimeFactor=entry.regime==='TRENDING'?1.12:entry.regime==='COMPRESSION'?.78:.92;
   const rate=Math.max(entry.atr*.30,entry.atr*(.45+entry.passed*.04+(confirmation.trendStrong?.12:0))*regimeFactor);
-  let minHours,maxHours,tp1Hours=null,tp2Hours=null,tp3Hours=null;
+  let minHours,maxHours,tp1Hours=null,tp2Hours=null,tp3Hours=null,tp4Hours=null,tp5Hours=null;
 
   if(finalVerdict!=='ATTENDRE'&&setup.levels){
     const eta=target=>Math.max(1,Math.ceil(Math.abs(target-setup.levels.entry)/rate));
     tp1Hours=eta(setup.levels.tp1);tp2Hours=eta(setup.levels.tp2);tp3Hours=eta(setup.levels.tp3);
+    tp4Hours=setup.levels.tp4?eta(setup.levels.tp4):null;
+    tp5Hours=setup.levels.tp5?eta(setup.levels.tp5):null;
     minHours=Math.max(1,Math.floor(tp1Hours*.7));
-    maxHours=Math.min(setup.mode==='swing'?120:36,Math.max(minHours+1,Math.ceil(tp3Hours*1.35)));
+    const farHours=tp5Hours||tp4Hours||tp3Hours;
+    maxHours=Math.min(setup.mode==='swing'?168:48,Math.max(minHours+1,Math.ceil(farHours*1.20)));
   }else if(setup.mode==='swing'){
     const strongSwing=aligned&&entry.trendStrong&&confirmation.trendStrong&&entry.regime==='TRENDING'&&confirmation.regime==='TRENDING';
     const persistent=strongSwing&&mem.persistence&&!mem.flip;
@@ -305,7 +315,7 @@ function estimateTiming(setup,finalVerdict,finalConfidence){
   return {
     bias,side:finalVerdict!=='ATTENDRE'?finalVerdict:activeSide,position_style:style,
     swing_class:swingClass,swing_days_min:minDays,swing_days_max:maxDays,swing_days_label:dayRange,
-    duration_min_hours:minHours,duration_max_hours:maxHours,tp1_hours:tp1Hours,tp2_hours:tp2Hours,tp3_hours:tp3Hours,
+    duration_min_hours:minHours,duration_max_hours:maxHours,tp1_hours:tp1Hours,tp2_hours:tp2Hours,tp3_hours:tp3Hours,tp4_hours:tp4Hours,tp5_hours:tp5Hours,
     expires_in_hours:expiresInHours,recheck_hours:setup.mode==='swing'?1:.25,is_confirmed:finalVerdict!=='ATTENDRE',
     basis:'ATR, régime, mémoire de tendance, structure, force H1/H4 et distance vers les objectifs'
   };
@@ -319,7 +329,14 @@ function buildLevels(setup,verdict){
     ?Math.min(entry-entryTf.atr*atrMultiplier,entryTf.swingLow)
     :Math.max(entry+entryTf.atr*atrMultiplier,entryTf.swingHigh);
   const distance=Math.max(Math.abs(entry-structural),entryTf.atr),direction=verdict==='BUY'?1:-1;
-  return {entry,sl:structural,tp1:entry+direction*distance*1.5,tp2:entry+direction*distance*2.4,tp3:entry+direction*distance*3.6};
+  return {
+    entry,sl:structural,
+    tp1:entry+direction*distance*1.5,
+    tp2:entry+direction*distance*2.4,
+    tp3:entry+direction*distance*3.6,
+    tp4:entry+direction*distance*4.8,
+    tp5:entry+direction*distance*6.0
+  };
 }
 
 function autonomousDecision(setup){
@@ -377,6 +394,8 @@ function autonomousDecision(setup){
   const conditionGate=conditionPassPercent>=minimumConditions;
   const signal=aligned&&confirmationGate&&adverseGate&&riskGate&&conditionGate&&consensus>=minimumConsensus&&score>=minimumScore;
   const verdict=signal?side:'ATTENDRE';
+  const setupDetected=aligned&&!e.spikeRisk&&!m.flip&&score>=60&&conditionPassPercent>=50;
+  const detectedSide=setupDetected?side:'NEUTRE';
 
   const active=strategies.filter(s=>s.applicable&&s.support).map(s=>s.name);
   const missing=strategies.filter(s=>s.applicable&&!s.support).map(s=>s.name);
@@ -388,7 +407,7 @@ function autonomousDecision(setup){
   return {
     verdict,confidence,score,consensus:Math.round(consensus*100),setup_type:setupType,condition_pass_percent:conditionPassPercent,
     conditions_passed:conditionsPassed,conditions_total:conditionsTotal,minimum_conditions_percent:minimumConditions,
-    condition_gate:conditionGate,side,aligned,
+    condition_gate:conditionGate,side,aligned,setup_detected:setupDetected,detected_side:detectedSide,
     active_strategies:active,missing_strategies:missing,
     strategies:strategies.map(s=>({id:s.id,name:s.name,weight:s.weight,applicable:s.applicable,support:s.support})),
     risk_gate:riskGate,adverse_gate:adverseGate,confirmation_gate:confirmationGate,summary
@@ -472,6 +491,7 @@ function finalize(setup,luna){
   finalConfidence=Math.round(clamp(finalConfidence,localConfirmed?75:18,localConfirmed?96:74));
   const finalVerdict=localConfirmed&&finalConfidence>=75?engine.verdict:'ATTENDRE';
   const levels=finalVerdict==='ATTENDRE'?null:buildLevels(setup,finalVerdict);
+  const projectedLevels=engine.setup_detected?buildLevels(setup,engine.detected_side):null;
   const execution=executionAssessment(setup,engine,finalVerdict,levels);
   const timing=estimateTiming({...setup,levels},finalVerdict,finalConfidence);
 
@@ -490,7 +510,9 @@ function finalize(setup,luna){
   ];
 
   return {
-    ...publicSetup(setup),levels,final_verdict:finalVerdict,final_confidence:finalConfidence,timing,
+    ...publicSetup(setup),levels,projected_levels:projectedLevels,
+    setup_detected:engine.setup_detected?1:0,setup_direction:engine.detected_side,
+    final_verdict:finalVerdict,final_confidence:finalConfidence,timing,
     decision_engine:engine,execution,execution_state:execution.state,execution_ready:execution.ready?1:0,execution_score:execution.score,
     confirmation_source:confirmationSource,score_type:finalVerdict!=='ATTENDRE'?'signal_confidence':'setup_readiness',
     ai_verdict:audit?.verdict||'INDISPONIBLE',ai_confidence:aiConfidence,ai_summary:summary,
@@ -569,7 +591,7 @@ async function main(){
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:reused.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
-    safety:"Sera Autonomous Engine exige au moins 80% des conditions pertinentes et distingue le signal directionnel du timing d’entrée. L’EA n’agit que sur EXECUTE_NOW avec les garde-fous critiques. Luna reste facultative."
+    safety:"Sera Autonomous Engine v3.4 peut afficher tôt un SETUP BUY/SELL avec Entry, SL et TP1–TP5 projetés, tout en réservant l’exécution réelle aux signaux EXECUTE_NOW qui passent les garde-fous critiques."
   };
 
   if(CANDLES_OUTPUT){
