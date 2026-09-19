@@ -1,5 +1,5 @@
 #property copyright "Sera Indicator"
-#property version   "1.40"
+#property version   "1.41"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -18,6 +18,8 @@ input int MinimumConfidence=75;
 input int MinimumAutonomousConditionsPercent=80;
 input int MinimumExecutionScore=78;
 input bool RequireExecuteNow=true;
+input bool UseOpenSourceModelGuard=true;
+input int MinimumModelConsensus=67;
 input int MaximumSignalAgeMinutes=90;
 input int MaximumOpenPositions=1;
 input int MaximumTradesPerDay=2;
@@ -222,6 +224,9 @@ void Evaluate(const string json)
       double conditions_percent=JsonNumber(object,"condition_pass_percent");
       string execution_state=JsonString(object,"execution_state");
       double execution_score=JsonNumber(object,"execution_score");
+      string model_direction=JsonString(object,"model_ensemble_direction");
+      double model_consensus=JsonNumber(object,"model_ensemble_consensus");
+      double models_available=JsonNumber(object,"model_models_available");
       if(mode=="swing")
       {
          string setup_id=JsonString(object,"id");
@@ -230,7 +235,14 @@ void Evaluate(const string json)
          string symbol=ResolveTradeSymbol(market_name,deriv_code);
          int state=VerdictState(verdict);
          bool directional_confirmed=(state!=0 && confidence>=MinimumConfidence && conditions_percent>=MinimumAutonomousConditionsPercent);
-         bool execution_ready=(!RequireExecuteNow)||(execution_state=="EXECUTE_NOW"&&execution_score>=MinimumExecutionScore);
+         bool model_guard_ok=true;
+         string opposite=verdict=="BUY"?"SELL":"BUY";
+         if(UseOpenSourceModelGuard && models_available>=2 && model_direction==opposite && model_consensus>=MinimumModelConsensus)
+         {
+            model_guard_ok=false;
+            Print("Sera: execution bloquee par ensemble open-source ",model_direction," ",DoubleToString(model_consensus,0),"% contre ",verdict);
+         }
+         bool execution_ready=((!RequireExecuteNow)||(execution_state=="EXECUTE_NOW"&&execution_score>=MinimumExecutionScore)) && model_guard_ok;
          int alert_state=state*10+(execution_ready?1:0);
 
          int previous_alert_state=StoredState("SERA_ALERTSTATE_",setup_id);
@@ -286,8 +298,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera v1.40 initialise — mode "+mode+" — AutoTrade="+(EnableAutomaticTrading?"ON":"OFF")+" — EXECUTE_NOW requis");
-   Print("Sera v1.40: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", RequireExecuteNow=",RequireExecuteNow);
+   Comment("Sera v1.41 initialise — mode "+mode+" — AutoTrade="+(EnableAutomaticTrading?"ON":"OFF")+" — EXECUTE_NOW + OSS guard");
+   Print("Sera v1.41: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", consensus min=",MinimumModelConsensus,"%");
    return INIT_SUCCEEDED;
 }
 
