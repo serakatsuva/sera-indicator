@@ -81,22 +81,23 @@ def simulate(record:dict[str,Any],rows:list[dict[str,Any]])->dict[str,Any]|None:
                 result=f"LOCKED_TP{stage-1}"; r=[0,0,1.5,2.4,3.6][stage]
             return {"status":"resolved","result":result,"r":r,"max_stage":stage,"resolved_epoch":epoch}
 
-        while stage<5:
+        # Advance by at most one target per candle. This is deliberately
+        # conservative because OHLC candles do not reveal intrabar ordering.
+        if stage<5:
             target=targets[stage]
             hit=(high>=target) if direction=="BUY" else (low<=target)
-            if not hit:
-                break
-            stage+=1
-            if stage==1:
-                current_stop=entry
-            elif stage==2:
-                current_stop=targets[0]
-            elif stage==3:
-                return {"status":"resolved","result":"WIN_TP3","r":3.6,"max_stage":3,"resolved_epoch":epoch}
-            elif stage==4:
-                current_stop=targets[2]
-            elif stage==5:
-                return {"status":"resolved","result":"WIN_TP5","r":6.0,"max_stage":5,"resolved_epoch":epoch}
+            if hit:
+                stage+=1
+                if stage==1:
+                    current_stop=entry
+                elif stage==2:
+                    current_stop=targets[0]
+                elif stage==3:
+                    return {"status":"resolved","result":"WIN_TP3","r":3.6,"max_stage":3,"resolved_epoch":epoch}
+                elif stage==4:
+                    current_stop=targets[2]
+                elif stage==5:
+                    return {"status":"resolved","result":"WIN_TP5","r":6.0,"max_stage":5,"resolved_epoch":epoch}
 
     latest=int(rows[-1].get("epoch") or 0) if rows else 0
     if latest>=expiry:
@@ -145,6 +146,52 @@ def build_profiles(records:list[dict[str,Any]])->dict[str,Any]:
             "wins":sum(1 for r in recent if num(r.get("r"))>0),
         }
     return profiles
+
+
+def build_strategy_profiles(records:list[dict[str,Any]])->dict[str,Any]:
+    grouped:dict[str,list[dict[str,Any]]]={}
+    for record in records:
+        if record.get("status")!="resolved":
+            continue
+        for strategy in record.get("active_strategies") or []:
+            grouped.setdefault(str(strategy),[]).append(record)
+
+    profiles={}
+    for name,items in grouped.items():
+        recent=sorted(items,key=lambda r:int(r.get("resolved_epoch") or 0))[-150:]
+        rs=[num(x.get("r")) for x in recent]
+        decisive=[r for r in recent if num(r.get("r"))!=0]
+        wins=[r for r in decisive if num(r.get("r"))>0]
+        profiles[name]={
+            "samples":len(recent),
+            "decisive_samples":len(decisive),
+            "win_rate":round(len(wins)/len(decisive)*100,1) if decisive else None,
+            "avg_r":round(sum(rs)/len(recent),3) if recent else 0.0,
+        }
+    return profiles
+
+
+def strategy_evidence(row:dict[str,Any],strategy_profiles:dict[str,Any])->dict[str,Any]:
+    active=((row.get("decision_engine") or {}).get("active_strategies") or [])
+    mature=[]
+    for name in active:
+        profile=strategy_profiles.get(str(name))
+        if not profile or int(profile.get("samples") or 0)<15 or int(profile.get("decisive_samples") or 0)<10:
+            continue
+        win=num(profile.get("win_rate"),50.0)/100.0
+        avg=num(profile.get("avg_r"))
+        raw=(win-.50)*6.0 + max(-1.0,min(1.0,avg))*1.5
+        mature.append((str(name),raw,profile))
+    if not mature:
+        return {"adjustment":0,"strategies_used":0,"details":[]}
+    mean=sum(x[1] for x in mature)/len(mature)
+    adjustment=max(-2,min(2,round(mean)))
+    details=sorted(
+        [{"name":n,"samples":p["samples"],"win_rate":p["win_rate"],"avg_r":p["avg_r"]} for n,_,p in mature],
+        key=lambda x:(num(x.get("avg_r")),num(x.get("win_rate"))),
+        reverse=True,
+    )[:5]
+    return {"adjustment":adjustment,"strategies_used":len(mature),"details":details}
 
 
 def evidence_adjustment(profile:dict[str,Any]|None)->dict[str,Any]:
@@ -212,7 +259,7 @@ def record_from_row(row:dict[str,Any])->dict[str,Any]|None:
     }
 
 
-def apply_evidence(row:dict[str,Any],profiles:dict[str,Any]):
+def apply_evidence(row:dict[str,Any],profiles:dict[str,Any],strategy_profiles:dict[str,Any]):
     pseudo={
         "market":row.get("market"),"mode":row.get("mode"),
         "setup_type":((row.get("decision_engine") or {}).get("setup_type") or "GENERIC"),
@@ -220,13 +267,23 @@ def apply_evidence(row:dict[str,Any],profiles:dict[str,Any]):
     }
     profile=profiles.get(profile_key(pseudo))
     evidence=evidence_adjustment(profile)
-    row["adaptive_evidence"]={"version":VERSION,"profile_key":profile_key(pseudo),**evidence}
+    strategy=strategy_evidence(row,strategy_profiles)
+    total_conf=max(-5,min(5,evidence["confidence_adjustment"]+strategy["adjustment"]))
+    total_exec=max(-7,min(7,evidence["execution_adjustment"]+strategy["adjustment"]))
+    row["adaptive_evidence"]={
+        "version":VERSION,"profile_key":profile_key(pseudo),**evidence,
+        "strategy_adjustment":strategy["adjustment"],
+        "strategy_samples_used":strategy["strategies_used"],
+        "strategy_reliability":strategy["details"],
+        "total_confidence_adjustment":total_conf,
+        "total_execution_adjustment":total_exec,
+    }
 
     if evidence["sample_size"]<12:
         return
 
-    row["final_confidence"]=int(max(18,min(96,num(row.get("final_confidence"))+evidence["confidence_adjustment"])))
-    row["execution_score"]=int(max(0,min(98,num(row.get("execution_score"))+evidence["execution_adjustment"])))
+    row["final_confidence"]=int(max(18,min(96,num(row.get("final_confidence"))+total_conf)))
+    row["execution_score"]=int(max(0,min(98,num(row.get("execution_score"))+total_exec)))
     if isinstance(row.get("execution"),dict):
         row["execution"]["score"]=row["execution_score"]
 
@@ -262,15 +319,17 @@ def run(signals_path:Path,candles_path:Path,memory_path:Path):
 
     records=sorted(records,key=lambda r:int(r.get("opened_epoch") or 0))[-MAX_RECORDS:]
     profiles=build_profiles(records)
+    strategy_profiles=build_strategy_profiles(records)
 
     for row in signals.get("markets") or []:
-        apply_evidence(row,profiles)
+        apply_evidence(row,profiles,strategy_profiles)
 
     signals["adaptive_learning"]={
         "version":VERSION,
         "records":len(records),
         "resolved_records":sum(1 for r in records if r.get("status")=="resolved"),
         "profiles":len(profiles),
+        "strategy_profiles":len(strategy_profiles),
         "policy":"Evidence may modestly adjust confidence/execution scores and can downgrade EXECUTE_NOW. It cannot create or reverse a BUY/SELL.",
     }
     signals["model"]=str(signals.get("model") or "Sera")+" + Adaptive Evidence"
@@ -281,6 +340,7 @@ def run(signals_path:Path,candles_path:Path,memory_path:Path):
         "updated_at":datetime.now(timezone.utc).isoformat().replace("+00:00","Z"),
         "records":records,
         "profiles":profiles,
+        "strategy_profiles":strategy_profiles,
     })
 
 
@@ -301,6 +361,12 @@ def self_test():
     rows=[{"epoch":200,"high":108,"low":99},{"epoch":300,"high":113,"low":107},{"epoch":400,"high":119,"low":111}]
     out=simulate(rec,rows)
     assert out and out["result"]=="WIN_TP3" and out["r"]==3.6
+
+    strategy_records=[]
+    for i in range(18):
+        strategy_records.append({**base,"status":"resolved","resolved_epoch":i,"r":3.6 if i<11 else -1.0,"active_strategies":["Trend following","SMC structure"]})
+    sp=build_strategy_profiles(strategy_records)
+    assert sp["Trend following"]["samples"]==18
     print(VERSION+" self-test passed")
 
 
