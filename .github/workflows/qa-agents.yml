@@ -1,0 +1,107 @@
+name: Sera QA Agents
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'app.js'
+      - 'styles.css'
+      - 'deriv.css'
+      - 'popup.css'
+      - 'forex.css'
+      - 'data/**'
+      - 'mt5/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'playwright.config.js'
+      - '.github/workflows/qa-agents.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '17 */2 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  static-agent:
+    name: Agent Static
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check HTML assets IDs and JS syntax
+        run: node scripts/qa_static.mjs
+
+  signal-agent:
+    name: Agent Signals
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate signal consistency
+        run: python scripts/qa_signals.py
+
+  ea-agent:
+    name: Agent EA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate real-account guards
+        run: python scripts/qa_ea.py
+
+  mobile-agent:
+    name: Agent Mobile UI
+    runs-on: ubuntu-latest
+    needs: [static-agent, signal-agent]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Run mobile browser tests
+        run: npx playwright test --project=mobile
+      - name: Upload mobile failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-qa-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  desktop-agent:
+    name: Agent Desktop UI
+    runs-on: ubuntu-latest
+    needs: [static-agent, signal-agent]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Run desktop browser tests
+        run: npx playwright test --project=desktop
+      - name: Upload desktop failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-qa-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
