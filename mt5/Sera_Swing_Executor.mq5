@@ -1,5 +1,5 @@
-#property copyright "Sera Indicator"
-#property version   "1.60"
+#property copyright "Sera EA Swing Intelligent"
+#property version   "1.70"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -12,8 +12,15 @@ input bool AllowAutonomousExecution=true;
 input bool EnableAutomaticTrading=true;
 input bool AllowRealAccount=true;
 input double RiskPercent=0.50;
+input double MaximumAdaptiveRiskPercent=0.75;
 input double MaximumLossUSD=1.00;
-input double MaximumLot=0.02;
+input double MaximumAdaptiveLossUSD=1.50;
+input double MaximumLot=0.05;
+input bool EnableAdaptiveLot=true;
+input double EquityGrowthStepPercent=5.0;
+input double RiskIncreasePerEquityStep=0.05;
+input double DailyProfitBoostThresholdUSD=2.00;
+input double DailyProfitRiskBoost=0.05;
 input int MinimumConfidence=75;
 input int MinimumAutonomousConditionsPercent=80;
 input int MinimumExecutionScore=78;
@@ -32,6 +39,10 @@ input double MaximumDailyDrawdownPercent=3.00;
 input int MaximumConsecutiveLosses=2;
 input double MinimumFreeMarginPercent=25.0;
 input bool EnforceBrokerStopsLevel=true;
+input bool EnableSmartPendingLimits=true;
+input int PendingExpirationHours=8;
+input int MinimumPendingExecutionScore=72;
+input int MinimumPendingConditionsPercent=80;
 input int PollEverySeconds=30;
 input long MagicNumber=26091801;
 input int DeviationPoints=30;
@@ -128,6 +139,42 @@ int OpenSeraPositions()
    return total;
 }
 
+int OpenSeraPendingOrders()
+{
+   int total=0;
+   for(int i=OrdersTotal()-1;i>=0;i--)
+   {
+      ulong ticket=OrderGetTicket(i);
+      if(ticket>0 && OrderGetInteger(ORDER_MAGIC)==MagicNumber)
+      {
+         ENUM_ORDER_TYPE type=(ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
+         if(type==ORDER_TYPE_BUY_LIMIT || type==ORDER_TYPE_SELL_LIMIT) total++;
+      }
+   }
+   return total;
+}
+
+ulong FindSeraPendingOrder(const string symbol)
+{
+   for(int i=OrdersTotal()-1;i>=0;i--)
+   {
+      ulong ticket=OrderGetTicket(i);
+      if(ticket<=0 || OrderGetInteger(ORDER_MAGIC)!=MagicNumber) continue;
+      if(OrderGetString(ORDER_SYMBOL)!=symbol) continue;
+      ENUM_ORDER_TYPE type=(ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
+      if(type==ORDER_TYPE_BUY_LIMIT || type==ORDER_TYPE_SELL_LIMIT) return ticket;
+   }
+   return 0;
+}
+
+void CancelSeraPendingOrder(const string symbol,const string reason)
+{
+   ulong ticket=FindSeraPendingOrder(symbol);
+   if(ticket<=0) return;
+   if(trade.OrderDelete(ticket)) Print("Sera EA Swing Intelligent: pending supprime ",symbol," - ",reason);
+   else Print("Sera EA Swing Intelligent: echec suppression pending ",symbol," - ",trade.ResultRetcodeDescription());
+}
+
 datetime StartOfDay()
 {
    datetime now=TimeCurrent(); MqlDateTime part; TimeToStruct(now,part);
@@ -212,6 +259,48 @@ bool BrokerStopsValid(const string symbol,const string verdict,const double entr
    return false;
 }
 
+double AdaptiveRiskPercent()
+{
+   double risk=RiskPercent;
+   if(!EnableAdaptiveLot) return MathMin(risk,MaximumAdaptiveRiskPercent);
+
+   double equity=AccountInfoDouble(ACCOUNT_EQUITY);
+   string key="SERA_EQUITY_BASELINE";
+   if(!GlobalVariableCheck(key) || GlobalVariableGet(key)<=0)
+      GlobalVariableSet(key,equity);
+
+   double baseline=GlobalVariableGet(key);
+   if(equity>baseline && baseline>0 && EquityGrowthStepPercent>0)
+   {
+      double growthPct=(equity-baseline)/baseline*100.0;
+      int steps=(int)MathFloor(growthPct/EquityGrowthStepPercent);
+      if(steps>0) risk+=steps*RiskIncreasePerEquityStep;
+   }
+
+   double daily=DailyNetProfit();
+   if(daily>=DailyProfitBoostThresholdUSD) risk+=DailyProfitRiskBoost;
+
+   if(ConsecutiveLosses()>=1) risk=MathMin(risk,RiskPercent*0.75);
+
+   double balance=AccountInfoDouble(ACCOUNT_BALANCE);
+   if(balance>0)
+   {
+      double dd=MathMax(0.0,(balance-equity)/balance*100.0);
+      if(dd>=1.0) risk=MathMin(risk,RiskPercent*0.65);
+      if(dd>=2.0) risk=MathMin(risk,RiskPercent*0.50);
+   }
+
+   return MathMax(0.10,MathMin(risk,MaximumAdaptiveRiskPercent));
+}
+
+double AdaptiveLossCap()
+{
+   if(!EnableAdaptiveLot) return MaximumLossUSD;
+   double risk=AdaptiveRiskPercent();
+   double ratio=RiskPercent>0?risk/RiskPercent:1.0;
+   return MathMin(MaximumAdaptiveLossUSD,MaximumLossUSD*MathMax(1.0,ratio));
+}
+
 double SafeVolume(const string symbol,const double entry,const double sl)
 {
    double tick_size=SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_SIZE);
@@ -220,7 +309,9 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    double max_lot=MathMin(SymbolInfoDouble(symbol,SYMBOL_VOLUME_MAX),MaximumLot);
    double step=SymbolInfoDouble(symbol,SYMBOL_VOLUME_STEP);
    if(tick_size<=0 || tick_value<=0 || step<=0 || MathAbs(entry-sl)<=0) return 0;
-   double risk=MathMin(AccountInfoDouble(ACCOUNT_BALANCE)*RiskPercent/100.0,MaximumLossUSD);
+   double adaptiveRisk=AdaptiveRiskPercent();
+   double lossCap=AdaptiveLossCap();
+   double risk=MathMin(AccountInfoDouble(ACCOUNT_EQUITY)*adaptiveRisk/100.0,lossCap);
    double loss_per_lot=(MathAbs(entry-sl)/tick_size)*tick_value;
    double volume=MathFloor((risk/loss_per_lot)/step)*step;
    if(volume<min_lot) return 0;
@@ -348,6 +439,46 @@ void SendTrendAlert(const string market,const string verdict,const double confid
    Print(message);
 }
 
+bool PlaceOrUpdatePendingLimit(const string setup_id,const string symbol,const string verdict,const double entry,const double sl,const double tp,const double volume)
+{
+   if(!EnableSmartPendingLimits || volume<=0 || entry<=0 || sl<=0 || tp<=0) return false;
+
+   MqlTick tick;
+   if(!SymbolInfoTick(symbol,tick)) return false;
+   int digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
+   entry=NormalizeDouble(entry,digits);
+   sl=NormalizeDouble(sl,digits);
+   tp=NormalizeDouble(tp,digits);
+
+   bool valid=verdict=="BUY" ? (entry<tick.ask && sl<entry && tp>entry) : (entry>tick.bid && sl>entry && tp<entry);
+   if(!valid) return false;
+
+   ulong existing=FindSeraPendingOrder(symbol);
+   if(existing>0)
+   {
+      double oldPrice=OrderGetDouble(ORDER_PRICE_OPEN);
+      double point=SymbolInfoDouble(symbol,SYMBOL_POINT);
+      if(MathAbs(oldPrice-entry)<=point*2) return true;
+      CancelSeraPendingOrder(symbol,"mise a jour zone entree");
+   }
+
+   datetime expiration=TimeCurrent()+PendingExpirationHours*3600;
+   trade.SetExpertMagicNumber(MagicNumber);
+   bool sent=verdict=="BUY"
+      ? trade.BuyLimit(volume,entry,symbol,sl,tp,ORDER_TIME_SPECIFIED,expiration,"Sera Intelligent Swing BUY LIMIT")
+      : trade.SellLimit(volume,entry,symbol,sl,tp,ORDER_TIME_SPECIFIED,expiration,"Sera Intelligent Swing SELL LIMIT");
+
+   if(sent)
+   {
+      StoreState("SERA_PENDINGSTATE_",setup_id,VerdictState(verdict));
+      StoreLevel("SERA_ENTRY_",setup_id,entry);
+      Print("Sera EA Swing Intelligent: ",verdict," LIMIT ",symbol," @ ",DoubleToString(entry,digits)," volume=",volume);
+      return true;
+   }
+   Print("Sera EA Swing Intelligent: pending refuse ",trade.ResultRetcodeDescription());
+   return false;
+}
+
 void Evaluate(const string json)
 {
    string status=JsonString(json,"status");
@@ -380,6 +511,8 @@ void Evaluate(const string json)
       double conditions_percent=JsonNumber(object,"condition_pass_percent");
       string execution_state=JsonString(object,"execution_state");
       double execution_score=JsonNumber(object,"execution_score");
+      string setup_direction=JsonString(object,"setup_direction");
+      double setup_detected=JsonNumber(object,"setup_detected");
       string model_direction=JsonString(object,"model_ensemble_direction");
       double model_consensus=JsonNumber(object,"model_ensemble_consensus");
       double models_available=JsonNumber(object,"model_models_available");
@@ -408,6 +541,55 @@ void Evaluate(const string json)
 
          int previous_trade_state=StoredState("SERA_TRADESTATE_",setup_id);
          if(state==0 && previous_trade_state!=0) StoreState("SERA_TRADESTATE_",setup_id,0);
+
+         // Pending LIMIT management: only a confirmed BUY/SELL may create a retracement order.
+         if(symbol!="" && EnableSmartPendingLimits)
+         {
+            bool pending_candidate=directional_confirmed
+               && execution_state=="WAIT_RETRACE"
+               && execution_score>=MinimumPendingExecutionScore
+               && conditions_percent>=MinimumPendingConditionsPercent
+               && can_trade
+               && OpenSeraPositions()<MaximumOpenPositions;
+
+            if(pending_candidate)
+            {
+               int levels_pos_pending=StringFind(object,"\"levels\"");
+               string levels_pending=levels_pos_pending>=0?ExtractObjectAt(object,StringFind(object,"{",levels_pos_pending)):"";
+               int plan_pos=StringFind(object,"\"setup_entry_plan\"");
+               string plan=plan_pos>=0?ExtractObjectAt(object,StringFind(object,"{",plan_pos)):"";
+               double pending_entry=JsonNumber(plan,"suggested_entry");
+               if(pending_entry<=0) pending_entry=JsonNumber(levels_pending,"entry");
+               double pending_sl=JsonNumber(levels_pending,"sl");
+               double pending_tp3=JsonNumber(levels_pending,"tp3");
+               double pending_tp4=JsonNumber(levels_pending,"tp4");
+               double pending_tp5=JsonNumber(levels_pending,"tp5");
+
+               double pending_final_tp=pending_tp3;
+               bool strong_pending_model=(models_available>=2 && model_direction==verdict && model_consensus>=75);
+               if(DynamicFinalTarget && confidence>=90 && execution_score>=90 && strong_pending_model && pending_tp5>0) pending_final_tp=pending_tp5;
+               else if(DynamicFinalTarget && confidence>=85 && execution_score>=85 && pending_tp4>0) pending_final_tp=pending_tp4;
+
+               bool pending_stops_ok=BrokerStopsValid(symbol,verdict,pending_entry,pending_sl,pending_final_tp);
+               double pending_volume=pending_stops_ok?SafeVolume(symbol,pending_entry,pending_sl):0;
+               double pending_margin=0.0;
+               bool pending_margin_ok=pending_volume>0 && OrderCalcMargin(verdict=="BUY"?ORDER_TYPE_BUY_LIMIT:ORDER_TYPE_SELL_LIMIT,symbol,pending_volume,pending_entry,pending_margin)
+                  && pending_margin<=AccountInfoDouble(ACCOUNT_MARGIN_FREE)*0.50;
+
+               if(pending_margin_ok)
+                  PlaceOrUpdatePendingLimit(setup_id,symbol,verdict,pending_entry,pending_sl,pending_final_tp,pending_volume);
+            }
+            else
+            {
+               ulong existing_pending=FindSeraPendingOrder(symbol);
+               if(existing_pending>0)
+               {
+                  bool invalidated=(state==0)||(execution_state=="BLOCKED_RISK")||(setup_detected<=0)||(setup_direction!="" && setup_direction!=verdict);
+                  bool now_market=directional_confirmed&&execution_state=="EXECUTE_NOW";
+                  if(invalidated || now_market) CancelSeraPendingOrder(symbol,invalidated?"setup invalide":"passage EXECUTE_NOW");
+               }
+            }
+         }
 
          if(directional_confirmed && execution_ready && can_trade && state!=previous_trade_state && OpenSeraPositions()<MaximumOpenPositions && TradesToday()<MaximumTradesPerDay)
          {
@@ -453,9 +635,10 @@ void Evaluate(const string json)
                   if(trial_volume>0 && !margin_ok) Print("Sera: entree ignoree, marge libre insuffisante.");
                   if(volume>0)
                   {
+                     CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera Swing v1.60"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera Swing v1.60");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.70"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.70");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -487,8 +670,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera v1.60 — "+mode+" — EXECUTE_NOW + OSS + Risk Circuit");
-   Print("Sera v1.60: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", smart management=",EnableSmartPositionManagement,", daily loss max=",MaximumDailyLossUSD);
+   Comment("Sera EA Swing Intelligent v1.70 — "+mode+" — Market + Smart Limit + Adaptive Risk");
+   Print("Sera EA Swing Intelligent v1.70: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", smart management=",EnableSmartPositionManagement,", daily loss max=",MaximumDailyLossUSD);
    return INIT_SUCCEEDED;
 }
 
