@@ -61,6 +61,7 @@ const modelStatusText=result=>{
   if(!result)return"En attente";
   if(result.status==="ok")return`${modelDirectionLabel(result.direction)} · ${Math.round(Number(result.confidence)||0)}%`;
   if(result.status==="warming_up")return"Apprentissage";
+  if(result.status==="low_quality")return"Qualité insuffisante";
   if(result.status==="pending")return"Prévision en attente";
   if(result.status==="not_selected")return"Non sélectionné";
   if(result.status==="unavailable")return"Indisponible";
