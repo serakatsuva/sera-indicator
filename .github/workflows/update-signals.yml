@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           minute="$(date -u +%M)"
-          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$minute" -lt 12 ]; then
+          if [ "$GITHUB_EVENT_NAME" != "schedule" ] || [ "$minute" -lt 12 ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "Chronos-2 + TimesFM cycle enabled."
           else
