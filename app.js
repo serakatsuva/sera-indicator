@@ -56,7 +56,7 @@ const swingBadgeText=row=>{
   const prefix=timing?.is_confirmed?"SWING":"PROJECTION SWING";
   return `${prefix} ${kind} · ${swingDurationLabel(timing)}`;
 };
-const hasDerivResults=()=>payload?.ok===true&&["ai_analyzed","smart_local","technical_only"].includes(payload?.status)&&payload?.source_broker==="Deriv"&&Array.isArray(payload?.markets);
+const hasDerivResults=()=>payload?.ok===true&&["ai_analyzed","autonomous_analyzed","smart_local","technical_only"].includes(payload?.status)&&payload?.source_broker==="Deriv"&&Array.isArray(payload?.markets);
 const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<130;
 
 $("refreshButton").addEventListener("click",()=>loadSignals(true));
@@ -266,15 +266,15 @@ function render(){
 
   setMarketStatus(fresh?"Deriv : données multi-horizon":"Deriv : données anciennes",fresh?"live":"error");
   const aiActive=fresh&&payload.status==="ai_analyzed";
-  const smartLocal=fresh&&payload.status==="smart_local";
-  setAiStatus(aiActive?"Luna : audit récent":smartLocal?"Smart Engine : autonome":fresh?"Smart Engine : analyse locale":"Validation expirée",aiActive||smartLocal?"live":fresh?"":"error");
-  notice.className=`notice ${aiActive||smartLocal?"success":"warning"}`;
+  const autonomousActive=fresh&&["autonomous_analyzed","smart_local"].includes(payload.status);
+  setAiStatus(aiActive?"Autonome + Luna":autonomousActive?"Moteur autonome actif":fresh?"Moteur autonome : analyse":"Validation expirée",aiActive||autonomousActive?"live":fresh?"":"error");
+  notice.className=`notice ${aiActive||autonomousActive?"success":"warning"}`;
   notice.textContent=aiActive
-    ?`${payload.markets_count} analyses disponibles · ${payload.ai_calls??0} appel(s) Luna · ${payload.cached_ai_validations??0} validation(s) réutilisée(s). Les signaux finaux ont passé l’audit IA.`
-    :smartLocal
-      ?`${payload.markets_count} analyses Smart Engine actualisées. Luna est indisponible, mais ${payload.confirmed_signals??0} setup(s) exceptionnellement solide(s) ont dépassé les seuils autonomes renforcés.`
+    ?`${payload.markets_count} analyses autonomes · ${payload.confirmed_signals??0} signal(aux) final(aux). Luna a audité ${payload.ai_candidates??0} candidat(s), mais la décision primaire reste locale.`
+    :autonomousActive
+      ?`${payload.markets_count} analyses autonomes actualisées · ${payload.confirmed_signals??0} signal(aux) final(aux). OpenAI n’est pas nécessaire pour prendre la décision.`
       :fresh
-        ?`${payload.markets_count} analyses Smart Engine actualisées. ${payload.technical_candidates??0} candidat(s) existent, mais aucun ne dépasse encore les seuils nécessaires pour un signal final.`
+        ?`${payload.markets_count} analyses locales actualisées. Le moteur reste sur ATTENDRE quand le consensus des stratégies est insuffisant.`
         :`Validation expirée depuis ${ageLabel(payload.updated_at)}. Les anciens BUY/SELL sont neutralisés sur ATTENDRE jusqu’à une nouvelle analyse.`;
   const allowedMarkets=new Set(marketsForIndexFamily());
   const rows=payload.markets.filter(row=>allowedMarkets.has(row.market)&&(tradingMode==="all"||row.mode===tradingMode));
@@ -352,7 +352,7 @@ function renderSelected(){
   $("decisionOrb").className=`decision-orb ${cls}`;
   $("decisionOrb").querySelector("strong").textContent=verdict;
   $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% de confiance`):"Validation requise";
-  $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend une analyse Deriv multi-horizon et une validation OpenAI récente pour ${selected}.`;
+  $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend le prochain consensus multi-stratégies pour ${selected}. Luna reste un conseiller facultatif.`;
   $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
   const swingBadge=$("swingDurationBadge");
   if(swingBadge){
@@ -372,7 +372,7 @@ function renderSelected(){
   $("levels").querySelectorAll("strong").forEach((element,index)=>element.textContent=fmt(levelValues[index]));
   const technical=row?.entry_tf||row?.h1;
   const confirmation=row?.confirmation_tf||row?.h4;
-  const metrics=[[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["Régime directionnel",row?.intelligence?.regime==="TRENDING"],["Mémoire tendance",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
+  const metrics=[["Consensus stratégies",Number(row?.decision_engine?.consensus)>=62],[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["Régime directionnel",row?.intelligence?.regime==="TRENDING"],["Mémoire tendance",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
   $("technicalGrid").innerHTML=metrics.map(([label,ok])=>`<div class="metric"><small>${label}</small><strong class="${ok?"ok":"no"}">${ok?"Confirmé":"Non confirmé"}</strong></div>`).join("");
   const profile=[row?.mode==="day"?"Day trading":"Swing",row?.duration?.range||"—",row?.duration?.validity||"—",row?.duration?.reanalysis||"—"];
   $("positionProfile").querySelectorAll("strong").forEach((element,index)=>element.textContent=profile[index]);
