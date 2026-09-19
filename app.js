@@ -61,16 +61,17 @@ const simpleActionState=row=>{
   const side=setupSide(row);
   const proposal=liveEntryProposal(row);
   const execution=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
-  const confirmed=row?.final_verdict==="BUY"||row?.final_verdict==="SELL";
+  const finalSide=row?.final_verdict==="BUY"||row?.final_verdict==="SELL"?row.final_verdict:null;
 
-  if(confirmed&&execution==="EXECUTE_NOW"){
-    return{code:side,label:side,detail:"ENTRER MAINTENANT",side:side.toLowerCase(),blink:true};
+  // A flashing BUY/SELL now has one meaning only: the final engine authorizes execution now.
+  if(finalSide&&execution==="EXECUTE_NOW"){
+    return{code:finalSide,label:finalSide,detail:"ENTRER MAINTENANT",side:finalSide.toLowerCase(),blink:true};
   }
   if(proposal?.live_state==="IN_ENTRY_ZONE"&&hasDetectedSetup(row)){
-    return{code:side,label:side,detail:"PRIX DANS LA ZONE D’ENTRÉE",side:side.toLowerCase(),blink:true};
+    return{code:"WAIT",label:"WAIT",detail:`PRIX DANS LA ZONE · VALIDATION ${side} EN COURS`,side:"wait",blink:false};
   }
   if(hasDetectedSetup(row)){
-    return{code:"WAIT",label:"WAIT",detail:`SETUP ${side} · ATTENDRE L’ENTRÉE`,side:"wait",blink:false};
+    return{code:"WAIT",label:"WAIT",detail:`SETUP ${side} · ATTENDRE LE SIGNAL FINAL`,side:"wait",blink:false};
   }
   return{code:"WAIT",label:"WAIT",detail:"ATTENDRE",side:"wait",blink:false};
 };
