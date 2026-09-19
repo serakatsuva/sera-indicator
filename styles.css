@@ -226,3 +226,77 @@
   .trade-action-box{right:10px;bottom:68px;min-width:150px;padding:7px 8px}
   .trade-action-box strong{font-size:10px}.trade-action-box span{font-size:6.5px}
 }
+
+
+/* Compact mobile-first header / EA / scanner / Trend Watch */
+.compact-info-strip{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:9px 13px!important;min-height:0}
+.compact-info-strip span{font-size:9px;color:#8193a8}
+.compact-info-strip b{color:#dbe8f5}
+.compact-info-strip a,.text-link{color:var(--cyan);font:800 9px var(--sans);text-decoration:none;background:none;border:0;padding:0;cursor:pointer}
+.compact-info-strip a{margin-left:auto}
+
+.compact-execution{padding:10px 13px!important}
+.compact-exec-main{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.compact-exec-status{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.compact-exec-status .mode-badge{padding:5px 8px;font-size:7px}
+.compact-exec-status strong{font-size:11px}
+.compact-exec-status small{font-size:8px;color:#7d8da2}
+.compact-exec-links{display:flex;gap:12px;white-space:nowrap}
+.compact-details{margin-top:9px;padding:9px 12px;border-top:1px solid var(--line);font-size:9px;color:#8fa0b4}
+.compact-details ol{margin:0;padding-left:16px}.compact-details li{margin:4px 0}
+
+.compact-scanner-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.compact-scanner-heading h2{font-size:18px;margin:2px 0 0}
+.compact-scanner-heading .eyebrow{font-size:8px}
+.compact-refresh{min-height:34px!important;padding:7px 12px!important;font-size:9px!important;width:auto!important}
+.compact-meta{display:flex!important;gap:6px!important;overflow-x:auto;white-space:nowrap;padding-bottom:3px;scrollbar-width:none}
+.compact-meta::-webkit-scrollbar{display:none}
+.compact-meta span{flex:0 0 auto!important;border:0!important;background:transparent!important;padding:3px 5px!important;font-size:8px!important;color:#6f8095}
+.compact-meta b{font-size:8px;color:#aab9ca}
+
+.compact-trend-watch{padding:8px 10px!important;margin:7px 0!important;border-radius:10px!important}
+.compact-watch-line{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.compact-watch-title{display:flex;align-items:center;gap:8px;min-width:0;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.compact-watch-title::-webkit-scrollbar{display:none}
+.compact-watch-title>strong{font-size:10px;color:#d9e8f7}
+.compact-watch-title>span:not(.trend-watch-state){font-size:8px;color:#718399}
+.compact-watch-title b{color:#c6d6e7;font-size:8px}
+.watch-summary-state{color:var(--amber)!important}
+.compact-trend-watch .trend-watch-state{padding:4px 6px;font-size:7px;gap:4px}
+.compact-trend-watch .trend-watch-state i{width:6px;height:6px}
+.watch-options-toggle{border:0;background:none;color:var(--cyan);font:800 8px var(--sans);padding:4px;cursor:pointer;flex:0 0 auto}
+.trend-watch-options{padding-top:8px;margin-top:7px;border-top:1px solid var(--line)}
+.compact-trend-watch .trend-watch-controls{margin-top:0;gap:6px}
+.compact-trend-watch .trend-watch-controls label{font-size:8px}
+.compact-trend-watch .trend-watch-controls select,.compact-trend-watch .trend-watch-controls button{min-height:30px;padding:5px 8px;font-size:8px}
+.compact-trend-watch .watch-switch{padding:5px 7px}
+.compact-last-alert{margin-top:6px;font-size:8px;color:#718399}.compact-last-alert strong{color:#a9b9ca}
+
+@media(max-width:720px){
+  .shell{gap:8px!important}
+  .signal-only-hero.compact-info-strip{display:none}
+  .compact-execution{margin-top:6px}
+  .compact-exec-main{align-items:flex-start}
+  .compact-exec-status{gap:5px}
+  .compact-exec-status small{width:100%;font-size:7.5px}
+  .compact-exec-links{gap:9px}
+  .scanner-panel{padding:10px!important}
+  .compact-scanner-heading{margin-bottom:4px}
+  .compact-scanner-heading h2{font-size:16px}
+  .scanner-controls{margin:8px 0!important}
+  .control-label{margin-bottom:4px!important}
+  .market-family-filter.compact-tabs .family-filter,.compact-tabs .mode-filter,.index-family-button{min-height:31px!important;padding:5px 8px!important;font-size:8px!important}
+  .compact-trend-watch .trend-watch-controls>*{width:auto}
+  .compact-trend-watch .trend-watch-controls label{justify-content:flex-start}
+  .compact-trend-watch .trend-watch-controls select,.compact-trend-watch .trend-watch-controls button{flex:0 1 auto}
+  #notice{margin:7px 0!important;padding:8px 10px!important;font-size:9px!important;line-height:1.35!important}
+}
+@media(max-width:480px){
+  .compact-exec-status .mode-badge{display:none}
+  .compact-exec-status strong{font-size:10px}
+  .compact-exec-status small{font-size:7px}
+  .text-link{font-size:8px}
+  .compact-watch-title{gap:6px}
+  .compact-watch-title>strong{font-size:9px}
+  .watch-summary-state{max-width:120px;overflow:hidden;text-overflow:ellipsis}
+}
