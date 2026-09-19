@@ -147,12 +147,17 @@ def vote_from_probability(prob_up: float, validation_accuracy: float | None = No
     else:
         direction = "NEUTRAL"
     confidence = round(max(p, 1.0 - p) * 100.0, 1)
+    quality = float(validation_accuracy) if validation_accuracy is not None else None
+    status = "ok" if quality is None or quality >= 0.53 else "low_quality"
+    if status != "ok":
+        direction = "NEUTRAL"
     return {
-        "status": "ok",
+        "status": status,
         "direction": direction,
         "probability_up": round(p * 100.0, 1),
         "confidence": confidence,
-        "validation_accuracy": round(validation_accuracy * 100.0, 1) if validation_accuracy is not None else None,
+        "validation_accuracy": round(quality * 100.0, 1) if quality is not None else None,
+        "minimum_validation_quality": 53.0,
     }
 
 
@@ -178,7 +183,11 @@ def fit_xgboost(rows: list[dict[str, Any]], horizon: int) -> dict[str, Any]:
             random_state=26,
         )
         model.fit(X[:split], y[:split])
-        accuracy = float((model.predict(X[split:]) == y[split:]).mean()) if split < len(X) else None
+        if split < len(X):
+            from sklearn.metrics import balanced_accuracy_score
+            accuracy = float(balanced_accuracy_score(y[split:], model.predict(X[split:])))
+        else:
+            accuracy = None
         model.fit(X, y)
         prob = float(model.predict_proba(current)[0, 1])
         result = vote_from_probability(prob, accuracy)
@@ -210,7 +219,11 @@ def fit_lightgbm(rows: list[dict[str, Any]], horizon: int) -> dict[str, Any]:
             random_state=26,
         )
         model.fit(X[:split], y[:split])
-        accuracy = float((model.predict(X[split:]) == y[split:]).mean()) if split < len(X) else None
+        if split < len(X):
+            from sklearn.metrics import balanced_accuracy_score
+            accuracy = float(balanced_accuracy_score(y[split:], model.predict(X[split:])))
+        else:
+            accuracy = None
         model.fit(X, y)
         prob = float(model.predict_proba(current)[0, 1])
         result = vote_from_probability(prob, accuracy)
@@ -265,8 +278,8 @@ def chronos_forecasts(requests: list[tuple[str, list[dict[str, Any]], int]]) -> 
         for row_id, rows, horizon in requests:
             try:
                 tail = rows[-220:]
-                timestamps = pd.to_datetime([int(x["epoch"]) for x in tail], unit="s", utc=True)
-                values = np.asarray([safe_float(x["close"]) for x in tail], dtype=np.float32)
+                timestamps = pd.to_datetime([int(x["epoch"]) for x in tail], unit="s", utc=True).tz_localize(None)
+                values = np.asarray([safe_float(x["close"]) for x in tail], dtype=np.float64)
                 frame = pd.DataFrame({"id": row_id, "timestamp": timestamps, "target": values})
                 pred = pipeline.predict_df(
                     frame,
