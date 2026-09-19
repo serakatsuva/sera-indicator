@@ -1,5 +1,5 @@
 #property copyright "Sera Indicator"
-#property version   "1.20"
+#property version   "1.30"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -8,7 +8,7 @@ input string SignalsUrl="https://serakatsuva.github.io/sera-indicator/data/signa
 input bool EnableTrendWatch=true;
 input bool EnableTerminalAlert=true;
 input bool EnablePushNotification=false;
-input bool AllowSmartLocalExecution=true;
+input bool AllowAutonomousExecution=true;
 input bool EnableAutomaticTrading=true;
 input bool AllowRealAccount=true;
 input double RiskPercent=0.50;
@@ -190,18 +190,18 @@ void SendTrendAlert(const string market,const string verdict,const double confid
 void Evaluate(const string json)
 {
    string status=JsonString(json,"status");
-   if(status!="ai_analyzed" && status!="smart_local"){ Comment("Sera Trend Watch: aucun signal final confirme"); return; }
+   if(status!="ai_analyzed" && status!="autonomous_analyzed" && status!="smart_local"){ Comment("Sera: aucun signal final autonome confirme"); return; }
    datetime generated=ParseIsoUtc(JsonString(json,"updated_at"));
    if(generated==0 || TimeGMT()-generated>MaximumSignalAgeMinutes*60){ Comment("Sera Trend Watch: signal global expire"); return; }
 
-   bool source_allows_trade=(status=="ai_analyzed")||(status=="smart_local"&&AllowSmartLocalExecution);
+   bool source_allows_trade=(status=="ai_analyzed")||(status=="autonomous_analyzed"&&AllowAutonomousExecution)||(status=="smart_local"&&AllowAutonomousExecution);
    bool can_trade=EnableAutomaticTrading&&source_allows_trade;
    if(can_trade && AccountInfoInteger(ACCOUNT_TRADE_MODE)!=ACCOUNT_TRADE_MODE_DEMO && !AllowRealAccount)
    {
       can_trade=false;
       Comment("Sera Trend Watch actif — trading reel bloque (AllowRealAccount=false)");
    }
-   else if(status=="smart_local" && !AllowSmartLocalExecution) Comment("Sera Smart Local actif — alertes seulement; execution locale bloquee");
+   else if((status=="autonomous_analyzed"||status=="smart_local") && !AllowAutonomousExecution) Comment("Sera autonome actif — alertes seulement; execution autonome bloquee");
    else if(EnableTrendWatch && !EnableAutomaticTrading) Comment("Sera Trend Watch actif — alertes seulement");
    else if(EnableTrendWatch && EnableAutomaticTrading)
    {
@@ -278,8 +278,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera v1.20 initialise — mode "+mode+" — AutoTrade="+(EnableAutomaticTrading?"ON":"OFF")+" — Risk "+DoubleToString(RiskPercent,2)+"%");
-   Print("Sera v1.20: compte ",mode,", trading automatique=",EnableAutomaticTrading,", compte reel autorise=",AllowRealAccount,", SmartLocal=",AllowSmartLocalExecution);
+   Comment("Sera v1.30 initialise — mode "+mode+" — AutoTrade="+(EnableAutomaticTrading?"ON":"OFF")+" — Risk "+DoubleToString(RiskPercent,2)+"%");
+   Print("Sera v1.30: compte ",mode,", trading automatique=",EnableAutomaticTrading,", compte reel autorise=",AllowRealAccount,", AutoEngine=",AllowAutonomousExecution);
    return INIT_SUCCEEDED;
 }
 
