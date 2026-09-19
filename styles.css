@@ -194,3 +194,35 @@
 .live-entry-box.ready{border-color:rgba(56,232,187,.32);background:rgba(10,30,28,.90)}
 .live-entry-box.ready span{color:#9ce8d4}
 @media(max-width:560px){.live-entry-box{left:10px;bottom:10px;max-width:82%;padding:7px 8px}.live-entry-box strong{font-size:11px}.live-entry-box span{font-size:6.5px}}
+
+
+/* Clear BUY / SELL / WAIT execution state */
+.trade-action-box{position:absolute;right:18px;bottom:16px;z-index:4;display:flex;align-items:center;gap:8px;min-width:190px;border:1px solid var(--line);border-radius:12px;background:rgba(8,15,24,.92);padding:9px 11px}
+.trade-action-box>i,.trade-action-chip>i{width:9px;height:9px;border-radius:999px;flex:0 0 auto}
+.trade-action-box strong{font:900 13px var(--mono);letter-spacing:.06em}
+.trade-action-box span{font:800 8px var(--mono);line-height:1.3}
+.trade-action-box.buy{border-color:rgba(77,163,255,.36);background:rgba(10,27,48,.94)}
+.trade-action-box.buy>i,.trade-action-chip.buy>i{background:#4da3ff;box-shadow:0 0 10px rgba(77,163,255,.7)}
+.trade-action-box.buy strong,.trade-action-chip.buy strong{color:#4da3ff}
+.trade-action-box.sell{border-color:rgba(255,95,118,.36);background:rgba(44,14,23,.94)}
+.trade-action-box.sell>i,.trade-action-chip.sell>i{background:#ff5f76;box-shadow:0 0 10px rgba(255,95,118,.65)}
+.trade-action-box.sell strong,.trade-action-chip.sell strong{color:#ff5f76}
+.trade-action-box.wait{border-color:rgba(255,177,66,.38);background:rgba(46,31,10,.94)}
+.trade-action-box.wait>i,.trade-action-chip.wait>i{background:#ffb142;box-shadow:0 0 8px rgba(255,177,66,.5)}
+.trade-action-box.wait strong,.trade-action-chip.wait strong{color:#ffb142}
+
+.trade-action-chip{display:flex;align-items:center;gap:6px;margin:8px 0 2px;border:1px solid var(--line);border-radius:999px;padding:6px 8px;background:rgba(0,0,0,.13);width:max-content;max-width:100%}
+.trade-action-chip strong{font:900 8px var(--mono)}
+.trade-action-chip span{font:800 7px var(--mono);color:#8ea1b6;white-space:normal}
+.trade-action-chip.buy{border-color:rgba(77,163,255,.24)}
+.trade-action-chip.sell{border-color:rgba(255,95,118,.24)}
+.trade-action-chip.wait{border-color:rgba(255,177,66,.26)}
+
+@keyframes seraTradePulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.45}}
+.trade-action-box.blink>i,.trade-action-chip.blink>i{animation:seraTradePulse .85s ease-in-out infinite}
+.trade-action-box.blink{box-shadow:0 0 0 1px rgba(255,255,255,.03),0 0 18px rgba(255,255,255,.05)}
+@media(prefers-reduced-motion:reduce){.trade-action-box.blink>i,.trade-action-chip.blink>i{animation:none}}
+@media(max-width:560px){
+  .trade-action-box{right:10px;bottom:68px;min-width:150px;padding:7px 8px}
+  .trade-action-box strong{font-size:10px}.trade-action-box span{font-size:6.5px}
+}
