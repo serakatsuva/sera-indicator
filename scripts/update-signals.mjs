@@ -5,7 +5,7 @@ const OPENAI_API_KEY=process.env.OPENAI_API_KEY||'';
 const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
-const ENGINE_VERSION='Sera Autonomous Engine v3.0';
+const ENGINE_VERSION='Sera Autonomous Engine v3.1';
 
 const MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -336,8 +336,12 @@ function autonomousDecision(setup){
 
   const applicable=strategies.filter(s=>s.applicable);
   const possible=applicable.reduce((sum,s)=>sum+s.weight,0)||1;
-  const supportWeight=applicable.filter(s=>s.support).reduce((sum,s)=>sum+s.weight,0);
+  const supported=applicable.filter(s=>s.support);
+  const supportWeight=supported.reduce((sum,s)=>sum+s.weight,0);
   const consensus=supportWeight/possible;
+  const conditionsPassed=supported.length;
+  const conditionsTotal=applicable.length||1;
+  const conditionPassPercent=Math.round((conditionsPassed/conditionsTotal)*100);
 
   const quality=(Number(e.trendQuality)||0)*.42+(Number(c.trendQuality)||0)*.38+(Number(setup.intelligence?.local_score)||0)*.20;
   let score=consensus*72+quality*.28;
@@ -349,23 +353,27 @@ function autonomousDecision(setup){
   if(adverse)score-=5;
   score=Math.round(clamp(score,0,97));
 
+  const minimumConditions=80;
   const minimumConsensus=setup.mode==='swing'?.62:.66;
   const minimumScore=setup.mode==='swing'?74:76;
   const confirmationGate=setup.mode==='swing'?c.trendQuality>=58:c.trendQuality>=54;
   const adverseGate=!adverse||(score>=84&&e.sweep&&(e.bos||e.choch));
   const riskGate=!e.spikeRisk&&!m.flip&&setup.risk?.specific_guard!==false;
-  const signal=aligned&&confirmationGate&&adverseGate&&riskGate&&consensus>=minimumConsensus&&score>=minimumScore;
+  const conditionGate=conditionPassPercent>=minimumConditions;
+  const signal=aligned&&confirmationGate&&adverseGate&&riskGate&&conditionGate&&consensus>=minimumConsensus&&score>=minimumScore;
   const verdict=signal?side:'ATTENDRE';
 
   const active=strategies.filter(s=>s.applicable&&s.support).map(s=>s.name);
   const missing=strategies.filter(s=>s.applicable&&!s.support).map(s=>s.name);
   const confidence=signal?Math.round(clamp(score,75,95)):Math.round(clamp(score,18,74));
   const summary=signal
-    ?`${verdict} autonome: ${active.length}/${applicable.length} familles de stratégie convergent (${Math.round(consensus*100)}% de consensus), régime ${e.regime}, confirmation multi-timeframe ${aligned?'alignée':'non alignée'}.`
-    :`ATTENDRE autonome: consensus ${Math.round(consensus*100)}%, score ${score}/100. Le moteur exige davantage de convergence avant une décision exécutable.`;
+    ?`${verdict} autonome: ${conditionsPassed}/${conditionsTotal} conditions validées (${conditionPassPercent}%), consensus pondéré ${Math.round(consensus*100)}%, régime ${e.regime}, horizons ${aligned?'alignés':'non alignés'}.`
+    :`ATTENDRE autonome: ${conditionsPassed}/${conditionsTotal} conditions validées (${conditionPassPercent}%), consensus ${Math.round(consensus*100)}%, score ${score}/100. Seuil autonome requis: au moins 80% des conditions + garde-fous critiques.`;
 
   return {
-    verdict,confidence,score,consensus:Math.round(consensus*100),side,aligned,
+    verdict,confidence,score,consensus:Math.round(consensus*100),condition_pass_percent:conditionPassPercent,
+    conditions_passed:conditionsPassed,conditions_total:conditionsTotal,minimum_conditions_percent:minimumConditions,
+    condition_gate:conditionGate,side,aligned,
     active_strategies:active,missing_strategies:missing,
     strategies:strategies.map(s=>({id:s.id,name:s.name,weight:s.weight,applicable:s.applicable,support:s.support})),
     risk_gate:riskGate,adverse_gate:adverseGate,confirmation_gate:confirmationGate,summary
@@ -476,7 +484,7 @@ async function main(){
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:reused.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
-    safety:'Sera Autonomous Engine prend sa décision localement par consensus multi-stratégies. Luna est un conseiller facultatif. Aucun score ni consensus ne garantit un gain.'
+    safety:'Sera Autonomous Engine exige au moins 80% des conditions locales applicables et les garde-fous critiques avant un BUY/SELL autonome. Luna est un conseiller facultatif. Aucun score ne garantit un gain.'
   };
 
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
