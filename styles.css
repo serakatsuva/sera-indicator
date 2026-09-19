@@ -133,3 +133,37 @@
 .qwen-local-panel button:disabled{opacity:.58;cursor:wait}
 .qwen-local-panel p{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:rgba(0,0,0,.14);padding:9px;color:#aebed0;font-size:9px;line-height:1.55;white-space:pre-wrap}
 @media(max-width:520px){.oss-model-grid{grid-template-columns:1fr}.oss-ai-head{align-items:flex-start}}
+
+
+/* Directional setup + 5 targets — 2026-09-19 */
+:root{--sera-buy-blue:#4da3ff;--sera-sell-red:#ff5f76}
+.signal.buy{background:rgba(77,163,255,.12)!important;color:var(--sera-buy-blue)!important}
+.verdict-badge.buy{color:var(--sera-buy-blue)!important;background:rgba(77,163,255,.11)!important;border-color:rgba(77,163,255,.28)!important}
+.decision-orb.buy{border-color:rgba(77,163,255,.28)!important;background:radial-gradient(circle,rgba(77,163,255,.11),transparent 65%)!important;color:var(--sera-buy-blue)!important}
+.result-timing.buy{color:var(--sera-buy-blue)}
+.result-timing.sell{color:var(--sera-sell-red)}
+.oss-model.buy strong,.oss-ai-head strong.buy{color:var(--sera-buy-blue)!important}
+.result-card.buy::before{background:rgba(77,163,255,.15)!important;color:#9acaff!important}
+
+.setup-side{display:inline-flex;align-items:center;gap:5px;margin-top:7px;border:1px solid var(--line);border-radius:999px;padding:4px 7px;font:800 7px var(--mono);letter-spacing:.055em;width:max-content}
+.setup-side i,.setup-direction i{width:6px;height:6px;border-radius:50%;display:inline-block;flex:0 0 auto}
+.setup-side.buy{color:var(--sera-buy-blue);border-color:rgba(77,163,255,.25);background:rgba(77,163,255,.07)}
+.setup-side.buy i,.setup-direction.buy i{background:var(--sera-buy-blue);box-shadow:0 0 9px rgba(77,163,255,.65)}
+.setup-side.sell{color:var(--sera-sell-red);border-color:rgba(255,95,118,.25);background:rgba(255,95,118,.07)}
+.setup-side.sell i,.setup-direction.sell i{background:var(--sera-sell-red);box-shadow:0 0 9px rgba(255,95,118,.55)}
+.setup-direction{position:absolute;right:22px;top:56px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:rgba(0,0,0,.24);font:800 8px var(--mono);letter-spacing:.055em;color:#8c9eb2}
+.setup-direction.buy{color:var(--sera-buy-blue);border-color:rgba(77,163,255,.25);background:rgba(77,163,255,.08)}
+.setup-direction.sell{color:var(--sera-sell-red);border-color:rgba(255,95,118,.25);background:rgba(255,95,118,.08)}
+.setup-direction.wait i{background:var(--amber)}
+
+.levels{grid-template-columns:repeat(7,minmax(0,1fr))}
+.levels strong{font-size:10px}
+.signal-modal .levels{grid-template-columns:repeat(7,minmax(0,1fr))}
+@media(max-width:900px){
+  .levels,.signal-modal .levels{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:520px){
+  .levels,.signal-modal .levels{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .levels div:last-child,.signal-modal .levels div:last-child{grid-column:auto}
+  .setup-direction{right:12px;top:52px;font-size:7px}
+}
