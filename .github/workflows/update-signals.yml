@@ -1,4 +1,4 @@
-name: Sera Indicator — Day M15 H1 + Swing H1 H4
+name: Sera Smart Engine — Deriv + Luna
 
 on:
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
       - name: Test Deriv signal engine
         run: node scripts/update-signals.mjs --self-test
 
-      - name: Analyze Deriv day trading and swing with Luna and Sol
+      - name: Analyze Deriv with Sera Smart Engine and Luna
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SCREENING_MODEL: gpt-5.6-luna
