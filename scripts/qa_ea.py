@@ -2,7 +2,7 @@
 from pathlib import Path
 import re
 
-text = Path("mt5/Sera_Swing_Executor.mq5").read_text(encoding="utf-8")
+text = Path("mt5/Sera_EA_Swing_Intelligent.mq5").read_text(encoding="utf-8")
 errors = []
 
 version = re.search(r'#property\s+version\s+"([^"]+)"', text)
