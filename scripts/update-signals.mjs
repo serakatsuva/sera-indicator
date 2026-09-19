@@ -120,7 +120,7 @@ function inspectCandles(candles){
   }
   const bbBaseline=average(bbWidths.slice(0,-5))||bollingerWidth;
   const squeeze=bollingerWidth<bbBaseline*.72;
-  const squeezeRelease=bollingerWidth>bbBaseline*.95&&volatilityExpansion>1.05;
+  const squeezeRelease=bollingerWidth>bbBaseline*.95&&!squeeze;
 
   const donchianHigh=Math.max(...highs.slice(-21,-1)),donchianLow=Math.min(...lows.slice(-21,-1));
   const donchianBreakout=bullish?last.close>donchianHigh:last.close<donchianLow;
