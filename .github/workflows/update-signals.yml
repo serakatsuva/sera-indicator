@@ -98,11 +98,18 @@ jobs:
           --cache data/open-source-ai.json
           --foundation ${{ steps.foundation.outputs.run }}
 
+      - name: Send Gmail Swing alerts
+        env:
+          GMAIL_ALERT_FROM: ${{ secrets.GMAIL_ALERT_FROM }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GMAIL_ALERT_TO: ${{ secrets.GMAIL_ALERT_TO }}
+        run: python scripts/send_gmail_alerts.py
+
       - name: Commit validated signals
         run: |
           git config user.name "sera-indicator-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/signals.json data/open-source-ai.json
+          git add data/signals.json data/open-source-ai.json data/email-alert-state.json
           if git diff --cached --quiet; then
             echo "No signal changes to commit."
           else
