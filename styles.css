@@ -182,3 +182,15 @@
 .swing-pips-panel>p{margin-top:7px;color:#6f8297;font-size:7px;line-height:1.45}
 .swing-pips-mini{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font:800 7px var(--mono);color:#9ec8ee}
 @media(max-width:650px){.swing-pips-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.swing-pips-head{align-items:flex-start;flex-direction:column}.swing-pips-head strong{text-align:left}}
+
+
+/* Live setup entry proposal */
+.live-entry-box{position:absolute;left:18px;bottom:16px;z-index:3;max-width:min(420px,72%);border:1px solid var(--line);border-radius:10px;background:rgba(7,14,23,.88);backdrop-filter:blur(8px);padding:8px 10px}
+.live-entry-box small{display:block;color:#7d90a6;font-size:7px;text-transform:uppercase;letter-spacing:.1em}
+.live-entry-box strong{display:block;margin-top:3px;font:900 14px var(--mono);letter-spacing:.02em}
+.live-entry-box span{display:block;margin-top:3px;font:700 7px var(--mono);color:#8ea1b6;line-height:1.35}
+.live-entry-box.buy strong{color:var(--sera-buy-blue)}
+.live-entry-box.sell strong{color:var(--sera-sell-red)}
+.live-entry-box.ready{border-color:rgba(56,232,187,.32);background:rgba(10,30,28,.90)}
+.live-entry-box.ready span{color:#9ce8d4}
+@media(max-width:560px){.live-entry-box{left:10px;bottom:10px;max-width:82%;padding:7px 8px}.live-entry-box strong{font-size:11px}.live-entry-box span{font-size:6.5px}}
