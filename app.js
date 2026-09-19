@@ -27,6 +27,9 @@ let trendWatchSound=localStorage.getItem("seraTrendWatchSound")!=="0";
 let trendWatchSnapshots=loadTrendWatchSnapshots();
 let trendWatchLastAlert=localStorage.getItem("seraTrendWatchLastAlert")||"";
 let trendWatchBannerTimer=null;
+let qwenEngine=null;
+let qwenLoading=false;
+let qwenLoadedModel="";
 const signalModal=$("signalModal");
 const welcomePopup=$("welcomePopup");
 const welcomeContinue=$("welcomeContinue");
@@ -52,6 +55,17 @@ const swingDurationLabel=timing=>timing?.swing_days_label||durationLabel(timing)
 const executionLabel=row=>{
   const state=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
   return ({EXECUTE_NOW:"EXÉCUTER MAINTENANT",WAIT_RETRACE:"ATTENDRE RETRACEMENT",WAIT_CONFIRMATION:"ATTENDRE CONFIRMATION",BLOCKED_RISK:"BLOQUÉ RISQUE"})[state]||state;
+};
+const modelDirectionLabel=value=>value==="BUY"?"BUY":value==="SELL"?"SELL":"NEUTRE";
+const modelStatusText=result=>{
+  if(!result)return"En attente";
+  if(result.status==="ok")return`${modelDirectionLabel(result.direction)} · ${Math.round(Number(result.confidence)||0)}%`;
+  if(result.status==="warming_up")return"Apprentissage";
+  if(result.status==="pending")return"Prévision en attente";
+  if(result.status==="not_selected")return"Non sélectionné";
+  if(result.status==="unavailable")return"Indisponible";
+  if(result.status==="error")return"Erreur";
+  return String(result.status||"En attente");
 };
 const swingBadgeText=row=>{
   if(row?.mode!=="swing")return"";
@@ -103,6 +117,7 @@ $("trendWatchSound")?.addEventListener("change",event=>{
   localStorage.setItem("seraTrendWatchSound",trendWatchSound?"1":"0");
 });
 $("enableBrowserAlerts")?.addEventListener("click",requestBrowserAlerts);
+$("qwenAdvisorButton")?.addEventListener("click",runQwenAdvisor);
 $("closeSignalModal")?.addEventListener("click",closeSignalModal);
 $("signalModalBackdrop")?.addEventListener("click",closeSignalModal);
 document.addEventListener("keydown",event=>{
@@ -271,7 +286,8 @@ function render(){
   setMarketStatus(fresh?"Deriv : données multi-horizon":"Deriv : données anciennes",fresh?"live":"error");
   const aiActive=fresh&&payload.status==="ai_analyzed";
   const autonomousActive=fresh&&["autonomous_analyzed","smart_local"].includes(payload.status);
-  setAiStatus(aiActive?"Autonome + Luna":autonomousActive?"Moteur autonome actif":fresh?"Moteur autonome : analyse":"Validation expirée",aiActive||autonomousActive?"live":fresh?"":"error");
+  const ossActive=fresh&&Boolean(payload?.open_source_models);
+  setAiStatus(aiActive?(ossActive?"Autonome + OSS + Luna":"Autonome + Luna"):autonomousActive?(ossActive?"Autonome + OSS":"Moteur autonome actif"):fresh?"Moteur autonome : analyse":"Validation expirée",aiActive||autonomousActive?"live":fresh?"":"error");
   notice.className=`notice ${aiActive||autonomousActive?"success":"warning"}`;
   notice.textContent=aiActive
     ?`${payload.markets_count} analyses autonomes · ${payload.confirmed_signals??0} signal(aux) final(aux). Luna a audité ${payload.ai_candidates??0} candidat(s), mais la décision primaire reste locale.`
@@ -328,8 +344,12 @@ function resultCard(row,fresh){
   const execState=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
   const status=verdict!=="ATTENDRE"?executionLabel(row):conditions>=80?"80% atteint · garde-fou en attente":row.technical_verdict!=="ATTENDRE"?"Setup détecté":"En attente";
   const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`;
+  const ensemble=row?.open_source_ai?.ensemble;
+  const oss=ensemble?.available_models
+    ?`OSS ${modelDirectionLabel(ensemble.direction)} ${Math.round(Number(ensemble.consensus)||0)}%`
+    :"OSS en attente";
   const swingBadge=row.mode==="swing"?`<div class="swing-duration-badge ${String(row.timing?.swing_class||"court").toLowerCase()}">${escapeHtml(swingBadgeText(row))}</div>`:"";
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(setupType)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
   card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();openSignalModal(row.market);};
   return card;
 }
@@ -347,6 +367,7 @@ function renderSelected(){
     $("timingNote").textContent="Durée, expiration et objectifs seront calculés après réception des vraies bougies MT5.";
     $("technicalGrid").innerHTML=[["Sessions","Londres / New York"],["Tendance","H1 + H4"],["Volatilité","ATR Forex"],["Actualités","Contrôle requis"]].map(([label,value])=>`<div class="metric"><small>${label}</small><strong class="no">${value}</strong></div>`).join("");
     $("checks").innerHTML='<div class="check no"><i></i><span>Flux de bougies Deriv MT5 non connecté</span></div><div class="check no"><i></i><span>Aucun signal ni pourcentage ne sera fabriqué</span></div>';
+    renderOpenSourceModels(null);
     $("signalActions").hidden=true;drawChart("wait");highlightSelected();return;
   }
   const candidates=hasDerivResults()?payload.markets.filter(item=>item.market===selected):[];
@@ -360,6 +381,7 @@ function renderSelected(){
   $("decisionOrb").querySelector("strong").textContent=verdict;
   $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`):"Validation requise";
   $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend le prochain consensus multi-stratégies pour ${selected}. Luna reste un conseiller facultatif.`;
+  renderOpenSourceModels(row);
   $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
   const swingBadge=$("swingDurationBadge");
   if(swingBadge){
@@ -408,6 +430,104 @@ function renderSelected(){
   $("signalActions").hidden=!(fresh&&verdict!=="ATTENDRE");
   drawChart(cls);
   highlightSelected();
+}
+
+function renderOpenSourceModels(row){
+  const host=$("modelEnsembleGrid"),summary=$("modelEnsembleSummary"),count=$("modelEnsembleCount");
+  if(!host||!summary||!count)return;
+  const oss=row?.open_source_ai;
+  const models=oss?.models||{};
+  const entries=[
+    ["XGBoost",models.xgboost],
+    ["LightGBM",models.lightgbm],
+    ["Chronos-2",models.chronos2],
+    ["TimesFM 2.5",models.timesfm25]
+  ];
+  host.innerHTML=entries.map(([name,result])=>{
+    const direction=result?.direction||"NEUTRAL";
+    const cls=direction==="BUY"?"buy":direction==="SELL"?"sell":"wait";
+    return `<div class="oss-model ${cls}"><small>${escapeHtml(name)}</small><strong>${escapeHtml(modelStatusText(result))}</strong></div>`;
+  }).join("");
+  const ensemble=oss?.ensemble;
+  if(ensemble?.available_models){
+    summary.textContent=`${modelDirectionLabel(ensemble.direction)} · ${Math.round(Number(ensemble.consensus)||0)}% consensus`;
+    count.textContent=`${ensemble.available_models}/4`;
+    summary.className=signalClass(ensemble.direction);
+  }else{
+    summary.textContent="En attente du cycle ML";
+    count.textContent="0/4";
+    summary.className="wait";
+  }
+  const qwenButton=$("qwenAdvisorButton"),qwenOutput=$("qwenAdvisorOutput");
+  if(qwenButton){
+    qwenButton.disabled=false;
+    qwenButton.textContent=qwenLoadedModel?"Relancer Qwen local":"Lancer Qwen local";
+  }
+  if(qwenOutput){
+    qwenOutput.hidden=true;
+    qwenOutput.textContent="";
+  }
+}
+
+function selectedSignalRow(){
+  if(!hasDerivResults())return null;
+  const rows=payload.markets.filter(item=>item.market===selected);
+  return rows.find(item=>item.mode===selectedMode)||rows[0]||null;
+}
+
+async function runQwenAdvisor(){
+  const button=$("qwenAdvisorButton"),output=$("qwenAdvisorOutput"),row=selectedSignalRow();
+  if(!button||!output||!row||qwenLoading)return;
+  output.hidden=false;
+  if(!("gpu" in navigator)){
+    output.textContent="Qwen local nécessite WebGPU. Le moteur Sera et les autres modèles continuent de fonctionner sans lui.";
+    return;
+  }
+  qwenLoading=true;
+  button.disabled=true;
+  try{
+    if(!qwenEngine){
+      output.textContent="Chargement de Qwen3-0.6B local… Le premier chargement télécharge le modèle et peut prendre du temps.";
+      const webllm=await import("https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm/+esm");
+      const model="Qwen3-0.6B-q4f16_1-MLC";
+      qwenEngine=await webllm.CreateMLCEngine(model,{
+        initProgressCallback:report=>{
+          output.textContent=`Qwen local : ${report.text||"chargement…"}`;
+        }
+      });
+      qwenLoadedModel=model;
+    }
+    button.textContent="Qwen analyse…";
+    const compact={
+      market:row.market,mode:row.mode,timeframes:row.timeframes,
+      final_verdict:row.final_verdict,final_confidence:row.final_confidence,
+      execution_state:row.execution_state,execution_score:row.execution_score,
+      setup_type:row.decision_engine?.setup_type,
+      conditions:row.decision_engine?.condition_pass_percent,
+      strategy_consensus:row.decision_engine?.consensus,
+      regime:row.intelligence?.regime,
+      entry_tf:{side:row.entry_tf?.side,rsi:row.entry_tf?.rsi,trendQuality:row.entry_tf?.trendQuality,spikeRisk:row.entry_tf?.spikeRisk,bos:row.entry_tf?.bos,choch:row.entry_tf?.choch,sweep:row.entry_tf?.sweep,retest:row.entry_tf?.retest},
+      confirmation_tf:{side:row.confirmation_tf?.side,rsi:row.confirmation_tf?.rsi,trendQuality:row.confirmation_tf?.trendQuality,spikeRisk:row.confirmation_tf?.spikeRisk},
+      oss_ensemble:row.open_source_ai?.ensemble,
+      model_votes:row.open_source_ai?.models
+    };
+    const response=await qwenEngine.chat.completions.create({
+      messages:[
+        {role:"system",content:"Tu es le conseiller local de Sera Indicator. Tu n'exécutes aucun trade et tu ne modifies jamais la décision du moteur. Analyse uniquement les données fournies. Réponds en français, maximum 5 lignes: accord/désaccord avec le signal, 2 confirmations majeures, principal risque, et remarque sur le timing d'entrée. Ne promets jamais un gain."},
+        {role:"user",content:JSON.stringify(compact)}
+      ],
+      temperature:.15,
+      max_tokens:220,
+      extra_body:{enable_thinking:false}
+    });
+    output.textContent=response?.choices?.[0]?.message?.content?.trim()||"Qwen n’a pas retourné d’avis.";
+  }catch(error){
+    output.textContent=`Qwen local indisponible : ${error?.message||error}. Les autres moteurs restent actifs.`;
+  }finally{
+    qwenLoading=false;
+    button.disabled=false;
+    button.textContent=qwenLoadedModel?"Relancer Qwen local":"Lancer Qwen local";
+  }
 }
 
 function loadTrendWatchSnapshots(){
@@ -578,9 +698,10 @@ function currentSignalText(){
     `TP2 : ${fmt(row.levels?.tp2)}`,
     `TP3 : ${fmt(row.levels?.tp3)}`,
     `Analyse : ${new Date(payload.updated_at).toLocaleString("fr-FR")}`,
+    `Consensus OSS : ${row.model_ensemble_direction||"NEUTRAL"} ${Math.round(Number(row.model_ensemble_consensus)||0)}% · ${Number(row.model_models_available)||0} modèle(s)`,
     `Modèle : ${row.ai_tier}`,
     "",
-    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera v1.40 n’exécute que si l’état est EXECUTE_NOW. Aucun gain garanti.",
+    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera v1.41 n’exécute que si l’état est EXECUTE_NOW et applique aussi le garde-fou de l’ensemble open source. Aucun gain garanti.",
     location.href
   ].join("\n");
 }
