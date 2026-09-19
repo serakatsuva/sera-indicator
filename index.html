@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=sera-20260919-swing-pips-1">
+  <link rel="stylesheet" href="./styles.css?v=sera-20260919-live-entry-1">
   <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
@@ -173,6 +173,11 @@
           <svg viewBox="0 0 900 250" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166" stop-opacity=".18"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></linearGradient></defs><path id="chartFillPath" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124 L900 250 L0 250 Z" fill="url(#chartFill)"/><path id="chartLine" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124" fill="none" stroke="#ffd166" stroke-width="4" stroke-linecap="round"/></svg>
           <span class="verdict-badge wait" id="verdictBadge">ATTENDRE</span>
           <span class="setup-direction wait" id="setupDirectionBadge"><i></i> SETUP EN ATTENTE</span>
+          <div class="live-entry-box" id="liveEntryBox" hidden>
+            <small>Entrée proposée live</small>
+            <strong id="liveEntryValue">—</strong>
+            <span id="liveEntryState">En attente</span>
+          </div>
         </div>
         <div class="levels" id="levels">
           <div><small>Entrée</small><strong>—</strong></div><div class="danger"><small>Stop loss</small><strong>—</strong></div><div><small>TP 1</small><strong>—</strong></div><div><small>TP 2</small><strong>—</strong></div><div><small>TP 3</small><strong>—</strong></div><div><small>TP 4</small><strong>—</strong></div><div><small>TP 5</small><strong>—</strong></div>
@@ -227,6 +232,6 @@
     <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button>
     <footer><strong>Trading réel à risque élevé.</strong> Sera fournit une aide à la décision et l’EA peut exécuter automatiquement sur le compte MT5 connecté. Les limites de risque réduisent l’exposition mais ne garantissent aucun gain.</footer>
   </main>
-  <script src="./app.js?v=swing-pips-v152-20260919-1" defer></script>
+  <script src="./app.js?v=live-entry-v160-20260919-1" defer></script>
 </body>
 </html>
