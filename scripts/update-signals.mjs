@@ -6,7 +6,7 @@ const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
-const ENGINE_VERSION='Sera Autonomous Engine v3.5';
+const ENGINE_VERSION='Sera Autonomous Engine v3.6';
 
 const MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -498,6 +498,52 @@ function executionAssessment(setup,engine,verdict,levels){
   };
 }
 
+function setupEntryPlan(setup,engine,projectedLevels){
+  if(!projectedLevels||!engine?.setup_detected||!['BUY','SELL'].includes(engine.detected_side))return null;
+  const e=setup.entry_tf,side=engine.detected_side;
+  const atr=Math.max(Number(e.atr)||0,.0000001);
+  const current=Number(e.price)||projectedLevels.entry;
+  const ema20=Number(e.ema20)||current;
+  const extension=Math.abs(current-ema20)/atr;
+  const maxExtension=setup.mode==='swing'?1.25:1.05;
+  const overextended=extension>maxExtension;
+  let zoneMin,zoneMax,suggested,status;
+
+  if(overextended){
+    if(side==='BUY'){
+      zoneMin=ema20-atr*.18;
+      zoneMax=ema20+atr*.12;
+      suggested=ema20;
+    }else{
+      zoneMin=ema20-atr*.12;
+      zoneMax=ema20+atr*.18;
+      suggested=ema20;
+    }
+    status='WAIT_RETRACE';
+  }else{
+    const tolerance=Math.max(atr*.12,Math.abs(projectedLevels.entry-projectedLevels.sl)*.08);
+    zoneMin=projectedLevels.entry-tolerance;
+    zoneMax=projectedLevels.entry+tolerance;
+    suggested=projectedLevels.entry;
+    status='WATCH_ENTRY_ZONE';
+  }
+
+  return {
+    side,status,
+    suggested_entry:Number(suggested.toFixed(3)),
+    reference_entry:Number(projectedLevels.entry.toFixed(3)),
+    zone_min:Number(Math.min(zoneMin,zoneMax).toFixed(3)),
+    zone_max:Number(Math.max(zoneMin,zoneMax).toFixed(3)),
+    live_reference_price:Number(current.toFixed(3)),
+    atr:Number(atr.toFixed(3)),
+    extension_atr:Number(extension.toFixed(2)),
+    max_extension_atr:maxExtension,
+    reason:overextended
+      ?'Prix trop étendu: attendre un retour dans la zone proposée avant toute exécution.'
+      :'Setup dans une zone exploitable: surveiller le prix live dans la zone proposée.'
+  };
+}
+
 function finalize(setup,luna){
   const engine=setup.autonomous||autonomousDecision(setup);
   const localConfirmed=engine.verdict!=='ATTENDRE';
@@ -511,6 +557,7 @@ function finalize(setup,luna){
   const finalVerdict=localConfirmed&&finalConfidence>=75?engine.verdict:'ATTENDRE';
   const levels=finalVerdict==='ATTENDRE'?null:buildLevels(setup,finalVerdict);
   const projectedLevels=engine.setup_detected?buildLevels(setup,engine.detected_side):null;
+  const entryPlan=setupEntryPlan(setup,engine,projectedLevels);
   const swingDistance=levels?swingDistanceEstimate(levels,finalVerdict):null;
   const projectedSwingDistance=projectedLevels?swingDistanceEstimate(projectedLevels,engine.detected_side):null;
   const execution=executionAssessment(setup,engine,finalVerdict,levels);
@@ -531,7 +578,7 @@ function finalize(setup,luna){
   ];
 
   return {
-    ...publicSetup(setup),levels,projected_levels:projectedLevels,
+    ...publicSetup(setup),levels,projected_levels:projectedLevels,setup_entry_plan:entryPlan,
     swing_distance:swingDistance,projected_swing_distance:projectedSwingDistance,
     setup_detected:engine.setup_detected?1:0,setup_direction:engine.detected_side,
     final_verdict:finalVerdict,final_confidence:finalConfidence,timing,
