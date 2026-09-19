@@ -1,5 +1,5 @@
 #property copyright "Sera Indicator"
-#property version   "1.10"
+#property version   "1.20"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -8,9 +8,9 @@ input string SignalsUrl="https://serakatsuva.github.io/sera-indicator/data/signa
 input bool EnableTrendWatch=true;
 input bool EnableTerminalAlert=true;
 input bool EnablePushNotification=false;
-input bool AllowSmartLocalExecution=false;
-input bool EnableAutomaticTrading=false;
-input bool AllowRealAccount=false;
+input bool AllowSmartLocalExecution=true;
+input bool EnableAutomaticTrading=true;
+input bool AllowRealAccount=true;
 input double RiskPercent=0.50;
 input double MaximumLossUSD=1.00;
 input double MaximumLot=0.02;
@@ -71,6 +71,26 @@ datetime ParseIsoUtc(string iso)
    string value=StringSubstr(iso,0,19);
    StringReplace(value,"-","."); StringReplace(value,"T"," ");
    return StringToTime(value);
+}
+
+string ResolveTradeSymbol(const string market_name,const string deriv_code)
+{
+   if(market_name!="" && SymbolSelect(market_name,true)) return market_name;
+   if(deriv_code!="" && SymbolSelect(deriv_code,true)) return deriv_code;
+
+   string market_compact=market_name;
+   StringReplace(market_compact," ","");
+   for(int i=0;i<SymbolsTotal(false);i++)
+   {
+      string candidate=SymbolName(i,false);
+      string compact=candidate;
+      StringReplace(compact," ","");
+      if(candidate==market_name || candidate==deriv_code || compact==market_compact)
+      {
+         if(SymbolSelect(candidate,true)) return candidate;
+      }
+   }
+   return "";
 }
 
 bool FetchSignals(string &json)
@@ -183,7 +203,11 @@ void Evaluate(const string json)
    }
    else if(status=="smart_local" && !AllowSmartLocalExecution) Comment("Sera Smart Local actif — alertes seulement; execution locale bloquee");
    else if(EnableTrendWatch && !EnableAutomaticTrading) Comment("Sera Trend Watch actif — alertes seulement");
-   else if(EnableTrendWatch && EnableAutomaticTrading) Comment("Sera Trend Watch + Auto-trade actifs");
+   else if(EnableTrendWatch && EnableAutomaticTrading)
+   {
+      string account_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"REEL";
+      Comment("Sera Trend Watch + Auto-trade actifs — "+account_mode+" — risque "+DoubleToString(RiskPercent,2)+"% / max "+DoubleToString(MaximumLossUSD,2)+" USD");
+   }
 
    int markets=StringFind(json,"\"markets\""); if(markets<0) return;
    int cursor=StringFind(json,"{",markets);
@@ -195,19 +219,26 @@ void Evaluate(const string json)
       if(mode=="swing")
       {
          string setup_id=JsonString(object,"id");
-         string symbol=JsonString(object,"market");
+         string market_name=JsonString(object,"market");
+         string deriv_code=JsonString(object,"symbol");
+         string symbol=ResolveTradeSymbol(market_name,deriv_code);
          int state=VerdictState(verdict);
          bool confirmed=(state!=0 && confidence>=MinimumConfidence);
 
          int previous_alert_state=StoredState("SERA_ALERTSTATE_",setup_id);
-         if(confirmed && state!=previous_alert_state) SendTrendAlert(symbol,verdict,confidence);
+         if(confirmed && state!=previous_alert_state) SendTrendAlert(market_name,verdict,confidence);
          if(state!=previous_alert_state) StoreState("SERA_ALERTSTATE_",setup_id,state);
 
          int previous_trade_state=StoredState("SERA_TRADESTATE_",setup_id);
          if(state==0 && previous_trade_state!=0) StoreState("SERA_TRADESTATE_",setup_id,0);
 
-         if(confirmed && can_trade && state!=previous_trade_state && OpenSeraPositions()<MaximumOpenPositions && TradesToday()<MaximumTradesPerDay && SymbolSelect(symbol,true))
+         if(confirmed && can_trade && state!=previous_trade_state && OpenSeraPositions()<MaximumOpenPositions && TradesToday()<MaximumTradesPerDay)
          {
+            if(symbol=="")
+            {
+               Print("Sera: symbole MT5 introuvable pour ",market_name," / ",deriv_code);
+               continue;
+            }
             int levels_pos=StringFind(object,"\"levels\"");
             string levels=levels_pos>=0?ExtractObjectAt(object,StringFind(object,"{",levels_pos)):"";
             double sl=JsonNumber(levels,"sl"),tp=JsonNumber(levels,"tp2");
@@ -234,7 +265,9 @@ int OnInit()
 {
    trade.SetAsyncMode(false);
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Comment("Sera Trend Watch initialise — alertes Swing H1/H4 actives");
+   string mode=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"REEL";
+   Comment("Sera v1.20 initialise — mode "+mode+" — AutoTrade="+(EnableAutomaticTrading?"ON":"OFF")+" — Risk "+DoubleToString(RiskPercent,2)+"%");
+   Print("Sera v1.20: compte ",mode,", trading automatique=",EnableAutomaticTrading,", compte reel autorise=",AllowRealAccount,", SmartLocal=",AllowSmartLocalExecution);
    return INIT_SUCCEEDED;
 }
 
