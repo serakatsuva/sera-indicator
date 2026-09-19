@@ -1,5 +1,5 @@
 #property copyright "Sera Indicator"
-#property version   "1.30"
+#property version   "1.31"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -15,6 +15,7 @@ input double RiskPercent=0.50;
 input double MaximumLossUSD=1.00;
 input double MaximumLot=0.02;
 input int MinimumConfidence=75;
+input int MinimumAutonomousConditionsPercent=80;
 input int MaximumSignalAgeMinutes=90;
 input int MaximumOpenPositions=1;
 input int MaximumTradesPerDay=2;
@@ -216,6 +217,7 @@ void Evaluate(const string json)
       string object=ExtractObjectAt(json,cursor); if(object=="") break;
       string mode=JsonString(object,"mode"),verdict=JsonString(object,"final_verdict");
       double confidence=JsonNumber(object,"final_confidence");
+      double conditions_percent=JsonNumber(object,"condition_pass_percent");
       if(mode=="swing")
       {
          string setup_id=JsonString(object,"id");
@@ -223,7 +225,7 @@ void Evaluate(const string json)
          string deriv_code=JsonString(object,"symbol");
          string symbol=ResolveTradeSymbol(market_name,deriv_code);
          int state=VerdictState(verdict);
-         bool confirmed=(state!=0 && confidence>=MinimumConfidence);
+         bool confirmed=(state!=0 && confidence>=MinimumConfidence && conditions_percent>=MinimumAutonomousConditionsPercent);
 
          int previous_alert_state=StoredState("SERA_ALERTSTATE_",setup_id);
          if(confirmed && state!=previous_alert_state) SendTrendAlert(market_name,verdict,confidence);
@@ -278,8 +280,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera v1.30 initialise — mode "+mode+" — AutoTrade="+(EnableAutomaticTrading?"ON":"OFF")+" — Risk "+DoubleToString(RiskPercent,2)+"%");
-   Print("Sera v1.30: compte ",mode,", trading automatique=",EnableAutomaticTrading,", compte reel autorise=",AllowRealAccount,", AutoEngine=",AllowAutonomousExecution);
+   Comment("Sera v1.31 initialise — mode "+mode+" — AutoTrade="+(EnableAutomaticTrading?"ON":"OFF")+" — Conditions>="+IntegerToString(MinimumAutonomousConditionsPercent)+"%");
+   Print("Sera v1.31: compte ",mode,", trading automatique=",EnableAutomaticTrading,", compte reel autorise=",AllowRealAccount,", AutoEngine=",AllowAutonomousExecution,", conditions min=",MinimumAutonomousConditionsPercent,"%");
    return INIT_SUCCEEDED;
 }
 
