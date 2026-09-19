@@ -82,3 +82,49 @@ L’EA v1.50 ajoute :
 - maintien du garde-fou `EXECUTE_NOW` et du veto de l’ensemble open source.
 
 Cette gestion progressive réduit l’exposition d’un trade déjà favorable mais ne garantit ni l’atteinte des objectifs ni l’absence de perte.
+
+
+## Intelligence v3.7
+
+Le moteur v3.7 ajoute des confirmations indépendantes supplémentaires aux familles déjà présentes :
+
+- ADX / DMI pour la force et la direction de tendance ;
+- MACD histogram pour l’alignement du momentum ;
+- Bollinger squeeze/release pour les changements de régime ;
+- Donchian breakout pour les cassures ;
+- Efficiency Ratio pour distinguer tendance propre et bruit ;
+- structure HH/HL ou LH/LL ;
+- pattern Engulfing dans les contextes de reversal/pullback.
+
+Ces signaux sont sélectionnés selon le régime de marché. Ils ne sont pas tous exigés simultanément, afin d’éviter qu’un empilement d’indicateurs corrélés bloque ou survalide artificiellement un trade.
+
+## EA réel v1.60
+
+L’EA v1.60 conserve le risque par trade et ajoute des protections de compte réel :
+
+- perte maximale par trade : **1 USD** par défaut ;
+- risque : **0,50 %** du solde, plafonné par la limite USD ;
+- maximum **1 position Sera** ouverte ;
+- maximum **2 entrées par jour** ;
+- circuit breaker à **3 USD de perte journalière** ;
+- circuit breaker à **3 % de drawdown** ;
+- pause après **2 pertes consécutives** ;
+- contrôle de marge libre ;
+- contrôle de la distance minimale SL/TP imposée par le broker ;
+- contrôle spread, prix trop éloigné de l’entrée, consensus OSS et état `EXECUTE_NOW`.
+
+Ces valeurs sont des garde-fous de départ et ne constituent pas une garantie de performance.
+
+## Alertes Gmail Swing
+
+Le workflow de cinq minutes peut envoyer automatiquement un email lorsqu’un **nouveau setup Swing** apparaît ou change de statut important.
+
+Le message contient : indice, BUY/SELL, entrée proposée, zone d’entrée, prix de référence, SL, TP1–TP5, amplitude pips/points, durée estimée, confiance, conditions, consensus stratégies, consensus des modèles open source et score d’exécution.
+
+Pour activer l’envoi, configurer les trois Repository Secrets suivants dans GitHub :
+
+- `GMAIL_ALERT_FROM` : compte Gmail expéditeur ;
+- `GMAIL_APP_PASSWORD` : mot de passe d’application Google, jamais le mot de passe normal du compte ;
+- `GMAIL_ALERT_TO` : adresse qui reçoit les alertes.
+
+Les secrets ne sont pas écrits dans le dépôt ni affichés dans les logs.
