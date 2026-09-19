@@ -314,3 +314,25 @@
 .live-scan-row.watch{color:#ffd166}
 .live-scan-row.wait{color:#94a3b8}
 @media(max-width:640px){.live-scan-row{padding:.32rem .42rem;font-size:.66rem}.live-scan-row strong{font-size:.62rem}}
+
+
+/* Realtime Japanese candle chart + prediction overlay */
+.chart-area{min-height:330px;overflow:hidden}
+.live-candles-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:linear-gradient(180deg,rgba(7,18,31,.88),rgba(6,15,25,.98))}
+.live-price-axis{position:absolute;right:0;top:0;bottom:0;width:58px;z-index:2;border-left:1px solid rgba(255,255,255,.07);pointer-events:none}
+.live-price-axis span{position:absolute;right:4px;transform:translateY(-50%);font:700 7px "JetBrains Mono",monospace;color:#8094aa;background:rgba(7,17,28,.78);padding:2px 3px;border-radius:3px}
+.prediction-panel{position:absolute;left:14px;top:12px;z-index:5;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;max-width:430px}
+.prediction-panel>div{border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(7,15,25,.86);backdrop-filter:blur(7px);padding:6px 8px}
+.prediction-panel small{display:block;color:#74879d;font-size:6.5px;text-transform:uppercase;letter-spacing:.09em}
+.prediction-panel strong{display:block;margin-top:3px;font:900 8px "JetBrains Mono",monospace;color:#d8e7f5;white-space:nowrap}
+.prediction-panel.buy>div:first-child strong,.prediction-panel.buy>div:last-child strong{color:#4da3ff}
+.prediction-panel.sell>div:first-child strong,.prediction-panel.sell>div:last-child strong{color:#ff5f76}
+.prediction-panel.wait>div:last-child strong{color:#ffb142}
+@media(max-width:560px){
+  .chart-area{min-height:360px}
+  .prediction-panel{left:8px;right:64px;top:8px;max-width:none;gap:4px}
+  .prediction-panel>div{padding:5px 6px}
+  .prediction-panel small{font-size:5.8px}
+  .prediction-panel strong{font-size:7px}
+  .live-price-axis{width:54px}
+}
