@@ -8,6 +8,7 @@ on:
       - '.github/workflows/update-signals.yml'
       - 'scripts/update-signals.mjs'
       - 'scripts/open_source_ensemble.py'
+      - 'scripts/adaptive_evidence.py'
       - 'requirements-ml.txt'
       - 'requirements-foundation.txt'
   schedule:
@@ -18,7 +19,7 @@ permissions:
 
 concurrency:
   group: sera-indicator-analysis
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   analyze:
