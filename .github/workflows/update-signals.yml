@@ -47,18 +47,12 @@ jobs:
       - name: Install core open-source models
         run: python -m pip install -r requirements-ml.txt
 
-      - name: Decide foundation-model cycle
+      - name: Keep all free models connected
         id: foundation
         shell: bash
         run: |
-          minute="$(date -u +%M)"
-          if [ "$GITHUB_EVENT_NAME" != "schedule" ] || [ "$minute" -lt 12 ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "Chronos-2 + TimesFM cycle enabled."
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "Core XGBoost + LightGBM cycle only."
-          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "XGBoost + LightGBM + Chronos-2 + TimesFM are enabled for this cycle."
 
       - name: Cache Hugging Face models
         if: steps.foundation.outputs.run == 'true'
