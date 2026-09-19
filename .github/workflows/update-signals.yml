@@ -1,4 +1,4 @@
-name: Sera Smart Engine — Deriv + Luna
+name: Sera Autonomous Engine — Deriv + optional Luna
 
 on:
   workflow_dispatch:
@@ -32,24 +32,23 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Check OpenAI secret
+      - name: Check optional OpenAI advisor
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
-            echo "OPENAI_API_KEY is not configured as a Repository secret."
-            exit 1
+            echo "OpenAI advisor unavailable: autonomous engine will run alone."
+          else
+            echo "OpenAI advisor configured: autonomous engine remains the primary decision maker."
           fi
-          echo "OpenAI API key is configured."
 
       - name: Test Deriv signal engine
         run: node scripts/update-signals.mjs --self-test
 
-      - name: Analyze Deriv with Sera Smart Engine and Luna
+      - name: Analyze Deriv with autonomous engine and optional Luna
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SCREENING_MODEL: gpt-5.6-luna
-          DEEP_MODEL: gpt-5.6-sol
         run: node scripts/update-signals.mjs
 
       - name: Commit validated signals
@@ -61,7 +60,15 @@ jobs:
             echo "No signal changes to commit."
           else
             git commit -m "Update Sera Indicator Deriv signals"
-            git fetch origin main
-            git rebase origin/main
-            git push origin main
+            for attempt in 1 2 3; do
+              git fetch origin main
+              git rebase origin/main
+              if git push origin main; then
+                exit 0
+              fi
+              echo "Push race detected; retry $attempt/3..."
+              sleep 2
+            done
+            echo "Unable to push signals after 3 retries."
+            exit 1
           fi
