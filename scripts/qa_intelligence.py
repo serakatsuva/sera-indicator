@@ -65,18 +65,18 @@ check("market order requires EXECUTE_NOW", market_allowed("BUY","EXECUTE_NOW",90
 check("market order blocked on WAIT_RETRACE", not market_allowed("BUY","WAIT_RETRACE",90,95))
 check("market order blocked below 80 percent conditions", not market_allowed("SELL","EXECUTE_NOW",90,79))
 
+# adaptive evidence self-test contract
+from pathlib import Path
+adaptive = Path("scripts/adaptive_evidence.py").read_text(encoding="utf-8")
+check("adaptive evidence engine present", "Sera Adaptive Evidence v1.0" in adaptive)
+check("adaptive evidence cannot manufacture trades", "cannot create or reverse a BUY/SELL" in adaptive)
+check("adaptive evidence has conservative downgrade", "WAIT_CONFIRMATION" in adaptive)
+check("adaptive evidence minimum sample gate", 'sample_size"]<12' in adaptive or 'sample_size"] < 12' in adaptive)
+check("adaptive evidence tracks strategy reliability", "strategy_profiles" in adaptive)
+
 failed=[name for name,ok in tests if not ok]
 for name,ok in tests:
     print(("PASS" if ok else "FAIL")+": "+name)
 if failed:
     raise SystemExit("Intelligence QA failed: "+", ".join(failed))
 print(f"Intelligence QA passed: {len(tests)} scenarios")
-
-
-# adaptive evidence self-test contract
-from pathlib import Path
-adaptive = Path("scripts/adaptive_evidence.py").read_text(encoding="utf-8")
-check("adaptive evidence engine present", "Sera Adaptive Evidence v1.0" in adaptive)
-check("adaptive evidence cannot manufacture trades", "cannot create or reverse a BUY/SELL" in adaptive)
-check("adaptive evidence has conservative downgrade", 'execution_state"]="WAIT_CONFIRMATION"' in adaptive or 'WAIT_CONFIRMATION' in adaptive)
-check("adaptive evidence minimum sample gate", 'sample_size"]<12' in adaptive or 'sample_size"] < 12' in adaptive)
