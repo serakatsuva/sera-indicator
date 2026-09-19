@@ -64,6 +64,7 @@ const setupSide=row=>{
 };
 const hasDetectedSetup=row=>Boolean(row?.setup_detected||row?.decision_engine?.setup_detected)&&setupSide(row)!=="NEUTRE";
 const modelDirectionLabel=value=>value==="BUY"?"BUY":value==="SELL"?"SELL":"NEUTRE";
+const fmtEntry=n=>Number.isFinite(Number(n))?Number(n).toLocaleString("en-US",{minimumFractionDigits:3,maximumFractionDigits:3}):"—";
 const signedDistance=(value,side)=>{
   const n=Number(value);
   if(!Number.isFinite(n))return"—";
@@ -393,6 +394,7 @@ function renderSelected(){
     $("technicalGrid").innerHTML=[["Sessions","Londres / New York"],["Tendance","H1 + H4"],["Volatilité","ATR Forex"],["Actualités","Contrôle requis"]].map(([label,value])=>`<div class="metric"><small>${label}</small><strong class="no">${value}</strong></div>`).join("");
     $("checks").innerHTML='<div class="check no"><i></i><span>Flux de bougies Deriv MT5 non connecté</span></div><div class="check no"><i></i><span>Aucun signal ni pourcentage ne sera fabriqué</span></div>';
     renderOpenSourceModels(null);
+    renderLiveEntry(null);
     $("signalActions").hidden=true;drawChart("wait");highlightSelected();return;
   }
   const candidates=hasDerivResults()?payload.markets.filter(item=>item.market===selected):[];
@@ -413,6 +415,7 @@ function renderSelected(){
   $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`):"Validation requise";
   $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend le prochain consensus multi-stratégies pour ${selected}. Luna reste un conseiller facultatif.`;
   renderOpenSourceModels(row);
+  renderLiveEntry(row);
   $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
   const swingBadge=$("swingDurationBadge");
   if(swingBadge){
@@ -467,6 +470,47 @@ function renderSelected(){
   $("signalActions").hidden=!(fresh&&verdict!=="ATTENDRE");
   drawChart(cls);
   highlightSelected();
+}
+
+function liveEntryProposal(row){
+  if(!row||!hasDetectedSetup(row))return null;
+  const plan=row.setup_entry_plan;
+  const levels=row.projected_levels;
+  if(!plan||!levels)return null;
+  const side=setupSide(row);
+  const live=liveQuote?.symbol===symbols[row.market]?Number(liveQuote.price):Number(row.price);
+  if(!Number.isFinite(live))return {...plan,live_price:null,live_state:plan.status};
+
+  const inZone=live>=Number(plan.zone_min)&&live<=Number(plan.zone_max);
+  let liveState=plan.status;
+  let proposed=Number(plan.suggested_entry);
+
+  if(inZone){
+    proposed=live;
+    liveState="IN_ENTRY_ZONE";
+  }else if(side==="BUY"&&live>Number(plan.zone_max)){
+    liveState="WAIT_RETRACE";
+  }else if(side==="SELL"&&live<Number(plan.zone_min)){
+    liveState="WAIT_RETRACE";
+  }else{
+    liveState="WAIT_CONFIRMATION";
+  }
+  return {...plan,live_price:live,proposed_entry:Number(proposed.toFixed(3)),live_state:liveState,in_zone:inZone};
+}
+
+function renderLiveEntry(row){
+  const box=$("liveEntryBox"),value=$("liveEntryValue"),state=$("liveEntryState");
+  if(!box||!value||!state)return;
+  const proposal=liveEntryProposal(row);
+  if(!proposal){
+    box.hidden=true;value.textContent="—";state.textContent="En attente";return;
+  }
+  box.hidden=false;
+  const side=setupSide(row);
+  value.textContent=`${side} · ${fmtEntry(proposal.proposed_entry??proposal.suggested_entry)}`;
+  const labels={IN_ENTRY_ZONE:"PRIX DANS LA ZONE",WAIT_RETRACE:"ATTENDRE RETRACEMENT",WAIT_CONFIRMATION:"ATTENDRE CONFIRMATION",WATCH_ENTRY_ZONE:"SURVEILLER LA ZONE"};
+  state.textContent=`${labels[proposal.live_state]||proposal.live_state} · zone ${fmtEntry(proposal.zone_min)} – ${fmtEntry(proposal.zone_max)}`;
+  box.className=`live-entry-box ${side.toLowerCase()} ${proposal.live_state==="IN_ENTRY_ZONE"?"ready":""}`;
 }
 
 function renderSwingPips(row){
@@ -738,7 +782,16 @@ function connectLivePrice(){
     socket.addEventListener("message",event=>{
       const message=JSON.parse(event.data);
       if(message.error){setMarketStatus("Deriv : flux interrompu","error");return;}
-      if(message.tick?.quote){liveQuote={symbol,price:Number(message.tick.quote)};if(symbol===symbols[selected]){$("livePrice").textContent=fmt(liveQuote.price);$("liveChange").textContent="Prix Deriv live";setMarketStatus("Deriv : Live","live");}}
+      if(message.tick?.quote){
+        liveQuote={symbol,price:Number(message.tick.quote)};
+        if(symbol===symbols[selected]){
+          $("livePrice").textContent=fmt(liveQuote.price);
+          $("liveChange").textContent="Prix Deriv live";
+          setMarketStatus("Deriv : Live","live");
+          const row=selectedSignalRow();
+          renderLiveEntry(row);
+        }
+      }
     });
     socket.addEventListener("error",()=>setMarketStatus("Deriv : flux indisponible","error"));
   }catch{setMarketStatus("Deriv : flux indisponible","error");}
@@ -790,4 +843,4 @@ fillMarketSelect();
 renderTrendWatchUi();
 loadSignals();
 connectLivePrice();
-setInterval(()=>loadSignals(false),60000);
+setInterval(()=>loadSignals(false),20000);
