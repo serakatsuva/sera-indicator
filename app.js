@@ -247,7 +247,7 @@ function render(){
   $("updatedAt").textContent=payload?.updated_at?new Date(payload.updated_at).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"—";
   $("dataAge").textContent=ageLabel(payload?.updated_at);
   $("sourceName").textContent=payload?.source||"Deriv WebSocket";
-  $("modelName").textContent=payload?.model||"Sera Smart Engine + Luna";
+  $("modelName").textContent=payload?.model||"Sera Autonomous Engine";
   renderIndexFamilyFilter();
   renderTrendWatchUi();
 
@@ -340,7 +340,7 @@ function renderSelected(){
     $("verdictBadge").className="verdict-badge wait";$("verdictBadge").textContent="EN ATTENTE";
     $("decisionOrb").className="decision-orb wait";$("decisionOrb").querySelector("strong").textContent="ATTENDRE";
     $("decisionConfidence").textContent="Connexion MT5 requise";
-    $("decisionSummary").textContent=`${selected} est ajouté au scanner. Son analyse H1/H4 par Sera Smart Engine + Luna démarrera uniquement après connexion des vraies bougies Deriv MT5.`;
+    $("decisionSummary").textContent=`${selected} est ajouté au scanner. Son analyse H1/H4 par Sera Autonomous Engine démarrera uniquement après connexion des vraies bougies Deriv MT5.`;
     $("livePrice").textContent="—";$("liveChange").textContent="Deriv MT5 · attente";
     $("levels").querySelectorAll("strong").forEach(element=>element.textContent="—");
     $("timingPanel").querySelectorAll("strong").forEach(element=>element.textContent="—");
