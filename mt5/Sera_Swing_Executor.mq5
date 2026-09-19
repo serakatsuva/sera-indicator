@@ -236,24 +236,35 @@ void Evaluate(const string json)
          {
             if(symbol=="")
             {
-               Print("Sera: symbole MT5 introuvable pour ",market_name," / ",deriv_code);
-               continue;
+               Print("Sera: symbole MT5 introuvable pour ",market_name," / ",deriv_code," — ordre ignore");
             }
-            int levels_pos=StringFind(object,"\"levels\"");
-            string levels=levels_pos>=0?ExtractObjectAt(object,StringFind(object,"{",levels_pos)):"";
-            double sl=JsonNumber(levels,"sl"),tp=JsonNumber(levels,"tp2");
-            MqlTick tick; if(sl>0 && tp>0 && SymbolInfoTick(symbol,tick))
+            else
             {
-               double price=verdict=="BUY"?tick.ask:tick.bid;
-               bool levels_valid=verdict=="BUY"?(sl<price && tp>price):(sl>price && tp<price);
-               double volume=levels_valid?SafeVolume(symbol,price,sl):0;
-               if(volume>0)
+               int levels_pos=StringFind(object,"\"levels\"");
+               string levels=levels_pos>=0?ExtractObjectAt(object,StringFind(object,"{",levels_pos)):"";
+               double sl=JsonNumber(levels,"sl"),tp=JsonNumber(levels,"tp2");
+               MqlTick tick;
+               if(sl>0 && tp>0 && SymbolInfoTick(symbol,tick))
                {
-                  trade.SetExpertMagicNumber(MagicNumber); trade.SetDeviationInPoints(DeviationPoints);
-                  bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,tp,"Sera Swing"):trade.Sell(volume,symbol,0,sl,tp,"Sera Swing");
-                  if(sent){ StoreState("SERA_TRADESTATE_",setup_id,state); Print("Sera: ",verdict," ",symbol," volume=",volume," SL=",sl," TP=",tp); return; }
-                  Print("Sera: ordre refuse: ",trade.ResultRetcodeDescription());
+                  double price=verdict=="BUY"?tick.ask:tick.bid;
+                  bool levels_valid=verdict=="BUY"?(sl<price && tp>price):(sl>price && tp<price);
+                  double volume=levels_valid?SafeVolume(symbol,price,sl):0;
+                  if(volume>0)
+                  {
+                     trade.SetExpertMagicNumber(MagicNumber);
+                     trade.SetDeviationInPoints(DeviationPoints);
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,tp,"Sera Swing"):trade.Sell(volume,symbol,0,sl,tp,"Sera Swing");
+                     if(sent)
+                     {
+                        StoreState("SERA_TRADESTATE_",setup_id,state);
+                        Print("Sera: ",verdict," ",symbol," volume=",volume," SL=",sl," TP=",tp);
+                        return;
+                     }
+                     Print("Sera: ordre refuse: ",trade.ResultRetcodeDescription());
+                  }
+                  else Print("Sera: volume nul ou niveaux invalides pour ",symbol);
                }
+               else Print("Sera: SL/TP ou tick invalide pour ",symbol);
             }
          }
       }
@@ -265,7 +276,8 @@ int OnInit()
 {
    trade.SetAsyncMode(false);
    EventSetTimer(MathMax(15,PollEverySeconds));
-   string mode=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"REEL";
+   long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
+   string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("Sera v1.20 initialise — mode "+mode+" — AutoTrade="+(EnableAutomaticTrading?"ON":"OFF")+" — Risk "+DoubleToString(RiskPercent,2)+"%");
    Print("Sera v1.20: compte ",mode,", trading automatique=",EnableAutomaticTrading,", compte reel autorise=",AllowRealAccount,", SmartLocal=",AllowSmartLocalExecution);
    return INIT_SUCCEEDED;
