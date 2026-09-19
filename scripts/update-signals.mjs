@@ -275,14 +275,44 @@ function estimateTiming(setup,finalVerdict,finalConfidence){
 }
 
 function finalize(setup,luna){
-  const audit=luna||{verdict:'ATTENDRE',confidence:0,summary:'Validation Luna absente.',confirmations:[],contradictions:['Validation IA absente'],risk:'Inconnu',needs_expert_review:true};
+  const audit=luna||{verdict:'ATTENDRE',confidence:0,summary:'Luna indisponible: décision autonome soumise aux seuils renforcés du Smart Engine.',confirmations:[],contradictions:[],risk:'Contrôle local renforcé',needs_expert_review:false};
   const aiConfidence=Number(audit.confidence)||0;
-  const agreed=setup.technical_verdict!=='ATTENDRE'&&audit.verdict===setup.technical_verdict&&aiConfidence>=75&&!audit.needs_expert_review&&!setup.trend_memory?.flip;
-  const finalVerdict=agreed?setup.technical_verdict:'ATTENDRE';
-  const finalConfidence=dynamicReadiness(setup,audit,agreed);
+  const lunaAgreed=Boolean(luna)&&setup.technical_verdict!=='ATTENDRE'&&audit.verdict===setup.technical_verdict&&aiConfidence>=75&&!audit.needs_expert_review&&!setup.trend_memory?.flip;
+
+  const localThreshold=setup.mode==='swing'?86:88;
+  const localAutonomous=!luna
+    &&setup.technical_verdict!=='ATTENDRE'
+    &&setup.intelligence.local_score>=localThreshold
+    &&setup.trend_memory?.candidate_score>=92
+    &&setup.entry_tf.trendQuality>=80
+    &&setup.confirmation_tf.trendQuality>=80
+    &&setup.entry_tf.regime==='TRENDING'
+    &&setup.confirmation_tf.regime==='TRENDING'
+    &&setup.intelligence.aligned
+    &&setup.intelligence.stability
+    &&!setup.entry_tf.spikeRisk
+    &&!setup.trend_memory?.flip
+    &&setup.entry_tf.passed>=6
+    &&(!setup.intelligence.adverse_spike_direction||setup.entry_tf.sweep);
+
+  const confirmed=lunaAgreed||localAutonomous;
+  const finalVerdict=confirmed?setup.technical_verdict:'ATTENDRE';
+  const finalConfidence=localAutonomous
+    ?Math.round(clamp(setup.intelligence.local_score+(setup.trend_memory?.persistence?2:0),75,94))
+    :dynamicReadiness(setup,audit,lunaAgreed);
   const timing=estimateTiming(setup,finalVerdict,finalConfidence);
-  const aiTier=luna?`${SCREENING_MODEL} · audit final`:'Sera Smart Engine local · Luna non appelée';
-  return {...publicSetup(setup),levels:finalVerdict==='ATTENDRE'?null:setup.levels,final_verdict:finalVerdict,final_confidence:finalConfidence,timing,score_type:agreed?'signal_confidence':'setup_readiness',ai_verdict:audit.verdict,ai_confidence:aiConfidence,ai_summary:audit.summary,ai_confirmations:audit.confirmations||[],ai_contradictions:audit.contradictions||[],ai_risk:audit.risk,needs_expert_review:Boolean(audit.needs_expert_review),ai_tier:aiTier};
+  const confirmationSource=lunaAgreed?'luna_audited':localAutonomous?'smart_local':'none';
+  const aiTier=luna?`${SCREENING_MODEL} · audit final`:localAutonomous?`${ENGINE_VERSION} · confirmation autonome renforcée`:'Sera Smart Engine local · setup non confirmé';
+  const summary=luna?audit.summary:localAutonomous
+    ?`Signal confirmé localement par ${ENGINE_VERSION}: régime directionnel fort, alignement multi-timeframe, qualité de tendance élevée et mémoire stable.`
+    :audit.summary;
+  const confirmations=luna?(audit.confirmations||[]):localAutonomous?[
+    'Régime directionnel confirmé sur les deux horizons',
+    'Alignement multi-timeframe stable',
+    'Score local et qualité de tendance au-dessus du seuil renforcé',
+    'Aucun flip récent ni risque de spike détecté'
+  ]:[];
+  return {...publicSetup(setup),levels:finalVerdict==='ATTENDRE'?null:setup.levels,final_verdict:finalVerdict,final_confidence:finalConfidence,timing,confirmation_source:confirmationSource,score_type:confirmed?'signal_confidence':'setup_readiness',ai_verdict:luna?audit.verdict:'ATTENDRE',ai_confidence:aiConfidence,ai_summary:summary,ai_confirmations:confirmations,ai_contradictions:audit.contradictions||[],ai_risk:audit.risk,needs_expert_review:Boolean(luna&&audit.needs_expert_review),ai_tier:aiTier};
 }
 
 async function selfTest(){
@@ -342,14 +372,14 @@ async function main(){
   const aiCalls=luna.response_id?1:0;
 
   const payload={
-    ok:true,status:aiCalls||reused.size?'ai_analyzed':'technical_only',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',
+    ok:true,status:aiCalls||reused.size?'ai_analyzed':markets.some(m=>m.confirmation_source==='smart_local')?'smart_local':'technical_only',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',
     updated_at:new Date().toISOString(),engine_version:ENGINE_VERSION,
     model:aiCalls||reused.size?`${ENGINE_VERSION} + ${SCREENING_MODEL}`:`${ENGINE_VERSION} · local`,
     screening_model:SCREENING_MODEL,deep_model:null,markets_count:markets.length,technical_candidates:technicalCandidates.length,
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:reused.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
-    safety:'Sera Smart Engine analyse localement tous les marchés. Luna audite seulement les meilleurs candidats. Aucun score ne garantit un gain.'
+    safety:'Sera Smart Engine analyse localement tous les marchés. Sans Luna, seuls les setups dépassant des seuils autonomes renforcés peuvent être confirmés. Aucun score ne garantit un gain.'
   };
 
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
