@@ -5,7 +5,7 @@ Sera Indicator est un système d’aide à la décision et d’exécution Deriv 
 ## Fonctionnement
 
 - Les bougies Deriv M15, H1 et H4 sont récupérées depuis le WebSocket public Deriv.
-- Sera Autonomous Engine v3.3 analyse tendance, régime de marché, momentum, structure, liquidité, retest, ATR, mémoire de tendance et risque de spike.
+- Sera Autonomous Engine v3.4 analyse tendance, régime de marché, momentum, structure, liquidité, retest, ATR, mémoire de tendance et risque de spike.
 - OpenAI Luna intervient uniquement comme conseiller/auditeur facultatif lorsqu’il est disponible.
 - Sans Luna, le moteur peut confirmer seul BUY/SELL lorsque au moins 80 % des conditions applicables sont validées, tout en exigeant les garde-fous critiques.
 - Le résultat final reste BUY, SELL ou ATTENDRE. Aucun score ne garantit un gain.
@@ -56,6 +56,29 @@ Sera ajoute maintenant un ensemble quantitatif open source au moteur autonome :
 
 Les modèles open source ne peuvent pas transformer un `ATTENDRE` local en ordre réel ni contourner les garde-fous. Ils peuvent confirmer une direction ou mettre l’exécution en attente en cas de désaccord important.
 
-L’EA **v1.41** applique également un garde-fou indépendant : si au moins deux modèles open source disponibles donnent un consensus opposé suffisamment fort, l’ordre `EXECUTE_NOW` est bloqué.
+L’EA **v1.50** applique également un garde-fou indépendant : si au moins deux modèles open source disponibles donnent un consensus opposé suffisamment fort, l’ordre `EXECUTE_NOW` est bloqué.
 
 Les classifieurs dont la qualité de validation est insuffisante sont exclus du consensus plutôt que comptés comme des votes.
+
+
+## Setup directionnel et TP1–TP5
+
+Sera Autonomous Engine v3.4 distingue désormais le **setup détecté** du **signal final exécutable**.
+
+- Un setup précoce est affiché comme **SETUP BUY** (bleu) ou **SETUP SELL** (rouge).
+- Lorsque la structure le permet, Sera calcule immédiatement une **Entrée projetée**, un **Stop Loss** et **TP1 à TP5**.
+- Tant que le moteur n’est pas en `EXECUTE_NOW`, ces niveaux restent des projections d’analyse et l’EA ne les utilise pas pour ouvrir un ordre.
+- Un BUY/SELL final doit toujours respecter les seuils de conditions, le score d’exécution, les garde-fous de risque et le consensus open source.
+
+### EA v1.50 — gestion intelligente
+
+L’EA v1.50 ajoute :
+
+- protection contre une entrée trop éloignée du prix calculé ;
+- contrôle du spread par rapport à la distance de risque ;
+- choix dynamique de l’objectif final : TP3, TP4 ou TP5 selon la qualité du setup ;
+- passage du Stop Loss au break-even après TP1 ;
+- verrouillage progressif du profit : TP1 après TP2, TP2 après TP3 et TP3 après TP4 ;
+- maintien du garde-fou `EXECUTE_NOW` et du veto de l’ensemble open source.
+
+Cette gestion progressive réduit l’exposition d’un trade déjà favorable mais ne garantit ni l’atteinte des objectifs ni l’absence de perte.
