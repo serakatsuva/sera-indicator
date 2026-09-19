@@ -1,5 +1,5 @@
 #property copyright "Sera Indicator"
-#property version   "1.41"
+#property version   "1.50"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -20,10 +20,14 @@ input int MinimumExecutionScore=78;
 input bool RequireExecuteNow=true;
 input bool UseOpenSourceModelGuard=true;
 input int MinimumModelConsensus=67;
+input bool EnableSmartPositionManagement=true;
+input bool DynamicFinalTarget=true;
+input int MaximumEntryChaseRiskPercent=35;
+input int MaximumSpreadRiskPercent=12;
 input int MaximumSignalAgeMinutes=90;
 input int MaximumOpenPositions=1;
 input int MaximumTradesPerDay=2;
-input int PollEverySeconds=60;
+input int PollEverySeconds=30;
 input long MagicNumber=26091801;
 input int DeviationPoints=30;
 
@@ -172,6 +176,83 @@ void StoreState(const string prefix,const string id,const int state)
    GlobalVariableSet(StateKey(prefix,id),(double)state);
 }
 
+double StoredLevel(const string prefix,const string id)
+{
+   string key=StateKey(prefix,id);
+   if(!GlobalVariableCheck(key)) return 0.0;
+   return GlobalVariableGet(key);
+}
+
+void StoreLevel(const string prefix,const string id,const double value)
+{
+   GlobalVariableSet(StateKey(prefix,id),value);
+}
+
+bool SelectSeraPosition(const string symbol)
+{
+   if(!PositionSelect(symbol)) return false;
+   return PositionGetInteger(POSITION_MAGIC)==MagicNumber;
+}
+
+bool ReachedLevel(const long position_type,const double price,const double level)
+{
+   if(level<=0) return false;
+   if(position_type==POSITION_TYPE_BUY) return price>=level;
+   if(position_type==POSITION_TYPE_SELL) return price<=level;
+   return false;
+}
+
+void ManageSeraPosition(const string setup_id,const string symbol)
+{
+   if(!EnableSmartPositionManagement || symbol=="" || !SelectSeraPosition(symbol)) return;
+
+   double tp1=StoredLevel("SERA_TP1_",setup_id);
+   double tp2=StoredLevel("SERA_TP2_",setup_id);
+   double tp3=StoredLevel("SERA_TP3_",setup_id);
+   double tp4=StoredLevel("SERA_TP4_",setup_id);
+   double final_tp=StoredLevel("SERA_FINALTP_",setup_id);
+   if(tp1<=0 || final_tp<=0) return;
+
+   long position_type=PositionGetInteger(POSITION_TYPE);
+   double open_price=PositionGetDouble(POSITION_PRICE_OPEN);
+   double current_sl=PositionGetDouble(POSITION_SL);
+   double current_tp=PositionGetDouble(POSITION_TP);
+
+   MqlTick tick;
+   if(!SymbolInfoTick(symbol,tick)) return;
+   double price=position_type==POSITION_TYPE_BUY?tick.bid:tick.ask;
+
+   double desired_sl=0.0;
+   int stage=0;
+   if(ReachedLevel(position_type,price,tp1)){ desired_sl=open_price; stage=1; }
+   if(ReachedLevel(position_type,price,tp2)){ desired_sl=tp1; stage=2; }
+   if(ReachedLevel(position_type,price,tp3)){ desired_sl=tp2; stage=3; }
+   if(ReachedLevel(position_type,price,tp4)){ desired_sl=tp3; stage=4; }
+   if(desired_sl<=0) return;
+
+   int digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
+   double point=SymbolInfoDouble(symbol,SYMBOL_POINT);
+   double stop_distance=(double)SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL)*point;
+   desired_sl=NormalizeDouble(desired_sl,digits);
+   final_tp=NormalizeDouble(final_tp,digits);
+
+   bool valid_stop=position_type==POSITION_TYPE_BUY
+      ? desired_sl < tick.bid-stop_distance
+      : desired_sl > tick.ask+stop_distance;
+   bool improves=position_type==POSITION_TYPE_BUY
+      ? (current_sl<=0 || desired_sl>current_sl+point)
+      : (current_sl<=0 || desired_sl<current_sl-point);
+
+   if(valid_stop && improves)
+   {
+      double target=current_tp>0?current_tp:final_tp;
+      if(trade.PositionModify(symbol,desired_sl,target))
+         Print("Sera Smart Manage: ",symbol," stage TP",stage," -> SL ",DoubleToString(desired_sl,digits)," final TP ",DoubleToString(target,digits));
+      else
+         Print("Sera Smart Manage: modification refusee ",trade.ResultRetcodeDescription());
+   }
+}
+
 int VerdictState(const string verdict)
 {
    if(verdict=="BUY") return 1;
@@ -233,6 +314,7 @@ void Evaluate(const string json)
          string market_name=JsonString(object,"market");
          string deriv_code=JsonString(object,"symbol");
          string symbol=ResolveTradeSymbol(market_name,deriv_code);
+         if(symbol!="") ManageSeraPosition(setup_id,symbol);
          int state=VerdictState(verdict);
          bool directional_confirmed=(state!=0 && confidence>=MinimumConfidence && conditions_percent>=MinimumAutonomousConditionsPercent);
          bool model_guard_ok=true;
@@ -262,27 +344,52 @@ void Evaluate(const string json)
             {
                int levels_pos=StringFind(object,"\"levels\"");
                string levels=levels_pos>=0?ExtractObjectAt(object,StringFind(object,"{",levels_pos)):"";
-               double sl=JsonNumber(levels,"sl"),tp=JsonNumber(levels,"tp2");
+               double signal_entry=JsonNumber(levels,"entry");
+               double sl=JsonNumber(levels,"sl");
+               double tp1=JsonNumber(levels,"tp1"),tp2=JsonNumber(levels,"tp2"),tp3=JsonNumber(levels,"tp3");
+               double tp4=JsonNumber(levels,"tp4"),tp5=JsonNumber(levels,"tp5");
                MqlTick tick;
-               if(sl>0 && tp>0 && SymbolInfoTick(symbol,tick))
+               if(sl>0 && tp3>0 && SymbolInfoTick(symbol,tick))
                {
                   double price=verdict=="BUY"?tick.ask:tick.bid;
-                  bool levels_valid=verdict=="BUY"?(sl<price && tp>price):(sl>price && tp<price);
-                  double volume=levels_valid?SafeVolume(symbol,price,sl):0;
+                  double risk_distance=MathAbs(signal_entry-sl);
+                  double spread=MathAbs(tick.ask-tick.bid);
+                  bool levels_valid=verdict=="BUY"?(sl<price && tp3>price):(sl>price && tp3<price);
+                  bool spread_ok=risk_distance>0 && spread<=risk_distance*(MaximumSpreadRiskPercent/100.0);
+                  bool chase_ok=risk_distance>0 && (verdict=="BUY"
+                     ? price<=signal_entry+risk_distance*(MaximumEntryChaseRiskPercent/100.0)
+                     : price>=signal_entry-risk_distance*(MaximumEntryChaseRiskPercent/100.0));
+
+                  double final_tp=tp3;
+                  bool strong_model=(models_available>=2 && model_direction==verdict && model_consensus>=75);
+                  if(DynamicFinalTarget && confidence>=90 && execution_score>=90 && strong_model && tp5>0) final_tp=tp5;
+                  else if(DynamicFinalTarget && confidence>=85 && execution_score>=85 && tp4>0) final_tp=tp4;
+
+                  bool final_valid=verdict=="BUY"?final_tp>price:final_tp<price;
+                  double volume=(levels_valid&&spread_ok&&chase_ok&&final_valid)?SafeVolume(symbol,price,sl):0;
+                  if(!spread_ok) Print("Sera: entree ignoree, spread trop grand par rapport au risque.");
+                  if(!chase_ok) Print("Sera: entree ignoree, prix trop eloigne de l'entree calculee.");
                   if(volume>0)
                   {
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,tp,"Sera Swing"):trade.Sell(volume,symbol,0,sl,tp,"Sera Swing");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera Swing v1.50"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera Swing v1.50");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
-                        Print("Sera: ",verdict," ",symbol," volume=",volume," SL=",sl," TP=",tp);
+                        StoreLevel("SERA_ENTRY_",setup_id,signal_entry);
+                        StoreLevel("SERA_TP1_",setup_id,tp1);
+                        StoreLevel("SERA_TP2_",setup_id,tp2);
+                        StoreLevel("SERA_TP3_",setup_id,tp3);
+                        StoreLevel("SERA_TP4_",setup_id,tp4);
+                        StoreLevel("SERA_TP5_",setup_id,tp5);
+                        StoreLevel("SERA_FINALTP_",setup_id,final_tp);
+                        Print("Sera: ",verdict," ",symbol," volume=",volume," SL=",sl," final TP=",final_tp," management TP1-TP5 actif");
                         return;
                      }
                      Print("Sera: ordre refuse: ",trade.ResultRetcodeDescription());
                   }
-                  else Print("Sera: volume nul ou niveaux invalides pour ",symbol);
+                  else Print("Sera: volume nul ou entree bloquee par les gardes spread/chase/niveaux pour ",symbol);
                }
                else Print("Sera: SL/TP ou tick invalide pour ",symbol);
             }
@@ -298,8 +405,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera v1.41 initialise — mode "+mode+" — AutoTrade="+(EnableAutomaticTrading?"ON":"OFF")+" — EXECUTE_NOW + OSS guard");
-   Print("Sera v1.41: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", consensus min=",MinimumModelConsensus,"%");
+   Comment("Sera v1.50 — "+mode+" — EXECUTE_NOW + OSS + Smart TP management");
+   Print("Sera v1.50: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", smart management=",EnableSmartPositionManagement);
    return INIT_SUCCEEDED;
 }
 
