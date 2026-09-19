@@ -122,3 +122,17 @@ test('realtime chart exposes Japanese candle canvas instead of decorative SVG cu
   await expect(page.locator('#chartLine')).toHaveCount(0);
   await expect(page.locator('#chartFillPath')).toHaveCount(0);
 });
+
+
+test('chart uses strategy timeframe mapping for Day and Swing', async ({ page }) => {
+  const mapping = await page.evaluate(() => ({
+    day: chartSpecForRow({mode:'day'}),
+    swing: chartSpecForRow({mode:'swing'})
+  }));
+  expect(mapping.day.entry).toBe('M15');
+  expect(mapping.day.confirmation).toBe('H1');
+  expect(mapping.day.granularity).toBe(900);
+  expect(mapping.swing.entry).toBe('H1');
+  expect(mapping.swing.confirmation).toBe('H4');
+  expect(mapping.swing.granularity).toBe(3600);
+});
