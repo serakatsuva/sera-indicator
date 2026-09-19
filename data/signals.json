@@ -3,19 +3,19 @@
   "status": "autonomous_analyzed",
   "source_broker": "Deriv",
   "source": "Deriv WebSocket · M15/H1/H4",
-  "updated_at": "2026-09-19T15:08:05.287Z",
+  "updated_at": "2026-09-19T15:11:55.330Z",
   "engine_version": "Sera Autonomous Engine v3.3",
-  "model": "Sera Autonomous Engine v3.3 · local",
+  "model": "Sera Autonomous Engine v3.3 · local + OSS Ensemble",
   "screening_model": "gpt-5.6-luna",
   "deep_model": null,
   "markets_count": 22,
-  "technical_candidates": 2,
-  "ai_candidates": 2,
+  "technical_candidates": 0,
+  "ai_candidates": 0,
   "ai_calls": 0,
-  "ai_attempted": 1,
-  "ai_error": "OpenAI API 429: credit_balance_exhausted",
+  "ai_attempted": 0,
+  "ai_error": null,
   "cached_ai_validations": 0,
-  "confirmed_signals": 2,
+  "confirmed_signals": 0,
   "markets": [
     {
       "id": "BOOM300N:day",
@@ -34,14 +34,14 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 352.364,
+      "price": 351.718,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 74,
       "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 80,
-        "passed": 6,
+        "confidence": 86,
+        "passed": 7,
         "bos": false,
         "choch": true,
         "sweep": false,
@@ -49,25 +49,25 @@
         "fvg": true,
         "retest": false,
         "orderBlock": true,
-        "momentum": false,
+        "momentum": true,
         "rejection": false,
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 84,
-        "emaSpreadAtr": 1.6085427852740088,
-        "emaSlopeAtr": -0.3831589797380155,
-        "volatilityExpansion": 0.970879138697022,
-        "ema20": 355.5627320293484,
-        "ema50": 359.6417820604319,
-        "ema200": 362.47806714557936,
-        "rsi": 48.63561983105564,
-        "atr": 2.5358666666666636,
+        "trendQuality": 92,
+        "emaSpreadAtr": 1.6003475995310072,
+        "emaSlopeAtr": -0.40178000658850255,
+        "volatilityExpansion": 0.9881959983137161,
+        "ema20": 355.5012082198246,
+        "ema50": 359.6164487270986,
+        "ema200": 362.4716392848828,
+        "rsi": 47.284688480887525,
+        "atr": 2.5714666666666632,
         "swingHigh": 359.845,
         "swingLow": 347.687,
         "closedAt": 1789830000,
-        "price": 352.364,
-        "change": -0.2632368508947214
+        "price": 351.718,
+        "change": -0.44608739463448677
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -86,23 +86,23 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 63,
-        "emaSpreadAtr": 0.5144768322342737,
-        "emaSlopeAtr": -1.0386652178231799,
-        "volatilityExpansion": 0.8507252123078614,
-        "ema20": 361.03924821432093,
-        "ema50": 363.7957807829767,
-        "ema200": 375.073408651835,
-        "rsi": 17.76339975001845,
-        "atr": 5.357933333333335,
+        "emaSpreadAtr": 0.5177910049404052,
+        "emaSlopeAtr": -1.0432164695263244,
+        "volatilityExpansion": 0.858111036320549,
+        "ema20": 360.97772440479713,
+        "ema50": 363.77044744964337,
+        "ema200": 375.0669807911385,
+        "rsi": 17.486549735820006,
+        "atr": 5.393533333333335,
         "swingHigh": 380.795,
         "swingLow": 347.687,
         "closedAt": 1789830000,
-        "price": 352.364,
-        "change": -0.2632368508947214
+        "price": 351.718,
+        "change": -0.44608739463448677
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 76,
+        "local_score": 82,
         "regime": "TRENDING",
         "confirmation_regime": "TRENDING",
         "aligned": true,
@@ -123,35 +123,35 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 50,
-        "previous_score": 48,
+        "bias_cycles": 3,
+        "previous_conditions": 75,
+        "previous_score": 80,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 82
+        "candidate_score": 83
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
         "confidence": 74,
-        "score": 80,
-        "consensus": 79,
+        "score": 89,
+        "consensus": 91,
         "setup_type": "BREAKOUT_CONTINUATION",
-        "condition_pass_percent": 75,
-        "conditions_passed": 6,
+        "condition_pass_percent": 88,
+        "conditions_passed": 7,
         "conditions_total": 8,
         "minimum_conditions_percent": 80,
-        "condition_gate": false,
+        "condition_gate": true,
         "side": "SELL",
         "aligned": true,
         "active_strategies": [
           "Trend following",
           "SMC structure",
           "Breakout + impulse",
+          "Momentum",
           "FVG / Order Block",
           "Trend memory",
           "Volatility control"
         ],
         "missing_strategies": [
-          "Momentum",
           "Boom/Crash guard"
         ],
         "strategies": [
@@ -195,7 +195,7 @@
             "name": "Momentum",
             "weight": 10,
             "applicable": true,
-            "support": false
+            "support": true
           },
           {
             "id": "imbalance",
@@ -243,7 +243,7 @@
         "risk_gate": false,
         "adverse_gate": false,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 6/8 conditions pertinentes validées (75%), consensus 79%, score 80/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 7/8 conditions pertinentes validées (88%), consensus 91%, score 89/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -274,48 +274,95 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 64,
+        "score": 73,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 1.26,
+        "extension_atr": 1.47,
         "max_extension_atr": 0.97,
-        "rsi": 48.63561983105564,
+        "rsi": 47.284688480887525,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 352.364,
-        "ema20": 355.5627320293484,
+        "current_price": 351.718,
+        "ema20": 355.5012082198246,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 64,
+      "execution_score": 73,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 6/8 conditions pertinentes validées (75%), consensus 79%, score 80/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 7/8 conditions pertinentes validées (88%), consensus 91%, score 89/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Trend following",
         "Stratégie locale: SMC structure",
         "Stratégie locale: Breakout + impulse",
+        "Stratégie locale: Momentum",
         "Stratégie locale: FVG / Order Block",
-        "Stratégie locale: Trend memory",
-        "Stratégie locale: Volatility control"
+        "Stratégie locale: Trend memory"
       ],
       "ai_contradictions": [
-        "À renforcer: Momentum",
         "À renforcer: Boom/Crash guard"
       ],
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 57.6,
+            "confidence": 57.6,
+            "validation_accuracy": 35.7,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 57.5,
+            "confidence": 57.5,
+            "validation_accuracy": 40.5,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 57.5,
+          "buy_weight": 1.026,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "BOOM300N:swing",
@@ -334,7 +381,7 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 352.364,
+      "price": 351.718,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 74,
       "levels": null,
@@ -355,19 +402,19 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 63,
-        "emaSpreadAtr": 0.5144768322342737,
-        "emaSlopeAtr": -1.0386652178231799,
-        "volatilityExpansion": 0.8507252123078614,
-        "ema20": 361.03924821432093,
-        "ema50": 363.7957807829767,
-        "ema200": 375.073408651835,
-        "rsi": 17.76339975001845,
-        "atr": 5.357933333333335,
+        "emaSpreadAtr": 0.5177910049404052,
+        "emaSlopeAtr": -1.0432164695263244,
+        "volatilityExpansion": 0.858111036320549,
+        "ema20": 360.97772440479713,
+        "ema50": 363.77044744964337,
+        "ema200": 375.0669807911385,
+        "rsi": 17.486549735820006,
+        "atr": 5.393533333333335,
         "swingHigh": 380.795,
         "swingLow": 347.687,
         "closedAt": 1789830000,
-        "price": 352.364,
-        "change": -0.2632368508947214
+        "price": 351.718,
+        "change": -0.44608739463448677
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -386,19 +433,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 88,
-        "emaSpreadAtr": 1.3416766287222417,
-        "emaSlopeAtr": -0.09436027127699606,
+        "emaSpreadAtr": 1.3448891053049739,
+        "emaSlopeAtr": -0.09982148146764773,
         "volatilityExpansion": 0.9529309528297994,
-        "ema20": 365.60604154819134,
-        "ema50": 380.72083377672465,
-        "ema200": 473.1336849704476,
-        "rsi": 47.52689031948498,
+        "ema20": 365.54451773866754,
+        "ema50": 380.69550044339127,
+        "ema200": 473.12725710975104,
+        "rsi": 47.121166069800346,
         "atr": 11.265600000000013,
         "swingHigh": 384.312,
         "swingLow": 347.339,
         "closedAt": 1789819200,
-        "price": 352.364,
-        "change": -0.9211562253964689
+        "price": 351.718,
+        "change": -1.1028005848610856
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
@@ -423,11 +470,11 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 67,
-        "previous_score": 62,
+        "bias_cycles": 3,
+        "previous_conditions": 44,
+        "previous_score": 54,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 82
+        "candidate_score": 83
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
@@ -577,19 +624,19 @@
         "ready": false,
         "score": 38,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 1.62,
+        "extension_atr": 1.72,
         "max_extension_atr": 1.17,
-        "rsi": 17.76339975001845,
+        "rsi": 17.486549735820006,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 352.364,
-        "ema20": 361.03924821432093,
+        "current_price": 351.718,
+        "ema20": 360.97772440479713,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
@@ -616,7 +663,63 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 84.6,
+            "confidence": 84.6,
+            "validation_accuracy": 70.7,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 84.2,
+            "confidence": 84.2,
+            "validation_accuracy": 61.0,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "error",
+            "direction": "NEUTRAL",
+            "error": "Cannot change data-type for array of references."
+          },
+          "timesfm25": {
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "BUY",
+            "confidence": 76.5,
+            "forecast_price": 355.7779541,
+            "expected_return_pct": 1.1543,
+            "volatility_threshold_pct": 0.6088,
+            "horizon_steps": 6,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 3,
+          "directional_models": 3,
+          "neutral_models": 0,
+          "mean_confidence": 81.8,
+          "buy_weight": 2.268,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 3
     },
     {
       "id": "BOOM500:day",
@@ -635,14 +738,14 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 4829.243,
+      "price": 4828.022,
       "technical_verdict": "ATTENDRE",
-      "technical_confidence": 35,
+      "technical_confidence": 39,
       "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 59,
-        "passed": 3,
+        "confidence": 65,
+        "passed": 4,
         "bos": false,
         "choch": false,
         "sweep": false,
@@ -651,24 +754,24 @@
         "retest": false,
         "orderBlock": true,
         "momentum": true,
-        "rejection": false,
+        "rejection": true,
         "trendStrong": false,
         "spikeRisk": false,
         "regime": "TRANSITION",
-        "trendQuality": 42,
-        "emaSpreadAtr": 0.4201527743955182,
-        "emaSlopeAtr": -0.8703369519189221,
+        "trendQuality": 47,
+        "emaSpreadAtr": 0.41269026388477437,
+        "emaSlopeAtr": -0.8830232197871964,
         "volatilityExpansion": 0.9202585602512681,
-        "ema20": 4836.933590191118,
-        "ema50": 4833.082357820269,
-        "ema200": 4798.083382584951,
-        "rsi": 36.63370107529645,
+        "ema20": 4836.817304476833,
+        "ema50": 4833.034475467328,
+        "ema200": 4798.07123333122,
+        "rsi": 35.68215121211338,
         "atr": 9.166266666666706,
         "swingHigh": 4864.394,
         "swingLow": 4814.769,
         "closedAt": 1789830000,
-        "price": 4829.243,
-        "change": 0.022700220187998887
+        "price": 4828.022,
+        "change": -0.0025889849667004583
       },
       "confirmation_tf": {
         "side": "BUY",
@@ -687,23 +790,23 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 63,
-        "emaSpreadAtr": 1.1251430010791366,
-        "emaSlopeAtr": 0.505900371631035,
+        "emaSpreadAtr": 1.1220408359584033,
+        "emaSlopeAtr": 0.5006266909258134,
         "volatilityExpansion": 0.9199801294541127,
-        "ema20": 4824.009189110522,
-        "ema50": 4799.199560908127,
-        "ema200": 4756.175066839526,
-        "rsi": 53.81009594043524,
+        "ema20": 4823.892903396236,
+        "ema50": 4799.151678555186,
+        "ema200": 4756.162917585795,
+        "rsi": 53.46870014524833,
         "atr": 22.0502000000001,
         "swingHigh": 4864.394,
         "swingLow": 4760.136,
         "closedAt": 1789830000,
-        "price": 4829.243,
-        "change": 0.022700220187998887
+        "price": 4828.022,
+        "change": -0.0025889849667004583
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 35,
+        "local_score": 39,
         "regime": "TRANSITION",
         "confirmation_regime": "TRENDING",
         "aligned": false,
@@ -725,15 +828,15 @@
         "persistence": false,
         "flip": false,
         "bias_cycles": 0,
-        "previous_conditions": 56,
-        "previous_score": 37,
+        "previous_conditions": 22,
+        "previous_score": 6,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 35
+        "candidate_score": 39
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
         "confidence": 18,
-        "score": 6,
+        "score": 7,
         "consensus": 16,
         "setup_type": "GENERIC",
         "condition_pass_percent": 22,
@@ -811,7 +914,7 @@
             "name": "Price rejection",
             "weight": 6,
             "applicable": false,
-            "support": false
+            "support": true
           },
           {
             "id": "range",
@@ -845,7 +948,7 @@
         "risk_gate": false,
         "adverse_gate": false,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · GENERIC: 2/9 conditions pertinentes validées (22%), consensus 16%, score 6/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · GENERIC: 2/9 conditions pertinentes validées (22%), consensus 16%, score 7/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -876,32 +979,32 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 8,
+        "score": 16,
         "phase": "TRANSITION",
-        "extension_atr": 0.84,
+        "extension_atr": 0.96,
         "max_extension_atr": 0.97,
-        "rsi": 36.63370107529645,
+        "rsi": 35.68215121211338,
         "stretched": false,
         "extreme": false,
         "overextended": false,
         "breakout_chase": false,
         "persistence_gate": true,
         "bias_cycles": 0,
-        "structural_entry": false,
+        "structural_entry": true,
         "preferred_entry_zone": null,
-        "current_price": 4829.243,
-        "ema20": 4836.933590191118,
+        "current_price": 4828.022,
+        "ema20": 4836.817304476833,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 8,
+      "execution_score": 16,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · GENERIC: 2/9 conditions pertinentes validées (22%), consensus 16%, score 6/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 2/9 conditions pertinentes validées (22%), consensus 16%, score 7/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: FVG / Order Block",
         "Stratégie locale: Volatility control"
@@ -915,7 +1018,55 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 67.5,
+            "confidence": 67.5,
+            "validation_accuracy": 47.6,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 82.4,
+            "confidence": 82.4,
+            "validation_accuracy": 47.6,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 75.0,
+          "buy_weight": 1.226,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "BOOM500:swing",
@@ -934,7 +1085,7 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 4829.243,
+      "price": 4828.022,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 62,
       "levels": null,
@@ -955,19 +1106,19 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 63,
-        "emaSpreadAtr": 1.1251430010791366,
-        "emaSlopeAtr": 0.505900371631035,
+        "emaSpreadAtr": 1.1220408359584033,
+        "emaSlopeAtr": 0.5006266909258134,
         "volatilityExpansion": 0.9199801294541127,
-        "ema20": 4824.009189110522,
-        "ema50": 4799.199560908127,
-        "ema200": 4756.175066839526,
-        "rsi": 53.81009594043524,
+        "ema20": 4823.892903396236,
+        "ema50": 4799.151678555186,
+        "ema200": 4756.162917585795,
+        "rsi": 53.46870014524833,
         "atr": 22.0502000000001,
         "swingHigh": 4864.394,
         "swingLow": 4760.136,
         "closedAt": 1789830000,
-        "price": 4829.243,
-        "change": 0.022700220187998887
+        "price": 4828.022,
+        "change": -0.0025889849667004583
       },
       "confirmation_tf": {
         "side": "BUY",
@@ -986,19 +1137,19 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 52,
-        "emaSpreadAtr": 0.6570695508661564,
-        "emaSlopeAtr": 0.5781342864258681,
+        "emaSpreadAtr": 0.6557285924545204,
+        "emaSlopeAtr": 0.5758546571260851,
         "volatilityExpansion": 1.0570028428591942,
-        "ema20": 4780.959380453333,
-        "ema50": 4747.44173700801,
-        "ema200": 4695.249693746371,
-        "rsi": 58.96556067958517,
+        "ema20": 4780.843094739048,
+        "ema50": 4747.393854655069,
+        "ema200": 4695.237544492639,
+        "rsi": 58.7690544099786,
         "atr": 51.01079999999995,
         "swingHigh": 4865.679,
         "swingLow": 4696.753,
         "closedAt": 1789819200,
-        "price": 4829.243,
-        "change": -0.24892105292509958
+        "price": 4828.022,
+        "change": -0.2741415828082294
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
@@ -1023,11 +1174,11 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "previous_conditions": 56,
-        "previous_score": 60,
+        "previous_score": 61,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 70
+        "candidate_score": 71
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
@@ -1177,19 +1328,19 @@
         "ready": false,
         "score": 63,
         "phase": "TREND",
-        "extension_atr": 0.24,
+        "extension_atr": 0.19,
         "max_extension_atr": 1.35,
-        "rsi": 53.81009594043524,
+        "rsi": 53.46870014524833,
         "stretched": false,
         "extreme": false,
         "overextended": false,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 4829.243,
-        "ema20": 4824.009189110522,
+        "current_price": 4828.022,
+        "ema20": 4823.892903396236,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
@@ -1217,7 +1368,63 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "NEUTRAL",
+            "probability_up": 54.2,
+            "confidence": 54.2,
+            "validation_accuracy": 61.0,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 61.8,
+            "confidence": 61.8,
+            "validation_accuracy": 56.1,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "error",
+            "direction": "NEUTRAL",
+            "error": "Cannot change data-type for array of references."
+          },
+          "timesfm25": {
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 61.2,
+            "forecast_price": 4821.21289062,
+            "expected_return_pct": -0.141,
+            "volatility_threshold_pct": 0.1764,
+            "horizon_steps": 6,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 3,
+          "directional_models": 1,
+          "neutral_models": 2,
+          "mean_confidence": 59.1,
+          "buy_weight": 0.59,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 3
     },
     {
       "id": "BOOM1000:day",
@@ -1236,40 +1443,40 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 16201.097,
+      "price": 16197.412,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 74,
       "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 81,
-        "passed": 6,
+        "confidence": 75,
+        "passed": 5,
         "bos": true,
         "choch": true,
         "sweep": false,
         "impulse": true,
         "fvg": false,
         "retest": false,
-        "orderBlock": true,
+        "orderBlock": false,
         "momentum": true,
         "rejection": false,
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 90,
-        "emaSpreadAtr": 2.305731590158703,
-        "emaSlopeAtr": -1.1838061096817605,
-        "volatilityExpansion": 0.9695670828568068,
-        "ema20": 16243.09873288832,
-        "ema50": 16283.991036355224,
-        "ema200": 16335.301710498094,
-        "rsi": 38.07327102109754,
-        "atr": 17.73506666666678,
+        "trendQuality": 82,
+        "emaSpreadAtr": 2.2857102256081623,
+        "emaSlopeAtr": -1.1871502825189748,
+        "volatilityExpansion": 0.9854307144589383,
+        "ema20": 16242.747780507369,
+        "ema50": 16283.846526551302,
+        "ema200": 16335.265043831427,
+        "rsi": 37.43309651896565,
+        "atr": 17.98073333333341,
         "swingHigh": 16291.047,
         "swingLow": 16206.762,
         "closedAt": 1789830000,
-        "price": 16201.097,
-        "change": -0.04768389764934211
+        "price": 16197.412,
+        "change": -0.07041842512220953
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -1288,23 +1495,23 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 68,
-        "emaSpreadAtr": 0.10745371501361928,
-        "emaSlopeAtr": -1.200588420153325,
-        "volatilityExpansion": 0.850644654113719,
-        "ema20": 16303.034945982628,
-        "ema50": 16308.018563321988,
-        "ema200": 15859.074462413997,
-        "rsi": 32.19289264041144,
-        "atr": 46.37919999999976,
+        "emaSpreadAtr": 0.11131527632016809,
+        "emaSlopeAtr": -1.201789663818776,
+        "volatilityExpansion": 0.8566609904669205,
+        "ema20": 16302.683993601675,
+        "ema50": 16307.874053518066,
+        "ema200": 15859.03779574733,
+        "rsi": 31.9258011788597,
+        "atr": 46.6248666666664,
         "swingHigh": 16546.661,
         "swingLow": 16219.347,
         "closedAt": 1789830000,
-        "price": 16201.097,
-        "change": -0.04768389764934211
+        "price": 16197.412,
+        "change": -0.07041842512220953
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 81,
+        "local_score": 76,
         "regime": "TRENDING",
         "confirmation_regime": "TRANSITION",
         "aligned": true,
@@ -1325,20 +1532,20 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "previous_conditions": 67,
-        "previous_score": 67,
+        "previous_score": 69,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 82
+        "candidate_score": 83
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 69,
-        "score": 69,
-        "consensus": 62,
+        "confidence": 62,
+        "score": 62,
+        "consensus": 54,
         "setup_type": "GENERIC",
-        "condition_pass_percent": 67,
-        "conditions_passed": 6,
+        "condition_pass_percent": 56,
+        "conditions_passed": 5,
         "conditions_total": 9,
         "minimum_conditions_percent": 80,
         "condition_gate": false,
@@ -1348,13 +1555,13 @@
           "SMC structure",
           "Breakout + impulse",
           "Momentum",
-          "FVG / Order Block",
           "Trend memory",
           "Volatility control"
         ],
         "missing_strategies": [
           "Trend following",
           "Break & retest",
+          "FVG / Order Block",
           "Boom/Crash guard"
         ],
         "strategies": [
@@ -1405,7 +1612,7 @@
             "name": "FVG / Order Block",
             "weight": 8,
             "applicable": true,
-            "support": true
+            "support": false
           },
           {
             "id": "rejection",
@@ -1446,7 +1653,7 @@
         "risk_gate": false,
         "adverse_gate": false,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · GENERIC: 6/9 conditions pertinentes validées (67%), consensus 62%, score 69/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 54%, score 62/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -1455,7 +1662,7 @@
         "source": "Deriv public WebSocket"
       },
       "final_verdict": "ATTENDRE",
-      "final_confidence": 69,
+      "final_confidence": 62,
       "timing": {
         "bias": "SELL",
         "side": "SELL",
@@ -1464,8 +1671,8 @@
         "swing_days_min": null,
         "swing_days_max": null,
         "swing_days_label": null,
-        "duration_min_hours": 3,
-        "duration_max_hours": 12,
+        "duration_min_hours": 6,
+        "duration_max_hours": 24,
         "tp1_hours": null,
         "tp2_hours": null,
         "tp3_hours": null,
@@ -1477,49 +1684,97 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 53,
+        "score": 46,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 2.37,
+        "extension_atr": 2.52,
         "max_extension_atr": 0.97,
-        "rsi": 38.07327102109754,
+        "rsi": 37.43309651896565,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 16201.097,
-        "ema20": 16243.09873288832,
+        "current_price": 16197.412,
+        "ema20": 16242.747780507369,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 53,
+      "execution_score": 46,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · GENERIC: 6/9 conditions pertinentes validées (67%), consensus 62%, score 69/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 54%, score 62/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: SMC structure",
         "Stratégie locale: Breakout + impulse",
         "Stratégie locale: Momentum",
-        "Stratégie locale: FVG / Order Block",
         "Stratégie locale: Trend memory",
         "Stratégie locale: Volatility control"
       ],
       "ai_contradictions": [
         "À renforcer: Trend following",
         "À renforcer: Break & retest",
+        "À renforcer: FVG / Order Block",
         "À renforcer: Boom/Crash guard"
       ],
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 37.9,
+            "confidence": 62.1,
+            "validation_accuracy": 71.4,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 43.0,
+            "confidence": 57.0,
+            "validation_accuracy": 71.4,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "SELL",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 59.5,
+          "buy_weight": 0.0,
+          "sell_weight": 1.309
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "BOOM1000:swing",
@@ -1538,7 +1793,7 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 16201.097,
+      "price": 16197.412,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 74,
       "levels": null,
@@ -1559,19 +1814,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 68,
-        "emaSpreadAtr": 0.10745371501361928,
-        "emaSlopeAtr": -1.200588420153325,
-        "volatilityExpansion": 0.850644654113719,
-        "ema20": 16303.034945982628,
-        "ema50": 16308.018563321988,
-        "ema200": 15859.074462413997,
-        "rsi": 32.19289264041144,
-        "atr": 46.37919999999976,
+        "emaSpreadAtr": 0.11131527632016809,
+        "emaSlopeAtr": -1.201789663818776,
+        "volatilityExpansion": 0.8566609904669205,
+        "ema20": 16302.683993601675,
+        "ema50": 16307.874053518066,
+        "ema200": 15859.03779574733,
+        "rsi": 31.9258011788597,
+        "atr": 46.6248666666664,
         "swingHigh": 16546.661,
         "swingLow": 16219.347,
         "closedAt": 1789830000,
-        "price": 16201.097,
-        "change": -0.04768389764934211
+        "price": 16197.412,
+        "change": -0.07041842512220953
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -1590,19 +1845,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 84,
-        "emaSpreadAtr": 3.4712337468372896,
-        "emaSlopeAtr": 0.6771115249595325,
-        "volatilityExpansion": 0.884973544054141,
-        "ema20": 16222.804735018583,
-        "ema50": 15851.506531443963,
-        "ema200": 15237.15835874941,
-        "rsi": 46.09749225133833,
-        "atr": 106.96433333333322,
+        "emaSpreadAtr": 3.461353987478653,
+        "emaSlopeAtr": 0.6722864516244721,
+        "volatilityExpansion": 0.8877178131737279,
+        "ema20": 16222.453782637629,
+        "ema50": 15851.362021640043,
+        "ema200": 15237.121692082745,
+        "rsi": 45.82865137420112,
+        "atr": 107.20999999999985,
         "swingHigh": 16590.175,
         "swingLow": 15772.302,
         "closedAt": 1789819200,
-        "price": 16201.097,
-        "change": -0.2254198562604337
+        "price": 16197.412,
+        "change": -0.24811395702594163
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
@@ -1627,11 +1882,11 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 50,
-        "previous_score": 49,
+        "bias_cycles": 3,
+        "previous_conditions": 83,
+        "previous_score": 85,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 78
+        "candidate_score": 79
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
@@ -1778,19 +2033,19 @@
         "ready": false,
         "score": 69,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 2.2,
+        "extension_atr": 2.26,
         "max_extension_atr": 1.17,
-        "rsi": 32.19289264041144,
+        "rsi": 31.9258011788597,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 16201.097,
-        "ema20": 16303.034945982628,
+        "current_price": 16197.412,
+        "ema20": 16302.683993601675,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
@@ -1815,7 +2070,63 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 25.6,
+            "confidence": 74.4,
+            "validation_accuracy": 48.8,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 32.9,
+            "confidence": 67.1,
+            "validation_accuracy": 41.5,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "error",
+            "direction": "NEUTRAL",
+            "error": "Cannot change data-type for array of references."
+          },
+          "timesfm25": {
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 61.5,
+            "forecast_price": 16180.953125,
+            "expected_return_pct": -0.1016,
+            "volatility_threshold_pct": 0.1234,
+            "horizon_steps": 6,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
+          }
+        },
+        "ensemble": {
+          "direction": "SELL",
+          "consensus": 100.0,
+          "available_models": 3,
+          "directional_models": 2,
+          "neutral_models": 1,
+          "mean_confidence": 67.7,
+          "buy_weight": 0.0,
+          "sell_weight": 1.177
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 3
     },
     {
       "id": "CRASH300N:day",
@@ -1834,7 +2145,7 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 2074.77,
+      "price": 2074.487,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 51,
       "levels": null,
@@ -1855,19 +2166,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 46,
-        "emaSpreadAtr": 0.35052822644678866,
-        "emaSlopeAtr": -0.7026077178050102,
-        "volatilityExpansion": 0.8369206545052817,
-        "ema20": 2085.507099385955,
-        "ema50": 2090.2802188769324,
-        "ema200": 2068.079360971717,
-        "rsi": 32.33045600559896,
-        "atr": 13.616933333333296,
+        "emaSpreadAtr": 0.34737782345803114,
+        "emaSlopeAtr": -0.6959428723050417,
+        "volatilityExpansion": 0.8505699303458294,
+        "ema20": 2085.4801470050024,
+        "ema50": 2090.2691208377164,
+        "ema200": 2068.076545051319,
+        "rsi": 32.15818212894568,
+        "atr": 13.786066666666617,
         "swingHigh": 2120.04,
         "swingLow": 2056.679,
         "closedAt": 1789830000,
-        "price": 2074.77,
-        "change": 0.23551919300255353
+        "price": 2074.487,
+        "change": 0.22184700190106543
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -1886,19 +2197,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 44,
-        "emaSpreadAtr": 0.5552527397476519,
-        "emaSlopeAtr": 0.027634839145209956,
-        "volatilityExpansion": 1.0123069071611235,
-        "ema20": 2085.623584679884,
-        "ema50": 2068.0723417112554,
-        "ema200": 2055.7734081754234,
-        "rsi": 41.68479244359128,
-        "atr": 31.609466666666563,
+        "emaSpreadAtr": 0.5517986515105217,
+        "emaSlopeAtr": 0.026639629997757285,
+        "volatilityExpansion": 1.0188681197138925,
+        "ema20": 2085.5966322989316,
+        "ema50": 2068.0612436720394,
+        "ema200": 2055.7705922550253,
+        "rsi": 41.626175659932386,
+        "atr": 31.778599999999884,
         "swingHigh": 2147.395,
         "swingLow": 2007.744,
         "closedAt": 1789830000,
-        "price": 2074.77,
-        "change": 0.23551919300255353
+        "price": 2074.487,
+        "change": 0.22184700190106543
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
@@ -1923,11 +2234,11 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 100,
-        "previous_score": 95,
+        "bias_cycles": 3,
+        "previous_conditions": 83,
+        "previous_score": 73,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 55
+        "candidate_score": 56
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
@@ -2074,19 +2385,19 @@
         "ready": false,
         "score": 75,
         "phase": "TRANSITION",
-        "extension_atr": 0.79,
+        "extension_atr": 0.8,
         "max_extension_atr": 1.15,
-        "rsi": 32.33045600559896,
+        "rsi": 32.15818212894568,
         "stretched": false,
         "extreme": false,
         "overextended": false,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 2074.77,
-        "ema20": 2085.507099385955,
+        "current_price": 2074.487,
+        "ema20": 2085.4801470050024,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
@@ -2111,7 +2422,55 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "NEUTRAL",
+            "probability_up": 53.6,
+            "confidence": 53.6,
+            "validation_accuracy": 47.6,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 58.1,
+            "confidence": 58.1,
+            "validation_accuracy": 42.9,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 1,
+          "neutral_models": 1,
+          "mean_confidence": 55.9,
+          "buy_weight": 0.515,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "CRASH300N:swing",
@@ -2130,7 +2489,7 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 2074.77,
+      "price": 2074.487,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 41,
       "levels": null,
@@ -2151,19 +2510,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 44,
-        "emaSpreadAtr": 0.5552527397476519,
-        "emaSlopeAtr": 0.027634839145209956,
-        "volatilityExpansion": 1.0123069071611235,
-        "ema20": 2085.623584679884,
-        "ema50": 2068.0723417112554,
-        "ema200": 2055.7734081754234,
-        "rsi": 41.68479244359128,
-        "atr": 31.609466666666563,
+        "emaSpreadAtr": 0.5517986515105217,
+        "emaSlopeAtr": 0.026639629997757285,
+        "volatilityExpansion": 1.0188681197138925,
+        "ema20": 2085.5966322989316,
+        "ema50": 2068.0612436720394,
+        "ema200": 2055.7705922550253,
+        "rsi": 41.626175659932386,
+        "atr": 31.778599999999884,
         "swingHigh": 2147.395,
         "swingLow": 2007.744,
         "closedAt": 1789830000,
-        "price": 2074.77,
-        "change": 0.23551919300255353
+        "price": 2074.487,
+        "change": 0.22184700190106543
       },
       "confirmation_tf": {
         "side": "BUY",
@@ -2182,19 +2541,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 61,
-        "emaSpreadAtr": 0.25395172367214713,
-        "emaSlopeAtr": 0.3728416420345601,
+        "emaSpreadAtr": 0.25371584253553214,
+        "emaSlopeAtr": 0.37244064410231936,
         "volatilityExpansion": 1.1151428845723066,
-        "ema20": 2067.0198496121443,
-        "ema50": 2049.9509246885086,
-        "ema200": 1900.1432966701443,
-        "rsi": 65.83997990328454,
+        "ema20": 2066.992897231192,
+        "ema50": 2049.939826649293,
+        "ema200": 1900.1404807497463,
+        "rsi": 65.78152304521198,
         "atr": 67.21326666666668,
         "swingHigh": 2147.395,
         "swingLow": 1943.809,
         "closedAt": 1789819200,
-        "price": 2074.77,
-        "change": -1.7128959396057075
+        "price": 2074.487,
+        "change": -1.7263023655946452
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
@@ -2220,8 +2579,8 @@
         "persistence": false,
         "flip": false,
         "bias_cycles": 0,
-        "previous_conditions": 50,
-        "previous_score": 30,
+        "previous_conditions": 67,
+        "previous_score": 43,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 41
       },
@@ -2370,9 +2729,9 @@
         "ready": false,
         "score": 33,
         "phase": "TRANSITION",
-        "extension_atr": 0.34,
+        "extension_atr": 0.35,
         "max_extension_atr": 1.35,
-        "rsi": 41.68479244359128,
+        "rsi": 41.626175659932386,
         "stretched": false,
         "extreme": false,
         "overextended": false,
@@ -2381,8 +2740,8 @@
         "bias_cycles": 0,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 2074.77,
-        "ema20": 2085.623584679884,
+        "current_price": 2074.487,
+        "ema20": 2085.5966322989316,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
@@ -2407,7 +2766,55 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 57.9,
+            "confidence": 57.9,
+            "validation_accuracy": 63.4,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "NEUTRAL",
+            "probability_up": 55.6,
+            "confidence": 55.6,
+            "validation_accuracy": 61.0,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 1,
+          "neutral_models": 1,
+          "mean_confidence": 56.8,
+          "buy_weight": 0.607,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "CRASH500:day",
@@ -2426,18 +2833,18 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 3041.397,
+      "price": 3042.828,
       "technical_verdict": "ATTENDRE",
-      "technical_confidence": 67,
+      "technical_confidence": 62,
       "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 67,
-        "passed": 4,
+        "confidence": 62,
+        "passed": 3,
         "bos": false,
         "choch": false,
         "sweep": false,
-        "impulse": true,
+        "impulse": false,
         "fvg": false,
         "retest": false,
         "orderBlock": true,
@@ -2446,29 +2853,29 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 64,
-        "emaSpreadAtr": 3.2074091699356404,
-        "emaSlopeAtr": -0.740844136321807,
+        "trendQuality": 59,
+        "emaSpreadAtr": 3.1913545784907362,
+        "emaSlopeAtr": -0.713551330865516,
         "volatilityExpansion": 0.6638211914336344,
-        "ema20": 3048.465676192887,
-        "ema50": 3064.481766969321,
-        "ema200": 3098.648097127754,
-        "rsi": 53.78814207270426,
+        "ema20": 3048.6019619071726,
+        "ema50": 3064.53788461638,
+        "ema200": 3098.662335933724,
+        "rsi": 56.60315254361244,
         "atr": 4.993466666666579,
         "swingHigh": 3075.215,
         "swingLow": 3028.84,
         "closedAt": 1789830000,
-        "price": 3041.397,
-        "change": -0.07966957331934088
+        "price": 3042.828,
+        "change": -0.032656311702861096
       },
       "confirmation_tf": {
         "side": "SELL",
-        "confidence": 67,
-        "passed": 4,
+        "confidence": 62,
+        "passed": 3,
         "bos": false,
         "choch": false,
         "sweep": false,
-        "impulse": true,
+        "impulse": false,
         "fvg": false,
         "retest": false,
         "orderBlock": false,
@@ -2477,28 +2884,28 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 64,
-        "emaSpreadAtr": 1.682734009970583,
-        "emaSlopeAtr": -1.6227037460318698,
+        "trendQuality": 59,
+        "emaSpreadAtr": 1.6772444251247398,
+        "emaSlopeAtr": -1.6133714517939521,
         "volatilityExpansion": 1.028313705838141,
-        "ema20": 3071.881421030938,
-        "ema50": 3096.4555076012116,
-        "ema200": 3105.3015244203016,
-        "rsi": 31.17042080104288,
+        "ema20": 3072.0177067452237,
+        "ema50": 3096.5116252482703,
+        "ema200": 3105.315763226272,
+        "rsi": 31.496863999297346,
         "atr": 14.603666666666657,
         "swingHigh": 3129.056,
         "swingLow": 3028.84,
         "closedAt": 1789830000,
-        "price": 3041.397,
-        "change": -0.07966957331934088
+        "price": 3042.828,
+        "change": -0.032656311702861096
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 67,
+        "local_score": 62,
         "regime": "TRENDING",
         "confirmation_regime": "TRENDING",
         "aligned": true,
-        "stability": true,
+        "stability": false,
         "adverse_spike_direction": false,
         "reasons": [
           "Unités de temps alignées",
@@ -2515,16 +2922,16 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 44,
-        "previous_score": 55,
+        "bias_cycles": 3,
+        "previous_conditions": 56,
+        "previous_score": 62,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 75
+        "candidate_score": 71
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 62,
-        "score": 62,
+        "confidence": 61,
+        "score": 61,
         "consensus": 52,
         "setup_type": "GENERIC",
         "condition_pass_percent": 56,
@@ -2636,7 +3043,7 @@
         "risk_gate": true,
         "adverse_gate": true,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 62/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 61/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -2645,7 +3052,7 @@
         "source": "Deriv public WebSocket"
       },
       "final_verdict": "ATTENDRE",
-      "final_confidence": 62,
+      "final_confidence": 61,
       "timing": {
         "bias": "SELL",
         "side": "SELL",
@@ -2667,32 +3074,32 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 46,
+        "score": 45,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 1.42,
+        "extension_atr": 1.16,
         "max_extension_atr": 1.15,
-        "rsi": 53.78814207270426,
+        "rsi": 56.60315254361244,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 3041.397,
-        "ema20": 3048.465676192887,
+        "current_price": 3042.828,
+        "ema20": 3048.6019619071726,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 46,
+      "execution_score": 45,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 62/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 61/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Trend following",
         "Stratégie locale: FVG / Order Block",
@@ -2709,7 +3116,55 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 70.3,
+            "confidence": 70.3,
+            "validation_accuracy": 66.7,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 66.7,
+            "confidence": 66.7,
+            "validation_accuracy": 57.1,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 68.5,
+          "buy_weight": 1.304,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "CRASH500:swing",
@@ -2728,18 +3183,18 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 3041.397,
+      "price": 3042.828,
       "technical_verdict": "ATTENDRE",
-      "technical_confidence": 67,
+      "technical_confidence": 64,
       "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 67,
-        "passed": 4,
+        "confidence": 62,
+        "passed": 3,
         "bos": false,
         "choch": false,
         "sweep": false,
-        "impulse": true,
+        "impulse": false,
         "fvg": false,
         "retest": false,
         "orderBlock": false,
@@ -2748,20 +3203,20 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 64,
-        "emaSpreadAtr": 1.682734009970583,
-        "emaSlopeAtr": -1.6227037460318698,
+        "trendQuality": 59,
+        "emaSpreadAtr": 1.6772444251247398,
+        "emaSlopeAtr": -1.6133714517939521,
         "volatilityExpansion": 1.028313705838141,
-        "ema20": 3071.881421030938,
-        "ema50": 3096.4555076012116,
-        "ema200": 3105.3015244203016,
-        "rsi": 31.17042080104288,
+        "ema20": 3072.0177067452237,
+        "ema50": 3096.5116252482703,
+        "ema200": 3105.315763226272,
+        "rsi": 31.496863999297346,
         "atr": 14.603666666666657,
         "swingHigh": 3129.056,
         "swingLow": 3028.84,
         "closedAt": 1789830000,
-        "price": 3041.397,
-        "change": -0.07966957331934088
+        "price": 3042.828,
+        "change": -0.032656311702861096
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -2779,24 +3234,24 @@
         "trendStrong": false,
         "spikeRisk": false,
         "regime": "TRANSITION",
-        "trendQuality": 64,
-        "emaSpreadAtr": 0.2763950393979376,
-        "emaSlopeAtr": -0.872073484922404,
+        "trendQuality": 65,
+        "emaSpreadAtr": 0.279016847243818,
+        "emaSlopeAtr": -0.8676164115844044,
         "volatilityExpansion": 1.1772371531256882,
-        "ema20": 3105.227279096061,
-        "ema50": 3096.7758374183745,
-        "ema200": 3045.640246126811,
-        "rsi": 32.52697463332534,
+        "ema20": 3105.3635648103464,
+        "ema50": 3096.8319550654332,
+        "ema200": 3045.654484932781,
+        "rsi": 32.88777946765222,
         "atr": 30.577399999999972,
         "swingHigh": 3167.432,
         "swingLow": 3074.248,
         "closedAt": 1789819200,
-        "price": 3041.397,
-        "change": 0.15985283264554617
+        "price": 3042.828,
+        "change": 0.20697879134266017
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 67,
+        "local_score": 64,
         "regime": "TRENDING",
         "confirmation_regime": "TRANSITION",
         "aligned": true,
@@ -2817,27 +3272,26 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 33,
-        "previous_score": 44,
+        "bias_cycles": 3,
+        "previous_conditions": 44,
+        "previous_score": 50,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 75
+        "candidate_score": 73
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 50,
-        "score": 50,
-        "consensus": 35,
+        "confidence": 42,
+        "score": 42,
+        "consensus": 25,
         "setup_type": "GENERIC",
-        "condition_pass_percent": 44,
-        "conditions_passed": 4,
+        "condition_pass_percent": 33,
+        "conditions_passed": 3,
         "conditions_total": 9,
         "minimum_conditions_percent": 80,
         "condition_gate": false,
         "side": "SELL",
         "aligned": true,
         "active_strategies": [
-          "Momentum",
           "Trend memory",
           "Volatility control",
           "Boom/Crash guard"
@@ -2847,6 +3301,7 @@
           "SMC structure",
           "Breakout + impulse",
           "Break & retest",
+          "Momentum",
           "FVG / Order Block"
         ],
         "strategies": [
@@ -2890,7 +3345,7 @@
             "name": "Momentum",
             "weight": 10,
             "applicable": true,
-            "support": true
+            "support": false
           },
           {
             "id": "imbalance",
@@ -2938,7 +3393,7 @@
         "risk_gate": true,
         "adverse_gate": true,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · GENERIC: 4/9 conditions pertinentes validées (44%), consensus 35%, score 50/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · GENERIC: 3/9 conditions pertinentes validées (33%), consensus 25%, score 42/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -2947,7 +3402,7 @@
         "source": "Deriv public WebSocket"
       },
       "final_verdict": "ATTENDRE",
-      "final_confidence": 50,
+      "final_confidence": 42,
       "timing": {
         "bias": "SELL",
         "side": "SELL",
@@ -2969,34 +3424,33 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 34,
+        "score": 26,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 2.09,
+        "extension_atr": 2,
         "max_extension_atr": 1.35,
-        "rsi": 31.17042080104288,
+        "rsi": 31.496863999297346,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 3041.397,
-        "ema20": 3071.881421030938,
+        "current_price": 3042.828,
+        "ema20": 3072.0177067452237,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 34,
+      "execution_score": 26,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · GENERIC: 4/9 conditions pertinentes validées (44%), consensus 35%, score 50/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 3/9 conditions pertinentes validées (33%), consensus 25%, score 42/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
-        "Stratégie locale: Momentum",
         "Stratégie locale: Trend memory",
         "Stratégie locale: Volatility control",
         "Stratégie locale: Boom/Crash guard"
@@ -3010,7 +3464,55 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 58.4,
+            "confidence": 58.4,
+            "validation_accuracy": 36.6,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "NEUTRAL",
+            "probability_up": 55.4,
+            "confidence": 55.4,
+            "validation_accuracy": 41.5,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 1,
+          "neutral_models": 1,
+          "mean_confidence": 56.9,
+          "buy_weight": 0.517,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "CRASH1000:day",
@@ -3029,7 +3531,7 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 5992.998,
+      "price": 5994.348,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 70,
       "levels": null,
@@ -3050,19 +3552,19 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 72,
-        "emaSpreadAtr": 2.6575745299764906,
-        "emaSlopeAtr": 0.9651954037098647,
-        "volatilityExpansion": 0.965626264670206,
-        "ema20": 5985.732106952118,
-        "ema50": 5968.491357946348,
-        "ema200": 5920.05467560415,
-        "rsi": 55.24607595740274,
-        "atr": 6.48739999999998,
+        "emaSpreadAtr": 2.6327088603201574,
+        "emaSlopeAtr": 0.97153587900975,
+        "volatilityExpansion": 0.9826993120194623,
+        "ema20": 5985.860678380689,
+        "ema50": 5968.544299122819,
+        "ema200": 5920.068108439972,
+        "rsi": 56.184838173371304,
+        "atr": 6.5774000000000035,
         "swingHigh": 5999.205,
         "swingLow": 5964.209,
         "closedAt": 1789830000,
-        "price": 5992.998,
-        "change": 0.047945569091534246
+        "price": 5994.348,
+        "change": 0.07048265762690242
       },
       "confirmation_tf": {
         "side": "BUY",
@@ -3081,19 +3583,19 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 64,
-        "emaSpreadAtr": 2.138436927035942,
-        "emaSlopeAtr": 1.5548294225932198,
-        "volatilityExpansion": 0.9459021877299806,
-        "ema20": 5958.524653813579,
-        "ema50": 5924.777267855716,
-        "ema200": 5899.910326548124,
-        "rsi": 78.67327924445311,
-        "atr": 15.78133333333329,
+        "emaSpreadAtr": 2.131075915274779,
+        "emaSlopeAtr": 1.5541134638754865,
+        "volatilityExpansion": 0.9526761222987922,
+        "ema20": 5958.65322524215,
+        "ema50": 5924.830209032186,
+        "ema200": 5899.923759383945,
+        "rsi": 78.83860076255222,
+        "atr": 15.871333333333315,
         "swingHigh": 5997.091,
         "swingLow": 5876.466,
         "closedAt": 1789830000,
-        "price": 5992.998,
-        "change": 0.047945569091534246
+        "price": 5994.348,
+        "change": 0.07048265762690242
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
@@ -3118,11 +3620,11 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "previous_conditions": 56,
-        "previous_score": 62,
+        "previous_score": 60,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 78
+        "candidate_score": 79
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
@@ -3272,19 +3774,19 @@
         "ready": false,
         "score": 44,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 1.12,
+        "extension_atr": 1.29,
         "max_extension_atr": 0.97,
-        "rsi": 55.24607595740274,
+        "rsi": 56.184838173371304,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 5992.998,
-        "ema20": 5985.732106952118,
+        "current_price": 5994.348,
+        "ema20": 5985.860678380689,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
@@ -3312,7 +3814,55 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 78.1,
+            "confidence": 78.1,
+            "validation_accuracy": 69.0,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 59.3,
+            "confidence": 59.3,
+            "validation_accuracy": 69.0,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 68.7,
+          "buy_weight": 1.377,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "CRASH1000:swing",
@@ -3331,9 +3881,9 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 5992.998,
+      "price": 5994.348,
       "technical_verdict": "ATTENDRE",
-      "technical_confidence": 70,
+      "technical_confidence": 72,
       "levels": null,
       "entry_tf": {
         "side": "BUY",
@@ -3352,28 +3902,28 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 64,
-        "emaSpreadAtr": 2.138436927035942,
-        "emaSlopeAtr": 1.5548294225932198,
-        "volatilityExpansion": 0.9459021877299806,
-        "ema20": 5958.524653813579,
-        "ema50": 5924.777267855716,
-        "ema200": 5899.910326548124,
-        "rsi": 78.67327924445311,
-        "atr": 15.78133333333329,
+        "emaSpreadAtr": 2.131075915274779,
+        "emaSlopeAtr": 1.5541134638754865,
+        "volatilityExpansion": 0.9526761222987922,
+        "ema20": 5958.65322524215,
+        "ema50": 5924.830209032186,
+        "ema200": 5899.923759383945,
+        "rsi": 78.83860076255222,
+        "atr": 15.871333333333315,
         "swingHigh": 5997.091,
         "swingLow": 5876.466,
         "closedAt": 1789830000,
-        "price": 5992.998,
-        "change": 0.047945569091534246
+        "price": 5994.348,
+        "change": 0.07048265762690242
       },
       "confirmation_tf": {
         "side": "BUY",
-        "confidence": 79,
-        "passed": 6,
+        "confidence": 85,
+        "passed": 7,
         "bos": true,
         "choch": true,
         "sweep": false,
-        "impulse": false,
+        "impulse": true,
         "fvg": true,
         "retest": false,
         "orderBlock": true,
@@ -3382,24 +3932,24 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRANSITION",
-        "trendQuality": 79,
-        "emaSpreadAtr": 0.033756559476718836,
-        "emaSlopeAtr": 0.7529831566396328,
+        "trendQuality": 84,
+        "emaSpreadAtr": 0.03561473879877002,
+        "emaSlopeAtr": 0.7561420614870996,
         "volatilityExpansion": 0.9358943181962786,
-        "ema20": 5914.150424542924,
-        "ema50": 5912.776489813913,
-        "ema200": 5911.813087489001,
-        "rsi": 75.38088187885809,
+        "ema20": 5914.2789959714955,
+        "ema50": 5912.829430990383,
+        "ema200": 5911.826520324822,
+        "rsi": 75.47969152282367,
         "atr": 40.70126666666662,
         "swingHigh": 5975.332,
         "swingLow": 5787.77,
         "closedAt": 1789819200,
-        "price": 5992.998,
-        "change": 0.19353257469545415
+        "price": 5994.348,
+        "change": 0.21610245857925925
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 70,
+        "local_score": 72,
         "regime": "TRENDING",
         "confirmation_regime": "TRANSITION",
         "aligned": true,
@@ -3420,16 +3970,16 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 56,
-        "previous_score": 68,
+        "bias_cycles": 3,
+        "previous_conditions": 44,
+        "previous_score": 53,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 78
+        "candidate_score": 81
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 53,
-        "score": 53,
+        "confidence": 54,
+        "score": 54,
         "consensus": 43,
         "setup_type": "GENERIC",
         "condition_pass_percent": 44,
@@ -3541,7 +4091,7 @@
         "risk_gate": false,
         "adverse_gate": false,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · GENERIC: 4/9 conditions pertinentes validées (44%), consensus 43%, score 53/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · GENERIC: 4/9 conditions pertinentes validées (44%), consensus 43%, score 54/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -3550,7 +4100,7 @@
         "source": "Deriv public WebSocket"
       },
       "final_verdict": "ATTENDRE",
-      "final_confidence": 53,
+      "final_confidence": 54,
       "timing": {
         "bias": "BUY",
         "side": "BUY",
@@ -3572,32 +4122,32 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 37,
+        "score": 38,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 2.18,
+        "extension_atr": 2.25,
         "max_extension_atr": 1.17,
-        "rsi": 78.67327924445311,
+        "rsi": 78.83860076255222,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 5992.998,
-        "ema20": 5958.524653813579,
+        "current_price": 5994.348,
+        "ema20": 5958.65322524215,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 37,
+      "execution_score": 38,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · GENERIC: 4/9 conditions pertinentes validées (44%), consensus 43%, score 53/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 4/9 conditions pertinentes validées (44%), consensus 43%, score 54/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Trend following",
         "Stratégie locale: FVG / Order Block",
@@ -3613,7 +4163,63 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "NEUTRAL",
+            "probability_up": 46.8,
+            "confidence": 53.2,
+            "validation_accuracy": 36.6,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 60.2,
+            "confidence": 60.2,
+            "validation_accuracy": 36.6,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "error",
+            "direction": "NEUTRAL",
+            "error": "Cannot change data-type for array of references."
+          },
+          "timesfm25": {
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "SELL",
+            "confidence": 67.7,
+            "forecast_price": 5984.86230469,
+            "expected_return_pct": -0.1582,
+            "volatility_threshold_pct": 0.1249,
+            "horizon_steps": 6,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
+          }
+        },
+        "ensemble": {
+          "direction": "NEUTRAL",
+          "consensus": 56.3,
+          "available_models": 3,
+          "directional_models": 2,
+          "neutral_models": 1,
+          "mean_confidence": 60.4,
+          "buy_weight": 0.526,
+          "sell_weight": 0.677
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "NEUTRAL",
+      "model_ensemble_consensus": 56.3,
+      "model_models_available": 3
     },
     {
       "id": "R_10:day",
@@ -3632,19 +4238,19 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 4977.67,
+      "price": 4977.045,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 74,
       "levels": null,
       "entry_tf": {
         "side": "BUY",
-        "confidence": 75,
-        "passed": 5,
+        "confidence": 70,
+        "passed": 4,
         "bos": true,
         "choch": true,
         "sweep": false,
         "impulse": false,
-        "fvg": true,
+        "fvg": false,
         "retest": false,
         "orderBlock": false,
         "momentum": true,
@@ -3652,20 +4258,20 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 83,
-        "emaSpreadAtr": 1.968942221922349,
-        "emaSlopeAtr": 0.9972669034268727,
-        "volatilityExpansion": 0.9767676421147176,
-        "ema20": 4971.382953347326,
-        "ema50": 4963.345599934624,
-        "ema200": 4936.301420992185,
-        "rsi": 63.16928969939265,
-        "atr": 4.082066666666773,
+        "trendQuality": 77,
+        "emaSpreadAtr": 1.9062569058820835,
+        "emaSlopeAtr": 0.9555621436083288,
+        "volatilityExpansion": 1.0125424542866683,
+        "ema20": 4971.323429537802,
+        "ema50": 4963.321090130703,
+        "ema200": 4936.295202086712,
+        "rsi": 61.56717932070004,
+        "atr": 4.197933333333458,
         "swingHigh": 4976.915,
         "swingLow": 4962.275,
         "closedAt": 1789830000,
-        "price": 4977.67,
-        "change": -0.028760206157651957
+        "price": 4977.045,
+        "change": -0.04131267043735454
       },
       "confirmation_tf": {
         "side": "BUY",
@@ -3684,23 +4290,23 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 83,
-        "emaSpreadAtr": 2.338470931800895,
-        "emaSlopeAtr": 1.5440072877354762,
-        "volatilityExpansion": 0.8969380678381528,
-        "ema20": 4958.609790105572,
-        "ema50": 4939.435263853177,
-        "ema200": 4895.425295049341,
-        "rsi": 79.57039531113728,
-        "atr": 8.199599999999979,
+        "emaSpreadAtr": 2.301676263524041,
+        "emaSlopeAtr": 1.5153350800506602,
+        "volatilityExpansion": 0.9134495108952109,
+        "ema20": 4958.550266296048,
+        "ema50": 4939.410754049256,
+        "ema200": 4895.419076143869,
+        "rsi": 78.80266143847471,
+        "atr": 8.315466666666664,
         "swingHigh": 4976.084,
         "swingLow": 4931.354,
         "closedAt": 1789830000,
-        "price": 4977.67,
-        "change": -0.028760206157651957
+        "price": 4977.045,
+        "change": -0.04131267043735454
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 85,
+        "local_score": 81,
         "regime": "TRENDING",
         "confirmation_regime": "TRENDING",
         "aligned": true,
@@ -3721,20 +4327,20 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 44,
-        "previous_score": 56,
+        "bias_cycles": 3,
+        "previous_conditions": 67,
+        "previous_score": 79,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 82
+        "candidate_score": 83
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 74,
-        "score": 79,
-        "consensus": 67,
+        "confidence": 72,
+        "score": 72,
+        "consensus": 59,
         "setup_type": "GENERIC",
-        "condition_pass_percent": 67,
-        "conditions_passed": 6,
+        "condition_pass_percent": 56,
+        "conditions_passed": 5,
         "conditions_total": 9,
         "minimum_conditions_percent": 80,
         "condition_gate": false,
@@ -3743,7 +4349,6 @@
         "active_strategies": [
           "Trend following",
           "SMC structure",
-          "FVG / Order Block",
           "Trend memory",
           "Volatility control",
           "Boom/Crash guard"
@@ -3751,7 +4356,8 @@
         "missing_strategies": [
           "Breakout + impulse",
           "Break & retest",
-          "Momentum"
+          "Momentum",
+          "FVG / Order Block"
         ],
         "strategies": [
           {
@@ -3801,7 +4407,7 @@
             "name": "FVG / Order Block",
             "weight": 8,
             "applicable": true,
-            "support": true
+            "support": false
           },
           {
             "id": "rejection",
@@ -3842,7 +4448,7 @@
         "risk_gate": true,
         "adverse_gate": true,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · GENERIC: 6/9 conditions pertinentes validées (67%), consensus 67%, score 79/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 59%, score 72/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -3851,7 +4457,7 @@
         "source": "Deriv public WebSocket"
       },
       "final_verdict": "ATTENDRE",
-      "final_confidence": 74,
+      "final_confidence": 72,
       "timing": {
         "bias": "BUY",
         "side": "BUY",
@@ -3873,36 +4479,35 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 63,
+        "score": 56,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 1.54,
+        "extension_atr": 1.36,
         "max_extension_atr": 1.05,
-        "rsi": 63.16928969939265,
+        "rsi": 61.56717932070004,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 4977.67,
-        "ema20": 4971.382953347326,
+        "current_price": 4977.045,
+        "ema20": 4971.323429537802,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 63,
+      "execution_score": 56,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · GENERIC: 6/9 conditions pertinentes validées (67%), consensus 67%, score 79/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 59%, score 72/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Trend following",
         "Stratégie locale: SMC structure",
-        "Stratégie locale: FVG / Order Block",
         "Stratégie locale: Trend memory",
         "Stratégie locale: Volatility control",
         "Stratégie locale: Boom/Crash guard"
@@ -3910,12 +4515,61 @@
       "ai_contradictions": [
         "À renforcer: Breakout + impulse",
         "À renforcer: Break & retest",
-        "À renforcer: Momentum"
+        "À renforcer: Momentum",
+        "À renforcer: FVG / Order Block"
       ],
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 86.4,
+            "confidence": 86.4,
+            "validation_accuracy": 69.0,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 90.9,
+            "confidence": 90.9,
+            "validation_accuracy": 69.0,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 88.7,
+          "buy_weight": 1.577,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "R_10:swing",
@@ -3934,7 +4588,7 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 4977.67,
+      "price": 4977.045,
       "technical_verdict": "BUY",
       "technical_confidence": 87,
       "levels": null,
@@ -3955,19 +4609,19 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 83,
-        "emaSpreadAtr": 2.338470931800895,
-        "emaSlopeAtr": 1.5440072877354762,
-        "volatilityExpansion": 0.8969380678381528,
-        "ema20": 4958.609790105572,
-        "ema50": 4939.435263853177,
-        "ema200": 4895.425295049341,
-        "rsi": 79.57039531113728,
-        "atr": 8.199599999999979,
+        "emaSpreadAtr": 2.301676263524041,
+        "emaSlopeAtr": 1.5153350800506602,
+        "volatilityExpansion": 0.9134495108952109,
+        "ema20": 4958.550266296048,
+        "ema50": 4939.410754049256,
+        "ema200": 4895.419076143869,
+        "rsi": 78.80266143847471,
+        "atr": 8.315466666666664,
         "swingHigh": 4976.084,
         "swingLow": 4931.354,
         "closedAt": 1789830000,
-        "price": 4977.67,
-        "change": -0.028760206157651957
+        "price": 4977.045,
+        "change": -0.04131267043735454
       },
       "confirmation_tf": {
         "side": "BUY",
@@ -3986,19 +4640,19 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 88,
-        "emaSpreadAtr": 1.940886398166716,
-        "emaSlopeAtr": 1.3636912713381515,
+        "emaSpreadAtr": 1.9388555097511497,
+        "emaSlopeAtr": 1.3602387610317153,
         "volatilityExpansion": 0.9985288281922927,
-        "ema20": 4930.149457803966,
-        "ema50": 4896.6871529828795,
-        "ema200": 4838.173260275759,
-        "rsi": 74.73161743969622,
+        "ema20": 4930.089933994442,
+        "ema50": 4896.662643178958,
+        "ema200": 4838.167041370287,
+        "rsi": 74.63225579142082,
         "atr": 17.240733333333264,
         "swingHigh": 4960.294,
         "swingLow": 4882.992,
         "closedAt": 1789819200,
-        "price": 4977.67,
-        "change": 0.12318099842583141
+        "price": 4977.045,
+        "change": 0.1106094562938642
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
@@ -4023,11 +4677,11 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 56,
-        "previous_score": 66,
+        "bias_cycles": 3,
+        "previous_conditions": 67,
+        "previous_score": 79,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 95
+        "candidate_score": 96
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
@@ -4177,19 +4831,19 @@
         "ready": false,
         "score": 63,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 2.32,
+        "extension_atr": 2.22,
         "max_extension_atr": 1.25,
-        "rsi": 79.57039531113728,
+        "rsi": 78.80266143847471,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 4977.67,
-        "ema20": 4958.609790105572,
+        "current_price": 4977.045,
+        "ema20": 4958.550266296048,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
@@ -4217,7 +4871,63 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 36.7,
+            "confidence": 63.3,
+            "validation_accuracy": 53.7,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 36.7,
+            "confidence": 63.3,
+            "validation_accuracy": 48.8,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "error",
+            "direction": "NEUTRAL",
+            "error": "Cannot change data-type for array of references."
+          },
+          "timesfm25": {
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 52.4,
+            "forecast_price": 4976.51318359,
+            "expected_return_pct": -0.0107,
+            "volatility_threshold_pct": 0.0626,
+            "horizon_steps": 6,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
+          }
+        },
+        "ensemble": {
+          "direction": "SELL",
+          "consensus": 100.0,
+          "available_models": 3,
+          "directional_models": 2,
+          "neutral_models": 1,
+          "mean_confidence": 59.7,
+          "buy_weight": 0.0,
+          "sell_weight": 1.145
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 3
     },
     {
       "id": "R_25:day",
@@ -4236,24 +4946,18 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 2636.681,
-      "technical_verdict": "SELL",
-      "technical_confidence": 87,
-      "levels": {
-        "entry": 2636.681,
-        "sl": 2671.466,
-        "tp1": 2584.5035000000003,
-        "tp2": 2553.1970000000006,
-        "tp3": 2511.4550000000004
-      },
+      "price": 2637.932,
+      "technical_verdict": "ATTENDRE",
+      "technical_confidence": 74,
+      "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 87,
-        "passed": 7,
+        "confidence": 81,
+        "passed": 6,
         "bos": false,
         "choch": true,
         "sweep": false,
-        "impulse": true,
+        "impulse": false,
         "fvg": true,
         "retest": false,
         "orderBlock": true,
@@ -4262,29 +4966,29 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 96,
-        "emaSpreadAtr": 1.6671904753470626,
-        "emaSlopeAtr": -0.764098599512848,
+        "trendQuality": 91,
+        "emaSpreadAtr": 1.6542603189665763,
+        "emaSlopeAtr": -0.7421173336660466,
         "volatilityExpansion": 0.8570941966249785,
-        "ema20": 2646.353736146801,
-        "ema50": 2655.3902419612773,
-        "ema200": 2677.4185854870893,
-        "rsi": 40.333955610869005,
+        "ema20": 2646.472879003944,
+        "ema50": 2655.4393007848066,
+        "ema200": 2677.4310332482833,
+        "rsi": 41.68609480933581,
         "atr": 5.4202000000000226,
         "swingHigh": 2671.466,
         "swingLow": 2634.17,
         "closedAt": 1789830000,
-        "price": 2636.681,
-        "change": -0.09960936759986216
+        "price": 2637.932,
+        "change": -0.0522106156533364
       },
       "confirmation_tf": {
         "side": "SELL",
-        "confidence": 67,
-        "passed": 4,
+        "confidence": 62,
+        "passed": 3,
         "bos": false,
         "choch": false,
         "sweep": false,
-        "impulse": true,
+        "impulse": false,
         "fvg": false,
         "retest": false,
         "orderBlock": false,
@@ -4293,28 +4997,28 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 64,
-        "emaSpreadAtr": 1.4725230930867383,
-        "emaSlopeAtr": -1.1013773670685034,
+        "trendQuality": 59,
+        "emaSpreadAtr": 1.4663721334927844,
+        "emaSlopeAtr": -1.0909207357587936,
         "volatilityExpansion": 0.993099617594914,
-        "ema20": 2658.236432043003,
-        "ema50": 2675.014360165633,
-        "ema200": 2711.22428270467,
-        "rsi": 33.56922930042718,
+        "ema20": 2658.3555749001457,
+        "ema50": 2675.0634189891625,
+        "ema200": 2711.2367304658637,
+        "rsi": 34.077995711326054,
         "atr": 11.394000000000021,
         "swingHigh": 2685.032,
         "swingLow": 2634.17,
         "closedAt": 1789830000,
-        "price": 2636.681,
-        "change": -0.09960936759986216
+        "price": 2637.932,
+        "change": -0.0522106156533364
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 87,
+        "local_score": 81,
         "regime": "TRENDING",
         "confirmation_regime": "TRENDING",
         "aligned": true,
-        "stability": true,
+        "stability": false,
         "adverse_spike_direction": false,
         "reasons": [
           "Unités de temps alignées",
@@ -4328,39 +5032,41 @@
       "trend_memory": {
         "previous_bias": "SELL",
         "current_bias": "SELL",
-        "previous_final": "ATTENDRE",
+        "previous_final": "SELL",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 67,
-        "previous_score": 71,
-        "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 95
+        "bias_cycles": 3,
+        "previous_conditions": 100,
+        "previous_score": 97,
+        "previous_execution_state": "WAIT_RETRACE",
+        "candidate_score": 83
       },
       "decision_engine": {
-        "verdict": "SELL",
-        "confidence": 95,
-        "score": 97,
-        "consensus": 100,
-        "setup_type": "BREAKOUT_CONTINUATION",
-        "condition_pass_percent": 100,
-        "conditions_passed": 8,
-        "conditions_total": 8,
+        "verdict": "ATTENDRE",
+        "confidence": 74,
+        "score": 77,
+        "consensus": 67,
+        "setup_type": "GENERIC",
+        "condition_pass_percent": 67,
+        "conditions_passed": 6,
+        "conditions_total": 9,
         "minimum_conditions_percent": 80,
-        "condition_gate": true,
+        "condition_gate": false,
         "side": "SELL",
         "aligned": true,
         "active_strategies": [
           "Trend following",
           "SMC structure",
-          "Breakout + impulse",
-          "Momentum",
           "FVG / Order Block",
           "Trend memory",
           "Volatility control",
           "Boom/Crash guard"
         ],
-        "missing_strategies": [],
+        "missing_strategies": [
+          "Breakout + impulse",
+          "Break & retest",
+          "Momentum"
+        ],
         "strategies": [
           {
             "id": "trend",
@@ -4388,13 +5094,13 @@
             "name": "Breakout + impulse",
             "weight": 11,
             "applicable": true,
-            "support": true
+            "support": false
           },
           {
             "id": "pullback",
             "name": "Break & retest",
             "weight": 11,
-            "applicable": false,
+            "applicable": true,
             "support": false
           },
           {
@@ -4402,7 +5108,7 @@
             "name": "Momentum",
             "weight": 10,
             "applicable": true,
-            "support": true
+            "support": false
           },
           {
             "id": "imbalance",
@@ -4450,7 +5156,7 @@
         "risk_gate": true,
         "adverse_gate": true,
         "confirmation_gate": true,
-        "summary": "SELL autonome · BREAKOUT_CONTINUATION: 8/8 conditions pertinentes validées (100%), consensus pondéré 100%, régime TRENDING, horizons alignés."
+        "summary": "ATTENDRE autonome · GENERIC: 6/9 conditions pertinentes validées (67%), consensus 67%, score 77/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -4458,73 +5164,120 @@
         "specific_guard": true,
         "source": "Deriv public WebSocket"
       },
-      "final_verdict": "SELL",
-      "final_confidence": 95,
+      "final_verdict": "ATTENDRE",
+      "final_confidence": 74,
       "timing": {
         "bias": "SELL",
         "side": "SELL",
-        "position_style": "LONG",
+        "position_style": "MOYEN",
         "swing_class": null,
         "swing_days_min": null,
         "swing_days_max": null,
         "swing_days_label": null,
-        "duration_min_hours": 7,
-        "duration_max_hours": 34,
-        "tp1_hours": 11,
-        "tp2_hours": 17,
-        "tp3_hours": 25,
-        "expires_in_hours": 16,
+        "duration_min_hours": 3,
+        "duration_max_hours": 12,
+        "tp1_hours": null,
+        "tp2_hours": null,
+        "tp3_hours": null,
+        "expires_in_hours": 8,
         "recheck_hours": 0.25,
-        "is_confirmed": true,
+        "is_confirmed": false,
         "basis": "ATR, régime, mémoire de tendance, structure, force H1/H4 et distance vers les objectifs"
       },
       "execution": {
-        "state": "WAIT_RETRACE",
+        "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 81,
+        "score": 61,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 1.78,
+        "extension_atr": 1.58,
         "max_extension_atr": 1.05,
-        "rsi": 40.333955610869005,
+        "rsi": 41.68609480933581,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
-        "preferred_entry_zone": {
-          "min": 2644.456666146801,
-          "max": 2647.166766146801
-        },
-        "current_price": 2636.681,
-        "ema20": 2646.353736146801,
-        "stop_reference": 2671.466,
-        "reason": "Signal directionnel confirmé mais prix étendu de 1.78 ATR par rapport à EMA20; attendre un retracement ou une nouvelle structure d’entrée."
+        "preferred_entry_zone": null,
+        "current_price": 2637.932,
+        "ema20": 2646.472879003944,
+        "stop_reference": null,
+        "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
-      "execution_state": "WAIT_RETRACE",
+      "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 81,
-      "confirmation_source": "autonomous_engine",
-      "score_type": "signal_confidence",
+      "execution_score": 61,
+      "confirmation_source": "none",
+      "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "SELL autonome · BREAKOUT_CONTINUATION: 8/8 conditions pertinentes validées (100%), consensus pondéré 100%, régime TRENDING, horizons alignés. Exécution: WAIT_RETRACE. Signal directionnel confirmé mais prix étendu de 1.78 ATR par rapport à EMA20; attendre un retracement ou une nouvelle structure d’entrée.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 6/9 conditions pertinentes validées (67%), consensus 67%, score 77/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Trend following",
         "Stratégie locale: SMC structure",
-        "Stratégie locale: Breakout + impulse",
-        "Stratégie locale: Momentum",
         "Stratégie locale: FVG / Order Block",
-        "Stratégie locale: Trend memory"
+        "Stratégie locale: Trend memory",
+        "Stratégie locale: Volatility control",
+        "Stratégie locale: Boom/Crash guard"
       ],
       "ai_contradictions": [
-        "Signal directionnel confirmé mais prix étendu de 1.78 ATR par rapport à EMA20; attendre un retracement ou une nouvelle structure d’entrée."
+        "À renforcer: Breakout + impulse",
+        "À renforcer: Break & retest",
+        "À renforcer: Momentum"
       ],
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 40.9,
+            "confidence": 59.1,
+            "validation_accuracy": 50.0,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 36.9,
+            "confidence": 63.1,
+            "validation_accuracy": 52.4,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "SELL",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 61.1,
+          "buy_weight": 0.0,
+          "sell_weight": 1.123
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "R_25:swing",
@@ -4543,18 +5296,18 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 2636.681,
+      "price": 2637.932,
       "technical_verdict": "ATTENDRE",
-      "technical_confidence": 67,
+      "technical_confidence": 63,
       "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 67,
-        "passed": 4,
+        "confidence": 62,
+        "passed": 3,
         "bos": false,
         "choch": false,
         "sweep": false,
-        "impulse": true,
+        "impulse": false,
         "fvg": false,
         "retest": false,
         "orderBlock": false,
@@ -4563,20 +5316,20 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 64,
-        "emaSpreadAtr": 1.4725230930867383,
-        "emaSlopeAtr": -1.1013773670685034,
+        "trendQuality": 59,
+        "emaSpreadAtr": 1.4663721334927844,
+        "emaSlopeAtr": -1.0909207357587936,
         "volatilityExpansion": 0.993099617594914,
-        "ema20": 2658.236432043003,
-        "ema50": 2675.014360165633,
-        "ema200": 2711.22428270467,
-        "rsi": 33.56922930042718,
+        "ema20": 2658.3555749001457,
+        "ema50": 2675.0634189891625,
+        "ema200": 2711.2367304658637,
+        "rsi": 34.077995711326054,
         "atr": 11.394000000000021,
         "swingHigh": 2685.032,
         "swingLow": 2634.17,
         "closedAt": 1789830000,
-        "price": 2636.681,
-        "change": -0.09960936759986216
+        "price": 2637.932,
+        "change": -0.0522106156533364
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -4595,23 +5348,23 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 62,
-        "emaSpreadAtr": 1.1834907452794112,
-        "emaSlopeAtr": -1.0710312241408446,
+        "emaSpreadAtr": 1.1802471552459568,
+        "emaSlopeAtr": -1.0655171210839787,
         "volatilityExpansion": 1.0390406753645438,
-        "ema20": 2682.5833446121783,
-        "ema50": 2708.1549502460475,
-        "ema200": 2705.155347540512,
-        "rsi": 21.712712844614188,
+        "ema20": 2682.702487469321,
+        "ema50": 2708.204009069577,
+        "ema200": 2705.167795301706,
+        "rsi": 21.91339554196115,
         "atr": 21.60693333333335,
         "swingHigh": 2735.195,
         "swingLow": 2649.956,
         "closedAt": 1789819200,
-        "price": 2636.681,
-        "change": -0.17997792866377704
+        "price": 2637.932,
+        "change": -0.13261730839487784
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 67,
+        "local_score": 63,
         "regime": "TRENDING",
         "confirmation_regime": "TRANSITION",
         "aligned": true,
@@ -4632,27 +5385,26 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "previous_conditions": 44,
         "previous_score": 50,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 75
+        "candidate_score": 72
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 50,
-        "score": 50,
-        "consensus": 35,
+        "confidence": 42,
+        "score": 42,
+        "consensus": 25,
         "setup_type": "GENERIC",
-        "condition_pass_percent": 44,
-        "conditions_passed": 4,
+        "condition_pass_percent": 33,
+        "conditions_passed": 3,
         "conditions_total": 9,
         "minimum_conditions_percent": 80,
         "condition_gate": false,
         "side": "SELL",
         "aligned": true,
         "active_strategies": [
-          "Momentum",
           "Trend memory",
           "Volatility control",
           "Boom/Crash guard"
@@ -4662,6 +5414,7 @@
           "SMC structure",
           "Breakout + impulse",
           "Break & retest",
+          "Momentum",
           "FVG / Order Block"
         ],
         "strategies": [
@@ -4705,7 +5458,7 @@
             "name": "Momentum",
             "weight": 10,
             "applicable": true,
-            "support": true
+            "support": false
           },
           {
             "id": "imbalance",
@@ -4753,7 +5506,7 @@
         "risk_gate": true,
         "adverse_gate": true,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · GENERIC: 4/9 conditions pertinentes validées (44%), consensus 35%, score 50/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · GENERIC: 3/9 conditions pertinentes validées (33%), consensus 25%, score 42/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -4762,7 +5515,7 @@
         "source": "Deriv public WebSocket"
       },
       "final_verdict": "ATTENDRE",
-      "final_confidence": 50,
+      "final_confidence": 42,
       "timing": {
         "bias": "SELL",
         "side": "SELL",
@@ -4784,34 +5537,33 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 34,
+        "score": 26,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 1.89,
+        "extension_atr": 1.79,
         "max_extension_atr": 1.25,
-        "rsi": 33.56922930042718,
+        "rsi": 34.077995711326054,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 2636.681,
-        "ema20": 2658.236432043003,
+        "current_price": 2637.932,
+        "ema20": 2658.3555749001457,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 34,
+      "execution_score": 26,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · GENERIC: 4/9 conditions pertinentes validées (44%), consensus 35%, score 50/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 3/9 conditions pertinentes validées (33%), consensus 25%, score 42/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
-        "Stratégie locale: Momentum",
         "Stratégie locale: Trend memory",
         "Stratégie locale: Volatility control",
         "Stratégie locale: Boom/Crash guard"
@@ -4825,7 +5577,55 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 90.1,
+            "confidence": 90.1,
+            "validation_accuracy": 73.2,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 92.2,
+            "confidence": 92.2,
+            "validation_accuracy": 75.6,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 91.2,
+          "buy_weight": 1.655,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "R_50:day",
@@ -4844,18 +5644,18 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 89.0623,
+      "price": 89.0567,
       "technical_verdict": "ATTENDRE",
-      "technical_confidence": 70,
+      "technical_confidence": 64,
       "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 68,
-        "passed": 4,
+        "confidence": 62,
+        "passed": 3,
         "bos": true,
         "choch": true,
         "sweep": false,
-        "impulse": true,
+        "impulse": false,
         "fvg": false,
         "retest": false,
         "orderBlock": false,
@@ -4864,29 +5664,29 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRANSITION",
-        "trendQuality": 65,
-        "emaSpreadAtr": 0.3467638047512131,
-        "emaSlopeAtr": -1.0310304651306508,
-        "volatilityExpansion": 0.8928571428571415,
-        "ema20": 89.73235334428875,
-        "ema50": 89.84712985190271,
-        "ema200": 90.28432408594482,
-        "rsi": 21.345045599507586,
-        "atr": 0.3309933333333343,
+        "trendQuality": 60,
+        "emaSpreadAtr": 0.3408195953965851,
+        "emaSlopeAtr": -1.0121736434815762,
+        "volatilityExpansion": 0.9149911816578453,
+        "ema20": 89.73182001095542,
+        "ema50": 89.84691024405957,
+        "ema200": 90.28426836455179,
+        "rsi": 21.278375815717666,
+        "atr": 0.3376866666666672,
         "swingHigh": 91.1072,
         "swingLow": 89.0893,
         "closedAt": 1789830000,
-        "price": 89.0623,
-        "change": -0.15705855447836203
+        "price": 89.0567,
+        "change": -0.16333641247319175
       },
       "confirmation_tf": {
         "side": "SELL",
-        "confidence": 73,
-        "passed": 5,
+        "confidence": 67,
+        "passed": 4,
         "bos": false,
         "choch": true,
         "sweep": false,
-        "impulse": true,
+        "impulse": false,
         "fvg": true,
         "retest": false,
         "orderBlock": false,
@@ -4895,24 +5695,24 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 69,
-        "emaSpreadAtr": 0.7334177226584578,
-        "emaSlopeAtr": -0.24630844827730453,
-        "volatilityExpansion": 0.931838140917386,
-        "ema20": 89.82699906483977,
-        "ema50": 90.32434918038041,
-        "ema200": 91.27481895440931,
-        "rsi": 55.36821279402063,
-        "atr": 0.678126666666671,
+        "trendQuality": 63,
+        "emaSpreadAtr": 0.7267075158885711,
+        "emaSlopeAtr": -0.2446798579706351,
+        "volatilityExpansion": 0.9431421558693096,
+        "ema20": 89.82646573150645,
+        "ema50": 90.32412957253726,
+        "ema200": 91.27476323301627,
+        "rsi": 55.300136126114374,
+        "atr": 0.6848200000000039,
         "swingHigh": 91.27,
         "swingLow": 87.8643,
         "closedAt": 1789830000,
-        "price": 89.0623,
-        "change": -0.15705855447836203
+        "price": 89.0567,
+        "change": -0.16333641247319175
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 70,
+        "local_score": 64,
         "regime": "TRANSITION",
         "confirmation_regime": "TRENDING",
         "aligned": true,
@@ -4933,21 +5733,21 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 67,
-        "previous_score": 62,
+        "bias_cycles": 3,
+        "previous_conditions": 75,
+        "previous_score": 83,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 74
+        "candidate_score": 69
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 74,
-        "score": 83,
-        "consensus": 79,
-        "setup_type": "BREAKOUT_CONTINUATION",
-        "condition_pass_percent": 75,
-        "conditions_passed": 6,
-        "conditions_total": 8,
+        "confidence": 67,
+        "score": 67,
+        "consensus": 59,
+        "setup_type": "GENERIC",
+        "condition_pass_percent": 56,
+        "conditions_passed": 5,
+        "conditions_total": 9,
         "minimum_conditions_percent": 80,
         "condition_gate": false,
         "side": "SELL",
@@ -4955,12 +5755,13 @@
         "active_strategies": [
           "Trend following",
           "SMC structure",
-          "Breakout + impulse",
           "Trend memory",
           "Volatility control",
           "Boom/Crash guard"
         ],
         "missing_strategies": [
+          "Breakout + impulse",
+          "Break & retest",
           "Momentum",
           "FVG / Order Block"
         ],
@@ -4991,13 +5792,13 @@
             "name": "Breakout + impulse",
             "weight": 11,
             "applicable": true,
-            "support": true
+            "support": false
           },
           {
             "id": "pullback",
             "name": "Break & retest",
             "weight": 11,
-            "applicable": false,
+            "applicable": true,
             "support": false
           },
           {
@@ -5053,7 +5854,7 @@
         "risk_gate": true,
         "adverse_gate": true,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 6/8 conditions pertinentes validées (75%), consensus 79%, score 83/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 59%, score 67/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -5062,7 +5863,7 @@
         "source": "Deriv public WebSocket"
       },
       "final_verdict": "ATTENDRE",
-      "final_confidence": 74,
+      "final_confidence": 67,
       "timing": {
         "bias": "SELL",
         "side": "SELL",
@@ -5084,48 +5885,97 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 67,
+        "score": 51,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 2.02,
+        "extension_atr": 2,
         "max_extension_atr": 1.05,
-        "rsi": 21.345045599507586,
+        "rsi": 21.278375815717666,
         "stretched": false,
         "extreme": false,
         "overextended": true,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 89.0623,
-        "ema20": 89.73235334428875,
+        "current_price": 89.0567,
+        "ema20": 89.73182001095542,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 67,
+      "execution_score": 51,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 6/8 conditions pertinentes validées (75%), consensus 79%, score 83/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 59%, score 67/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Trend following",
         "Stratégie locale: SMC structure",
-        "Stratégie locale: Breakout + impulse",
         "Stratégie locale: Trend memory",
         "Stratégie locale: Volatility control",
         "Stratégie locale: Boom/Crash guard"
       ],
       "ai_contradictions": [
+        "À renforcer: Breakout + impulse",
+        "À renforcer: Break & retest",
         "À renforcer: Momentum",
         "À renforcer: FVG / Order Block"
       ],
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 35.2,
+            "confidence": 64.8,
+            "validation_accuracy": 42.9,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 24.4,
+            "confidence": 75.6,
+            "validation_accuracy": 47.6,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "SELL",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 70.2,
+          "buy_weight": 0.0,
+          "sell_weight": 1.165
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "R_50:swing",
@@ -5144,24 +5994,18 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 89.0623,
-      "technical_verdict": "SELL",
-      "technical_confidence": 72,
-      "levels": {
-        "entry": 89.0623,
-        "sl": 91.27,
-        "tp1": 85.75074999999998,
-        "tp2": 83.76381999999998,
-        "tp3": 81.11457999999999
-      },
+      "price": 89.0567,
+      "technical_verdict": "ATTENDRE",
+      "technical_confidence": 67,
+      "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 73,
-        "passed": 5,
+        "confidence": 67,
+        "passed": 4,
         "bos": false,
         "choch": true,
         "sweep": false,
-        "impulse": true,
+        "impulse": false,
         "fvg": true,
         "retest": false,
         "orderBlock": false,
@@ -5170,20 +6014,20 @@
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 69,
-        "emaSpreadAtr": 0.7334177226584578,
-        "emaSlopeAtr": -0.24630844827730453,
-        "volatilityExpansion": 0.931838140917386,
-        "ema20": 89.82699906483977,
-        "ema50": 90.32434918038041,
-        "ema200": 91.27481895440931,
-        "rsi": 55.36821279402063,
-        "atr": 0.678126666666671,
+        "trendQuality": 63,
+        "emaSpreadAtr": 0.7267075158885711,
+        "emaSlopeAtr": -0.2446798579706351,
+        "volatilityExpansion": 0.9431421558693096,
+        "ema20": 89.82646573150645,
+        "ema50": 90.32412957253726,
+        "ema200": 91.27476323301627,
+        "rsi": 55.300136126114374,
+        "atr": 0.6848200000000039,
         "swingHigh": 91.27,
         "swingLow": 87.8643,
         "closedAt": 1789830000,
-        "price": 89.0623,
-        "change": -0.15705855447836203
+        "price": 89.0567,
+        "change": -0.16333641247319175
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -5202,23 +6046,23 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 65,
-        "emaSpreadAtr": 0.6060318975443325,
-        "emaSlopeAtr": -0.6047569075355306,
-        "volatilityExpansion": 1.1234220444385228,
-        "ema20": 90.58954639166126,
-        "ema50": 91.53836609130727,
-        "ema200": 95.14110824643338,
-        "rsi": 40.671557196528,
-        "atr": 1.565626666666668,
+        "emaSpreadAtr": 0.6036515627456215,
+        "emaSlopeAtr": -0.6025216715565642,
+        "volatilityExpansion": 1.1293252298459735,
+        "ema20": 90.58901305832794,
+        "ema50": 91.53814648346413,
+        "ema200": 95.14105252504035,
+        "rsi": 40.65312398834573,
+        "atr": 1.572320000000001,
         "swingHigh": 93.6016,
         "swingLow": 87.8643,
         "closedAt": 1789819200,
-        "price": 89.0623,
-        "change": -1.0704685313131845
+        "price": 89.0567,
+        "change": -1.0766889565236637
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 72,
+        "local_score": 67,
         "regime": "TRENDING",
         "confirmation_regime": "TRENDING",
         "aligned": true,
@@ -5236,38 +6080,39 @@
       "trend_memory": {
         "previous_bias": "SELL",
         "current_bias": "SELL",
-        "previous_final": "ATTENDRE",
+        "previous_final": "SELL",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 67,
-        "previous_score": 74,
-        "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 80
+        "bias_cycles": 3,
+        "previous_conditions": 88,
+        "previous_score": 90,
+        "previous_execution_state": "EXECUTE_NOW",
+        "candidate_score": 76
       },
       "decision_engine": {
-        "verdict": "SELL",
-        "confidence": 90,
-        "score": 90,
-        "consensus": 88,
-        "setup_type": "BREAKOUT_CONTINUATION",
-        "condition_pass_percent": 88,
-        "conditions_passed": 7,
-        "conditions_total": 8,
+        "verdict": "ATTENDRE",
+        "confidence": 73,
+        "score": 73,
+        "consensus": 67,
+        "setup_type": "GENERIC",
+        "condition_pass_percent": 67,
+        "conditions_passed": 6,
+        "conditions_total": 9,
         "minimum_conditions_percent": 80,
-        "condition_gate": true,
+        "condition_gate": false,
         "side": "SELL",
         "aligned": true,
         "active_strategies": [
           "Trend following",
           "SMC structure",
-          "Breakout + impulse",
           "FVG / Order Block",
           "Trend memory",
           "Volatility control",
           "Boom/Crash guard"
         ],
         "missing_strategies": [
+          "Breakout + impulse",
+          "Break & retest",
           "Momentum"
         ],
         "strategies": [
@@ -5297,13 +6142,13 @@
             "name": "Breakout + impulse",
             "weight": 11,
             "applicable": true,
-            "support": true
+            "support": false
           },
           {
             "id": "pullback",
             "name": "Break & retest",
             "weight": 11,
-            "applicable": false,
+            "applicable": true,
             "support": false
           },
           {
@@ -5359,7 +6204,7 @@
         "risk_gate": true,
         "adverse_gate": true,
         "confirmation_gate": true,
-        "summary": "SELL autonome · BREAKOUT_CONTINUATION: 7/8 conditions pertinentes validées (88%), consensus pondéré 88%, régime TRENDING, horizons alignés."
+        "summary": "ATTENDRE autonome · GENERIC: 6/9 conditions pertinentes validées (67%), consensus 67%, score 73/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -5367,73 +6212,128 @@
         "specific_guard": true,
         "source": "Deriv public WebSocket"
       },
-      "final_verdict": "SELL",
-      "final_confidence": 90,
+      "final_verdict": "ATTENDRE",
+      "final_confidence": 73,
       "timing": {
         "bias": "SELL",
         "side": "SELL",
-        "position_style": "COURT",
-        "swing_class": "COURT",
-        "swing_days_min": 0.5,
-        "swing_days_max": 1,
-        "swing_days_label": "≈ 0.5–1 jours",
-        "duration_min_hours": 4,
-        "duration_max_hours": 19,
-        "tp1_hours": 6,
-        "tp2_hours": 10,
-        "tp3_hours": 14,
-        "expires_in_hours": 8,
+        "position_style": "MOYEN",
+        "swing_class": "MOYEN",
+        "swing_days_min": 1,
+        "swing_days_max": 3,
+        "swing_days_label": "≈ 1–3 jours",
+        "duration_min_hours": 24,
+        "duration_max_hours": 72,
+        "tp1_hours": null,
+        "tp2_hours": null,
+        "tp3_hours": null,
+        "expires_in_hours": 16,
         "recheck_hours": 1,
-        "is_confirmed": true,
+        "is_confirmed": false,
         "basis": "ATR, régime, mémoire de tendance, structure, force H1/H4 et distance vers les objectifs"
       },
       "execution": {
-        "state": "EXECUTE_NOW",
-        "ready": true,
-        "score": 92,
-        "phase": "IMPULSE",
-        "extension_atr": 1.13,
+        "state": "WAIT_CONFIRMATION",
+        "ready": false,
+        "score": 75,
+        "phase": "TREND",
+        "extension_atr": 1.12,
         "max_extension_atr": 1.25,
-        "rsi": 55.36821279402063,
+        "rsi": 55.300136126114374,
         "stretched": false,
         "extreme": false,
         "overextended": false,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
-        "preferred_entry_zone": {
-          "min": 89.58965473150643,
-          "max": 89.92871806483977
-        },
-        "current_price": 89.0623,
-        "ema20": 89.82699906483977,
-        "stop_reference": 91.27,
-        "reason": "Signal confirmé et entrée jugée exploitable maintenant: structure, persistance, extension et risque sont compatibles."
+        "preferred_entry_zone": null,
+        "current_price": 89.0567,
+        "ema20": 89.82646573150645,
+        "stop_reference": null,
+        "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
-      "execution_state": "EXECUTE_NOW",
-      "execution_ready": 1,
-      "execution_score": 92,
-      "confirmation_source": "autonomous_engine",
-      "score_type": "signal_confidence",
+      "execution_state": "WAIT_CONFIRMATION",
+      "execution_ready": 0,
+      "execution_score": 75,
+      "confirmation_source": "none",
+      "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "SELL autonome · BREAKOUT_CONTINUATION: 7/8 conditions pertinentes validées (88%), consensus pondéré 88%, régime TRENDING, horizons alignés. Exécution: EXECUTE_NOW. Signal confirmé et entrée jugée exploitable maintenant: structure, persistance, extension et risque sont compatibles.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 6/9 conditions pertinentes validées (67%), consensus 67%, score 73/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Trend following",
         "Stratégie locale: SMC structure",
-        "Stratégie locale: Breakout + impulse",
         "Stratégie locale: FVG / Order Block",
         "Stratégie locale: Trend memory",
-        "Stratégie locale: Volatility control"
+        "Stratégie locale: Volatility control",
+        "Stratégie locale: Boom/Crash guard"
       ],
       "ai_contradictions": [
+        "À renforcer: Breakout + impulse",
+        "À renforcer: Break & retest",
         "À renforcer: Momentum"
       ],
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 31.4,
+            "confidence": 68.6,
+            "validation_accuracy": 41.5,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "NEUTRAL",
+            "probability_up": 54.1,
+            "confidence": 54.1,
+            "validation_accuracy": 46.3,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "error",
+            "direction": "NEUTRAL",
+            "error": "Cannot change data-type for array of references."
+          },
+          "timesfm25": {
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 55.3,
+            "forecast_price": 89.14282227,
+            "expected_return_pct": 0.0967,
+            "volatility_threshold_pct": 0.2549,
+            "horizon_steps": 6,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
+          }
+        },
+        "ensemble": {
+          "direction": "SELL",
+          "consensus": 100.0,
+          "available_models": 3,
+          "directional_models": 1,
+          "neutral_models": 2,
+          "mean_confidence": 59.3,
+          "buy_weight": 0.0,
+          "sell_weight": 0.568
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 3
     },
     {
       "id": "R_75:day",
@@ -5452,40 +6352,40 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 44096.0346,
-      "technical_verdict": "SELL",
-      "technical_confidence": 77,
+      "price": 44193.5774,
+      "technical_verdict": "ATTENDRE",
+      "technical_confidence": 66,
       "levels": null,
       "entry_tf": {
         "side": "SELL",
-        "confidence": 79,
-        "passed": 6,
+        "confidence": 66,
+        "passed": 4,
         "bos": false,
         "choch": false,
         "sweep": false,
         "impulse": false,
         "fvg": false,
-        "retest": true,
+        "retest": false,
         "orderBlock": true,
-        "momentum": true,
+        "momentum": false,
         "rejection": true,
         "trendStrong": true,
         "spikeRisk": false,
         "regime": "TRENDING",
-        "trendQuality": 75,
-        "emaSpreadAtr": 0.8496267235451893,
-        "emaSlopeAtr": -0.42765324154731954,
-        "volatilityExpansion": 1.1399986021013078,
-        "ema20": 44118.97361480789,
-        "ema50": 44356.97842170315,
-        "ema200": 44980.287885925085,
-        "rsi": 47.95152123374616,
-        "atr": 280.1286733333327,
+        "trendQuality": 56,
+        "emaSpreadAtr": 0.8294660223243905,
+        "emaSlopeAtr": -0.3941801962669069,
+        "volatilityExpansion": 1.1410601775284268,
+        "ema20": 44128.26340528408,
+        "ema50": 44360.80362954628,
+        "ema200": 44981.25846104947,
+        "rsi": 50.114179045883624,
+        "atr": 280.3493066666662,
         "swingHigh": 44676.0596,
         "swingLow": 43589.2209,
         "closedAt": 1789830000,
-        "price": 44096.0346,
-        "change": -0.2041983084959842
+        "price": 44193.5774,
+        "change": 0.016555371818727238
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -5504,326 +6404,23 @@
         "spikeRisk": false,
         "regime": "TRENDING",
         "trendQuality": 69,
-        "emaSpreadAtr": 1.0050772323834969,
-        "emaSlopeAtr": -0.6295998073921671,
-        "volatilityExpansion": 0.9655009540119984,
-        "ema20": 44488.01097508322,
-        "ema50": 44995.517929253176,
-        "ema200": 46362.196709149284,
-        "rsi": 41.666721801394196,
-        "atr": 504.94324,
+        "emaSpreadAtr": 0.993820813480123,
+        "emaSlopeAtr": -0.6109351686915654,
+        "volatilityExpansion": 0.9660021900812987,
+        "ema20": 44497.30076555941,
+        "ema50": 44999.343137096315,
+        "ema200": 46363.16728427366,
+        "rsi": 42.970005478749975,
+        "atr": 505.1638733333336,
         "swingHigh": 46044.3178,
         "swingLow": 43607.233,
         "closedAt": 1789830000,
-        "price": 44096.0346,
-        "change": -0.2041983084959842
+        "price": 44193.5774,
+        "change": 0.016555371818727238
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 77,
-        "regime": "TRENDING",
-        "confirmation_regime": "TRENDING",
-        "aligned": true,
-        "stability": true,
-        "adverse_spike_direction": false,
-        "reasons": [
-          "Unités de temps alignées",
-          "Tendance de confirmation forte",
-          "Structure non confirmée",
-          "Pas de sweep de liquidité",
-          "Retest présent",
-          "Régime directionnel"
-        ]
-      },
-      "trend_memory": {
-        "previous_bias": "SELL",
-        "current_bias": "SELL",
-        "previous_final": "ATTENDRE",
-        "persistence": true,
-        "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 56,
-        "previous_score": 64,
-        "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 85
-      },
-      "decision_engine": {
-        "verdict": "ATTENDRE",
-        "confidence": 74,
-        "score": 75,
-        "consensus": 66,
-        "setup_type": "PULLBACK_CONTINUATION",
-        "condition_pass_percent": 70,
-        "conditions_passed": 7,
-        "conditions_total": 10,
-        "minimum_conditions_percent": 80,
-        "condition_gate": false,
-        "side": "SELL",
-        "aligned": true,
-        "active_strategies": [
-          "Trend following",
-          "Break & retest",
-          "FVG / Order Block",
-          "Price rejection",
-          "Trend memory",
-          "Volatility control",
-          "Boom/Crash guard"
-        ],
-        "missing_strategies": [
-          "SMC structure",
-          "Liquidity sweep",
-          "Momentum"
-        ],
-        "strategies": [
-          {
-            "id": "trend",
-            "name": "Trend following",
-            "weight": 18,
-            "applicable": true,
-            "support": true
-          },
-          {
-            "id": "structure",
-            "name": "SMC structure",
-            "weight": 15,
-            "applicable": true,
-            "support": false
-          },
-          {
-            "id": "liquidity",
-            "name": "Liquidity sweep",
-            "weight": 10,
-            "applicable": true,
-            "support": false
-          },
-          {
-            "id": "breakout",
-            "name": "Breakout + impulse",
-            "weight": 11,
-            "applicable": false,
-            "support": false
-          },
-          {
-            "id": "pullback",
-            "name": "Break & retest",
-            "weight": 11,
-            "applicable": true,
-            "support": true
-          },
-          {
-            "id": "momentum",
-            "name": "Momentum",
-            "weight": 10,
-            "applicable": true,
-            "support": false
-          },
-          {
-            "id": "imbalance",
-            "name": "FVG / Order Block",
-            "weight": 8,
-            "applicable": true,
-            "support": true
-          },
-          {
-            "id": "rejection",
-            "name": "Price rejection",
-            "weight": 6,
-            "applicable": true,
-            "support": true
-          },
-          {
-            "id": "range",
-            "name": "Range reversal",
-            "weight": 12,
-            "applicable": false,
-            "support": false
-          },
-          {
-            "id": "memory",
-            "name": "Trend memory",
-            "weight": 8,
-            "applicable": true,
-            "support": true
-          },
-          {
-            "id": "volatility",
-            "name": "Volatility control",
-            "weight": 8,
-            "applicable": true,
-            "support": true
-          },
-          {
-            "id": "family",
-            "name": "Boom/Crash guard",
-            "weight": 8,
-            "applicable": true,
-            "support": true
-          }
-        ],
-        "risk_gate": true,
-        "adverse_gate": true,
-        "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 7/10 conditions pertinentes validées (70%), consensus 66%, score 75/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
-      },
-      "risk": {
-        "risk_reward": 3.6,
-        "spike_risk": false,
-        "specific_guard": true,
-        "source": "Deriv public WebSocket"
-      },
-      "final_verdict": "ATTENDRE",
-      "final_confidence": 74,
-      "timing": {
-        "bias": "SELL",
-        "side": "SELL",
-        "position_style": "MOYEN",
-        "swing_class": null,
-        "swing_days_min": null,
-        "swing_days_max": null,
-        "swing_days_label": null,
-        "duration_min_hours": 3,
-        "duration_max_hours": 12,
-        "tp1_hours": null,
-        "tp2_hours": null,
-        "tp3_hours": null,
-        "expires_in_hours": 8,
-        "recheck_hours": 0.25,
-        "is_confirmed": false,
-        "basis": "ATR, régime, mémoire de tendance, structure, force H1/H4 et distance vers les objectifs"
-      },
-      "execution": {
-        "state": "WAIT_CONFIRMATION",
-        "ready": false,
-        "score": 84,
-        "phase": "PULLBACK",
-        "extension_atr": 0.08,
-        "max_extension_atr": 1.05,
-        "rsi": 47.95152123374616,
-        "stretched": false,
-        "extreme": false,
-        "overextended": false,
-        "breakout_chase": false,
-        "persistence_gate": true,
-        "bias_cycles": 2,
-        "structural_entry": true,
-        "preferred_entry_zone": null,
-        "current_price": 44096.0346,
-        "ema20": 44118.97361480789,
-        "stop_reference": null,
-        "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
-      },
-      "execution_state": "WAIT_CONFIRMATION",
-      "execution_ready": 0,
-      "execution_score": 84,
-      "confirmation_source": "none",
-      "score_type": "setup_readiness",
-      "ai_verdict": "INDISPONIBLE",
-      "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 7/10 conditions pertinentes validées (70%), consensus 66%, score 75/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
-      "ai_confirmations": [
-        "Stratégie locale: Trend following",
-        "Stratégie locale: Break & retest",
-        "Stratégie locale: FVG / Order Block",
-        "Stratégie locale: Price rejection",
-        "Stratégie locale: Trend memory",
-        "Stratégie locale: Volatility control"
-      ],
-      "ai_contradictions": [
-        "À renforcer: SMC structure",
-        "À renforcer: Liquidity sweep",
-        "À renforcer: Momentum"
-      ],
-      "ai_risk": "Audit IA non disponible; décision locale autonome.",
-      "needs_expert_review": false,
-      "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
-    },
-    {
-      "id": "R_75:swing",
-      "market": "Volatility 75 Index",
-      "symbol": "R_75",
-      "family": "volatility",
-      "spikeBias": "NONE",
-      "mode": "swing",
-      "mode_label": "Swing",
-      "timeframes": [
-        "H1",
-        "H4"
-      ],
-      "duration": {
-        "range": "12 h–4 jours",
-        "validity": "3 bougies H1",
-        "reanalysis": "1 h"
-      },
-      "price": 44096.0346,
-      "technical_verdict": "SELL",
-      "technical_confidence": 74,
-      "levels": null,
-      "entry_tf": {
-        "side": "SELL",
-        "confidence": 73,
-        "passed": 5,
-        "bos": false,
-        "choch": false,
-        "sweep": false,
-        "impulse": false,
-        "fvg": false,
-        "retest": false,
-        "orderBlock": true,
-        "momentum": true,
-        "rejection": true,
-        "trendStrong": true,
-        "spikeRisk": false,
-        "regime": "TRENDING",
-        "trendQuality": 69,
-        "emaSpreadAtr": 1.0050772323834969,
-        "emaSlopeAtr": -0.6295998073921671,
-        "volatilityExpansion": 0.9655009540119984,
-        "ema20": 44488.01097508322,
-        "ema50": 44995.517929253176,
-        "ema200": 46362.196709149284,
-        "rsi": 41.666721801394196,
-        "atr": 504.94324,
-        "swingHigh": 46044.3178,
-        "swingLow": 43607.233,
-        "closedAt": 1789830000,
-        "price": 44096.0346,
-        "change": -0.2041983084959842
-      },
-      "confirmation_tf": {
-        "side": "SELL",
-        "confidence": 73,
-        "passed": 5,
-        "bos": false,
-        "choch": false,
-        "sweep": false,
-        "impulse": false,
-        "fvg": false,
-        "retest": false,
-        "orderBlock": true,
-        "momentum": true,
-        "rejection": true,
-        "trendStrong": true,
-        "spikeRisk": false,
-        "regime": "TRENDING",
-        "trendQuality": 70,
-        "emaSpreadAtr": 1.1174719086161584,
-        "emaSlopeAtr": -0.6720157924237102,
-        "volatilityExpansion": 0.7990197272900796,
-        "ema20": 45414.79462737911,
-        "ema50": 46561.69809393489,
-        "ema200": 48330.117691523905,
-        "rsi": 33.530522092334024,
-        "atr": 1026.337626666666,
-        "swingHigh": 47554.1554,
-        "swingLow": 43945.9196,
-        "closedAt": 1789819200,
-        "price": 44096.0346,
-        "change": -0.11262917425293173
-      },
-      "intelligence": {
-        "engine": "Sera Autonomous Engine v3.3",
-        "local_score": 74,
+        "local_score": 66,
         "regime": "TRENDING",
         "confirmation_regime": "TRENDING",
         "aligned": true,
@@ -5844,16 +6441,16 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
-        "previous_conditions": 67,
-        "previous_score": 71,
+        "bias_cycles": 3,
+        "previous_conditions": 70,
+        "previous_score": 75,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 82
+        "candidate_score": 75
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 64,
-        "score": 64,
+        "confidence": 62,
+        "score": 62,
         "consensus": 52,
         "setup_type": "GENERIC",
         "condition_pass_percent": 56,
@@ -5965,7 +6562,7 @@
         "risk_gate": true,
         "adverse_gate": true,
         "confirmation_gate": true,
-        "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 64/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+        "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 62/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -5974,7 +6571,357 @@
         "source": "Deriv public WebSocket"
       },
       "final_verdict": "ATTENDRE",
-      "final_confidence": 64,
+      "final_confidence": 62,
+      "timing": {
+        "bias": "SELL",
+        "side": "SELL",
+        "position_style": "MOYEN",
+        "swing_class": null,
+        "swing_days_min": null,
+        "swing_days_max": null,
+        "swing_days_label": null,
+        "duration_min_hours": 6,
+        "duration_max_hours": 24,
+        "tp1_hours": null,
+        "tp2_hours": null,
+        "tp3_hours": null,
+        "expires_in_hours": 8,
+        "recheck_hours": 0.25,
+        "is_confirmed": false,
+        "basis": "ATR, régime, mémoire de tendance, structure, force H1/H4 et distance vers les objectifs"
+      },
+      "execution": {
+        "state": "WAIT_CONFIRMATION",
+        "ready": false,
+        "score": 71,
+        "phase": "TREND",
+        "extension_atr": 0.23,
+        "max_extension_atr": 1.05,
+        "rsi": 50.114179045883624,
+        "stretched": false,
+        "extreme": false,
+        "overextended": false,
+        "breakout_chase": false,
+        "persistence_gate": true,
+        "bias_cycles": 3,
+        "structural_entry": true,
+        "preferred_entry_zone": null,
+        "current_price": 44193.5774,
+        "ema20": 44128.26340528408,
+        "stop_reference": null,
+        "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
+      },
+      "execution_state": "WAIT_CONFIRMATION",
+      "execution_ready": 0,
+      "execution_score": 71,
+      "confirmation_source": "none",
+      "score_type": "setup_readiness",
+      "ai_verdict": "INDISPONIBLE",
+      "ai_confidence": 0,
+      "ai_summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 62/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_confirmations": [
+        "Stratégie locale: Trend following",
+        "Stratégie locale: FVG / Order Block",
+        "Stratégie locale: Trend memory",
+        "Stratégie locale: Volatility control",
+        "Stratégie locale: Boom/Crash guard"
+      ],
+      "ai_contradictions": [
+        "À renforcer: SMC structure",
+        "À renforcer: Breakout + impulse",
+        "À renforcer: Break & retest",
+        "À renforcer: Momentum"
+      ],
+      "ai_risk": "Audit IA non disponible; décision locale autonome.",
+      "needs_expert_review": false,
+      "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 38.9,
+            "confidence": 61.1,
+            "validation_accuracy": 61.9,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 41.6,
+            "confidence": 58.4,
+            "validation_accuracy": 54.8,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "SELL",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 59.8,
+          "buy_weight": 0.0,
+          "sell_weight": 1.181
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
+    },
+    {
+      "id": "R_75:swing",
+      "market": "Volatility 75 Index",
+      "symbol": "R_75",
+      "family": "volatility",
+      "spikeBias": "NONE",
+      "mode": "swing",
+      "mode_label": "Swing",
+      "timeframes": [
+        "H1",
+        "H4"
+      ],
+      "duration": {
+        "range": "12 h–4 jours",
+        "validity": "3 bougies H1",
+        "reanalysis": "1 h"
+      },
+      "price": 44193.5774,
+      "technical_verdict": "SELL",
+      "technical_confidence": 72,
+      "levels": null,
+      "entry_tf": {
+        "side": "SELL",
+        "confidence": 73,
+        "passed": 5,
+        "bos": false,
+        "choch": false,
+        "sweep": false,
+        "impulse": false,
+        "fvg": false,
+        "retest": false,
+        "orderBlock": true,
+        "momentum": true,
+        "rejection": true,
+        "trendStrong": true,
+        "spikeRisk": false,
+        "regime": "TRENDING",
+        "trendQuality": 69,
+        "emaSpreadAtr": 0.993820813480123,
+        "emaSlopeAtr": -0.6109351686915654,
+        "volatilityExpansion": 0.9660021900812987,
+        "ema20": 44497.30076555941,
+        "ema50": 44999.343137096315,
+        "ema200": 46363.16728427366,
+        "rsi": 42.970005478749975,
+        "atr": 505.1638733333336,
+        "swingHigh": 46044.3178,
+        "swingLow": 43607.233,
+        "closedAt": 1789830000,
+        "price": 44193.5774,
+        "change": 0.016555371818727238
+      },
+      "confirmation_tf": {
+        "side": "SELL",
+        "confidence": 68,
+        "passed": 4,
+        "bos": false,
+        "choch": false,
+        "sweep": false,
+        "impulse": false,
+        "fvg": false,
+        "retest": false,
+        "orderBlock": true,
+        "momentum": true,
+        "rejection": false,
+        "trendStrong": true,
+        "spikeRisk": false,
+        "regime": "TRENDING",
+        "trendQuality": 65,
+        "emaSpreadAtr": 1.1121475567741552,
+        "emaSlopeAtr": -0.6629643942923141,
+        "volatilityExpansion": 0.7990197272900796,
+        "ema20": 45424.0844178553,
+        "ema50": 46565.52330177802,
+        "ema200": 48331.08826664828,
+        "rsi": 34.49537698613781,
+        "atr": 1026.337626666666,
+        "swingHigh": 47554.1554,
+        "swingLow": 43945.9196,
+        "closedAt": 1789819200,
+        "price": 44193.5774,
+        "change": 0.10832706191126196
+      },
+      "intelligence": {
+        "engine": "Sera Autonomous Engine v3.3",
+        "local_score": 72,
+        "regime": "TRENDING",
+        "confirmation_regime": "TRENDING",
+        "aligned": true,
+        "stability": true,
+        "adverse_spike_direction": false,
+        "reasons": [
+          "Unités de temps alignées",
+          "Tendance de confirmation forte",
+          "Structure non confirmée",
+          "Pas de sweep de liquidité",
+          "Retest absent",
+          "Régime directionnel"
+        ]
+      },
+      "trend_memory": {
+        "previous_bias": "SELL",
+        "current_bias": "SELL",
+        "previous_final": "ATTENDRE",
+        "persistence": true,
+        "flip": false,
+        "bias_cycles": 3,
+        "previous_conditions": 56,
+        "previous_score": 64,
+        "previous_execution_state": "WAIT_CONFIRMATION",
+        "candidate_score": 81
+      },
+      "decision_engine": {
+        "verdict": "ATTENDRE",
+        "confidence": 63,
+        "score": 63,
+        "consensus": 52,
+        "setup_type": "GENERIC",
+        "condition_pass_percent": 56,
+        "conditions_passed": 5,
+        "conditions_total": 9,
+        "minimum_conditions_percent": 80,
+        "condition_gate": false,
+        "side": "SELL",
+        "aligned": true,
+        "active_strategies": [
+          "Trend following",
+          "FVG / Order Block",
+          "Trend memory",
+          "Volatility control",
+          "Boom/Crash guard"
+        ],
+        "missing_strategies": [
+          "SMC structure",
+          "Breakout + impulse",
+          "Break & retest",
+          "Momentum"
+        ],
+        "strategies": [
+          {
+            "id": "trend",
+            "name": "Trend following",
+            "weight": 18,
+            "applicable": true,
+            "support": true
+          },
+          {
+            "id": "structure",
+            "name": "SMC structure",
+            "weight": 15,
+            "applicable": true,
+            "support": false
+          },
+          {
+            "id": "liquidity",
+            "name": "Liquidity sweep",
+            "weight": 10,
+            "applicable": false,
+            "support": false
+          },
+          {
+            "id": "breakout",
+            "name": "Breakout + impulse",
+            "weight": 11,
+            "applicable": true,
+            "support": false
+          },
+          {
+            "id": "pullback",
+            "name": "Break & retest",
+            "weight": 11,
+            "applicable": true,
+            "support": false
+          },
+          {
+            "id": "momentum",
+            "name": "Momentum",
+            "weight": 10,
+            "applicable": true,
+            "support": false
+          },
+          {
+            "id": "imbalance",
+            "name": "FVG / Order Block",
+            "weight": 8,
+            "applicable": true,
+            "support": true
+          },
+          {
+            "id": "rejection",
+            "name": "Price rejection",
+            "weight": 6,
+            "applicable": false,
+            "support": true
+          },
+          {
+            "id": "range",
+            "name": "Range reversal",
+            "weight": 12,
+            "applicable": false,
+            "support": false
+          },
+          {
+            "id": "memory",
+            "name": "Trend memory",
+            "weight": 8,
+            "applicable": true,
+            "support": true
+          },
+          {
+            "id": "volatility",
+            "name": "Volatility control",
+            "weight": 8,
+            "applicable": true,
+            "support": true
+          },
+          {
+            "id": "family",
+            "name": "Boom/Crash guard",
+            "weight": 8,
+            "applicable": true,
+            "support": true
+          }
+        ],
+        "risk_gate": true,
+        "adverse_gate": true,
+        "confirmation_gate": true,
+        "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 63/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques."
+      },
+      "risk": {
+        "risk_reward": 3.6,
+        "spike_risk": false,
+        "specific_guard": true,
+        "source": "Deriv public WebSocket"
+      },
+      "final_verdict": "ATTENDRE",
+      "final_confidence": 63,
       "timing": {
         "bias": "SELL",
         "side": "SELL",
@@ -5996,32 +6943,32 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 73,
+        "score": 72,
         "phase": "TREND",
-        "extension_atr": 0.78,
+        "extension_atr": 0.6,
         "max_extension_atr": 1.25,
-        "rsi": 41.666721801394196,
+        "rsi": 42.970005478749975,
         "stretched": false,
         "extreme": false,
         "overextended": false,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": true,
         "preferred_entry_zone": null,
-        "current_price": 44096.0346,
-        "ema20": 44488.01097508322,
+        "current_price": 44193.5774,
+        "ema20": 44497.30076555941,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 73,
+      "execution_score": 72,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 64/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 5/9 conditions pertinentes validées (56%), consensus 52%, score 63/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Trend following",
         "Stratégie locale: FVG / Order Block",
@@ -6038,7 +6985,63 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 22.2,
+            "confidence": 77.8,
+            "validation_accuracy": 58.5,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 16.8,
+            "confidence": 83.2,
+            "validation_accuracy": 53.7,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "error",
+            "direction": "NEUTRAL",
+            "error": "Cannot change data-type for array of references."
+          },
+          "timesfm25": {
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 57.8,
+            "forecast_price": 44292.328125,
+            "expected_return_pct": 0.2234,
+            "volatility_threshold_pct": 0.4027,
+            "horizon_steps": 6,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
+          }
+        },
+        "ensemble": {
+          "direction": "SELL",
+          "consensus": 100.0,
+          "available_models": 3,
+          "directional_models": 2,
+          "neutral_models": 1,
+          "mean_confidence": 72.9,
+          "buy_weight": 0.0,
+          "sell_weight": 1.366
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 3
     },
     {
       "id": "R_100:day",
@@ -6057,7 +7060,7 @@
         "validity": "3 bougies M15",
         "reanalysis": "15 min"
       },
-      "price": 581.8,
+      "price": 582.51,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 35,
       "levels": null,
@@ -6078,19 +7081,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 54,
-        "emaSpreadAtr": 0.08904926019797627,
-        "emaSlopeAtr": 0.5724825935159409,
-        "volatilityExpansion": 0.9484966274151126,
-        "ema20": 575.2829453128537,
-        "ema50": 574.869875477882,
-        "ema200": 595.0483653493001,
-        "rsi": 77.04975473020326,
-        "atr": 4.638666666666669,
+        "emaSpreadAtr": 0.09706610717401143,
+        "emaSlopeAtr": 0.5837042665207839,
+        "volatilityExpansion": 0.9553561220990039,
+        "ema20": 575.3505643604727,
+        "ema50": 574.8977186151369,
+        "ema200": 595.055430025917,
+        "rsi": 77.60683760683767,
+        "atr": 4.665333333333335,
         "swingHigh": 580.67,
         "swingLow": 564.18,
         "closedAt": 1789830000,
-        "price": 581.8,
-        "change": 0.28959525615388504
+        "price": 582.51,
+        "change": 0.41198372750466117
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -6109,19 +7112,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 35,
-        "emaSpreadAtr": 1.6308473795191334,
-        "emaSlopeAtr": -0.21701853888184544,
-        "volatilityExpansion": 0.8003747365133904,
-        "ema20": 579.0003730554483,
-        "ema50": 594.2716279172655,
-        "ema200": 593.0134968069297,
-        "rsi": 66.3761653830563,
-        "atr": 9.364000000000003,
+        "emaSpreadAtr": 1.621980578388438,
+        "emaSlopeAtr": -0.209201606254854,
+        "volatilityExpansion": 0.803497540791632,
+        "ema20": 579.0679921030674,
+        "ema50": 594.2994710545204,
+        "ema200": 593.0205614835465,
+        "rsi": 66.85314685314684,
+        "atr": 9.390666666666668,
         "swingHigh": 613.75,
         "swingLow": 562.37,
         "closedAt": 1789830000,
-        "price": 581.8,
-        "change": 0.28959525615388504
+        "price": 582.51,
+        "change": 0.41198372750466117
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
@@ -6141,14 +7144,14 @@
         ]
       },
       "trend_memory": {
-        "previous_bias": "SELL",
+        "previous_bias": "NEUTRE",
         "current_bias": "NEUTRE",
         "previous_final": "ATTENDRE",
         "persistence": false,
         "flip": false,
         "bias_cycles": 0,
         "previous_conditions": 67,
-        "previous_score": 63,
+        "previous_score": 47,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 35
       },
@@ -6297,9 +7300,9 @@
         "ready": false,
         "score": 31,
         "phase": "EXHAUSTION_RISK",
-        "extension_atr": 1.4,
+        "extension_atr": 1.53,
         "max_extension_atr": 1.05,
-        "rsi": 77.04975473020326,
+        "rsi": 77.60683760683767,
         "stretched": false,
         "extreme": false,
         "overextended": true,
@@ -6308,8 +7311,8 @@
         "bias_cycles": 0,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 581.8,
-        "ema20": 575.2829453128537,
+        "current_price": 582.51,
+        "ema20": 575.3505643604727,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
@@ -6334,7 +7337,55 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 25.4,
+            "confidence": 74.6,
+            "validation_accuracy": 52.4,
+            "model": "XGBoost",
+            "samples": 206
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "SELL",
+            "probability_up": 26.1,
+            "confidence": 73.9,
+            "validation_accuracy": 47.6,
+            "model": "LightGBM",
+            "samples": 206
+          },
+          "chronos2": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          },
+          "timesfm25": {
+            "status": "not_selected",
+            "direction": "NEUTRAL"
+          }
+        },
+        "ensemble": {
+          "direction": "SELL",
+          "consensus": 100.0,
+          "available_models": 2,
+          "directional_models": 2,
+          "neutral_models": 0,
+          "mean_confidence": 74.2,
+          "buy_weight": 0.0,
+          "sell_weight": 1.243
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 2
     },
     {
       "id": "R_100:swing",
@@ -6353,7 +7404,7 @@
         "validity": "3 bougies H1",
         "reanalysis": "1 h"
       },
-      "price": 581.8,
+      "price": 582.51,
       "technical_verdict": "ATTENDRE",
       "technical_confidence": 41,
       "levels": null,
@@ -6374,19 +7425,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 35,
-        "emaSpreadAtr": 1.6308473795191334,
-        "emaSlopeAtr": -0.21701853888184544,
-        "volatilityExpansion": 0.8003747365133904,
-        "ema20": 579.0003730554483,
-        "ema50": 594.2716279172655,
-        "ema200": 593.0134968069297,
-        "rsi": 66.3761653830563,
-        "atr": 9.364000000000003,
+        "emaSpreadAtr": 1.621980578388438,
+        "emaSlopeAtr": -0.209201606254854,
+        "volatilityExpansion": 0.803497540791632,
+        "ema20": 579.0679921030674,
+        "ema50": 594.2994710545204,
+        "ema200": 593.0205614835465,
+        "rsi": 66.85314685314684,
+        "atr": 9.390666666666668,
         "swingHigh": 613.75,
         "swingLow": 562.37,
         "closedAt": 1789830000,
-        "price": 581.8,
-        "change": 0.28959525615388504
+        "price": 582.51,
+        "change": 0.41198372750466117
       },
       "confirmation_tf": {
         "side": "SELL",
@@ -6405,19 +7456,19 @@
         "spikeRisk": false,
         "regime": "TRANSITION",
         "trendQuality": 37,
-        "emaSpreadAtr": 0.21502752115773735,
-        "emaSlopeAtr": -0.9748163457279836,
-        "volatilityExpansion": 0.995797767564018,
-        "ema20": 600.8283732858275,
-        "ema50": 596.4611643311139,
-        "ema200": 597.0685537744067,
-        "rsi": 39.190111473420785,
-        "atr": 20.310000000000006,
+        "emaSpreadAtr": 0.2167014357520686,
+        "emaSlopeAtr": -0.9702131257555918,
+        "volatilityExpansion": 0.997548697745677,
+        "ema20": 600.8959923334467,
+        "ema50": 596.4890074683688,
+        "ema200": 597.0756184510236,
+        "rsi": 39.51576406697844,
+        "atr": 20.33666666666667,
         "swingHigh": 659.37,
         "swingLow": 562.37,
         "closedAt": 1789819200,
-        "price": 581.8,
-        "change": 1.736408624337682
+        "price": 582.51,
+        "change": 1.8605627153024162
       },
       "intelligence": {
         "engine": "Sera Autonomous Engine v3.3",
@@ -6442,11 +7493,11 @@
         "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "previous_conditions": 67,
-        "previous_score": 61,
+        "previous_score": 58,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 45
+        "candidate_score": 46
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
@@ -6593,19 +7644,19 @@
         "ready": false,
         "score": 60,
         "phase": "TRANSITION",
-        "extension_atr": 0.3,
+        "extension_atr": 0.37,
         "max_extension_atr": 1.25,
-        "rsi": 66.3761653830563,
+        "rsi": 66.85314685314684,
         "stretched": false,
         "extreme": false,
         "overextended": false,
         "breakout_chase": false,
         "persistence_gate": true,
-        "bias_cycles": 2,
+        "bias_cycles": 3,
         "structural_entry": false,
         "preferred_entry_zone": null,
-        "current_price": 581.8,
-        "ema20": 579.0003730554483,
+        "current_price": 582.51,
+        "ema20": 579.0679921030674,
         "stop_reference": null,
         "reason": "Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate."
       },
@@ -6630,7 +7681,63 @@
       "ai_risk": "Audit IA non disponible; décision locale autonome.",
       "needs_expert_review": false,
       "ai_tier": "Sera Autonomous Engine v3.3 · autonome",
-      "ai_advisor_status": "offline"
+      "ai_advisor_status": "offline",
+      "open_source_ai": {
+        "version": "Sera OSS Ensemble v1.0",
+        "models": {
+          "xgboost": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 74.1,
+            "confidence": 74.1,
+            "validation_accuracy": 61.0,
+            "model": "XGBoost",
+            "samples": 204
+          },
+          "lightgbm": {
+            "status": "ok",
+            "direction": "BUY",
+            "probability_up": 66.5,
+            "confidence": 66.5,
+            "validation_accuracy": 65.9,
+            "model": "LightGBM",
+            "samples": 204
+          },
+          "chronos2": {
+            "status": "error",
+            "direction": "NEUTRAL",
+            "error": "Cannot change data-type for array of references."
+          },
+          "timesfm25": {
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 59.9,
+            "forecast_price": 585.08874512,
+            "expected_return_pct": 0.4427,
+            "volatility_threshold_pct": 0.6275,
+            "horizon_steps": 6,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
+          }
+        },
+        "ensemble": {
+          "direction": "BUY",
+          "consensus": 100.0,
+          "available_models": 3,
+          "directional_models": 2,
+          "neutral_models": 1,
+          "mean_confidence": 66.8,
+          "buy_weight": 1.337,
+          "sell_weight": 0.0
+        },
+        "qwen_local": {
+          "status": "browser_optional",
+          "model": "Qwen3-0.6B-q4f16_1-MLC"
+        }
+      },
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 3
     }
   ],
   "openai_response_ids": {
@@ -6639,5 +7746,20 @@
   "usage": {
     "screening": null
   },
-  "safety": "Sera Autonomous Engine exige au moins 80% des conditions pertinentes et distingue le signal directionnel du timing d’entrée. L’EA n’agit que sur EXECUTE_NOW avec les garde-fous critiques. Luna reste facultative."
+  "safety": "Sera Autonomous Engine exige au moins 80% des conditions pertinentes et distingue le signal directionnel du timing d’entrée. L’EA n’agit que sur EXECUTE_NOW avec les garde-fous critiques. Luna reste facultative.",
+  "open_source_models": {
+    "version": "Sera OSS Ensemble v1.0",
+    "core": [
+      "XGBoost",
+      "LightGBM"
+    ],
+    "foundation": [
+      "Chronos-2 small",
+      "TimesFM 2.5 200M"
+    ],
+    "browser_advisor": "Qwen3-0.6B via WebLLM",
+    "foundation_ran": true,
+    "policy": "Models can confirm or pause execution timing; they cannot create a trade against the autonomous engine or bypass risk gates."
+  },
+  "model_ensemble_updated_at": "2026-09-19T15:12:17.314563Z"
 }
