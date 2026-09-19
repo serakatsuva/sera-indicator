@@ -20,6 +20,7 @@ let liveQuote=null;
 const liveQuotes=new Map();
 const liveTickHistory=new Map();
 const liveCandles=new Map();
+const liveCandleSeries=new Map();
 let liveUiFrame=0;
 let liveReconnectTimer=null;
 let marketFamily="synthetic";
@@ -440,6 +441,8 @@ function renderSelected(){
     renderOpenSourceModels(null);
     renderLiveEntry(null);
     renderTradeAction(null);
+    renderPredictionPanel(null);
+    renderRealtimeCandles(null);
     $("signalActions").hidden=true;drawChart("wait");highlightSelected();return;
   }
   const candidates=hasDerivResults()?payload.markets.filter(item=>item.market===selected):[];
@@ -462,6 +465,8 @@ function renderSelected(){
   renderOpenSourceModels(row);
   renderLiveEntry(row);
   renderTradeAction(row);
+  renderPredictionPanel(row);
+  renderRealtimeCandles(row);
   $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
   const swingBadge=$("swingDurationBadge");
   if(swingBadge){
@@ -830,7 +835,10 @@ function candleBucket(epoch,seconds){
 }
 
 function updateLiveCandle(market,price,epoch=Date.now()/1000){
-  const key=`${market}:M1`,bucket=candleBucket(Number(epoch)||Date.now()/1000,60);
+  const ts=Number(epoch)||Date.now()/1000;
+
+  // M1 candle kept for movement diagnostics.
+  const key=`${market}:M1`,bucket=candleBucket(ts,60);
   const current=liveCandles.get(key);
   if(!current||current.epoch!==bucket){
     liveCandles.set(key,{epoch:bucket,open:price,high:price,low:price,close:price,ticks:1});
@@ -840,6 +848,21 @@ function updateLiveCandle(market,price,epoch=Date.now()/1000){
     current.close=price;
     current.ticks+=1;
   }
+
+  // 10-second rolling candles drive the realtime Japanese chart.
+  const series=liveCandleSeries.get(market)||[];
+  const liveBucket=candleBucket(ts,10);
+  const last=series.at(-1);
+  if(!last||last.epoch!==liveBucket){
+    series.push({epoch:liveBucket,open:price,high:price,low:price,close:price,ticks:1});
+    while(series.length>42)series.shift();
+  }else{
+    last.high=Math.max(last.high,price);
+    last.low=Math.min(last.low,price);
+    last.close=price;
+    last.ticks+=1;
+  }
+  liveCandleSeries.set(market,series);
 }
 
 function recordLiveTick(market,price,epoch){
@@ -895,6 +918,149 @@ function updateLiveScannerDom(market){
   });
 }
 
+function selectedSignalRow(){
+  if(!hasDerivResults())return null;
+  const candidates=payload.markets.filter(item=>item.market===selected);
+  return candidates.find(item=>item.mode===selectedMode)||candidates[0]||null;
+}
+
+function predictionState(row){
+  if(!row)return{prediction:"NEUTRE",status:"WAIT",action:"WAIT",side:"wait"};
+  const final=row.final_verdict==="BUY"||row.final_verdict==="SELL"?row.final_verdict:null;
+  const setup=hasDetectedSetup(row)?setupSide(row):null;
+  const prediction=final||setup||"NEUTRE";
+  const execution=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
+  const action=simpleActionState(row);
+  return{
+    prediction,
+    status:executionLabel(row),
+    action:action.label==="BUY"?"ENTER BUY NOW":action.label==="SELL"?"ENTER SELL NOW":"WAIT",
+    side:prediction==="BUY"?"buy":prediction==="SELL"?"sell":"wait"
+  };
+}
+
+function renderPredictionPanel(row){
+  const panel=$("predictionPanel");
+  if(!panel)return;
+  const state=predictionState(row);
+  panel.className=`prediction-panel ${state.side}`;
+  $("predictionDirection").textContent=state.prediction;
+  $("predictionStatus").textContent=state.status;
+  $("predictionAction").textContent=state.action;
+}
+
+function chartLevels(row){
+  const source=row?.levels||row?.projected_levels||{};
+  const plan=row?.setup_entry_plan||{};
+  return{
+    entry:Number(plan.suggested_entry??source.entry),
+    zoneMin:Number(plan.zone_min),
+    zoneMax:Number(plan.zone_max),
+    sl:Number(source.sl),
+    tp1:Number(source.tp1),tp2:Number(source.tp2),tp3:Number(source.tp3),tp4:Number(source.tp4),tp5:Number(source.tp5)
+  };
+}
+
+function renderRealtimeCandles(row){
+  const canvas=$("liveCandlesCanvas"),axis=$("livePriceAxis");
+  if(!canvas||!axis)return;
+  const ctx=canvas.getContext("2d");
+  if(!ctx)return;
+
+  const rect=canvas.getBoundingClientRect();
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  const width=Math.max(320,Math.round(rect.width||640));
+  const height=Math.max(220,Math.round(rect.height||320));
+  if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){
+    canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
+  }
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,width,height);
+
+  const series=(liveCandleSeries.get(selected)||[]).slice(-32);
+  const quote=liveQuotes.get(selected);
+  const levels=chartLevels(row);
+  const values=[];
+  for(const c of series)values.push(c.low,c.high);
+  if(Number.isFinite(Number(quote?.price)))values.push(Number(quote.price));
+  for(const key of ["entry","zoneMin","zoneMax","sl","tp1","tp2","tp3","tp4","tp5"]){
+    if(Number.isFinite(levels[key])&&levels[key]>0)values.push(levels[key]);
+  }
+  if(!values.length){axis.innerHTML="";return;}
+
+  let min=Math.min(...values),max=Math.max(...values);
+  const span=Math.max(max-min,Math.abs(max)*.0002,1e-6);
+  min-=span*.06;max+=span*.06;
+  const y=value=>height-((value-min)/(max-min))*height;
+  const chartW=width-54;
+
+  // grid
+  ctx.lineWidth=1;
+  ctx.strokeStyle="rgba(255,255,255,.07)";
+  for(let i=0;i<5;i++){
+    const yy=(height/4)*i;
+    ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(chartW,yy);ctx.stroke();
+  }
+
+  // Entry zone
+  if(Number.isFinite(levels.zoneMin)&&Number.isFinite(levels.zoneMax)){
+    const top=y(Math.max(levels.zoneMin,levels.zoneMax));
+    const bottom=y(Math.min(levels.zoneMin,levels.zoneMax));
+    ctx.fillStyle="rgba(77,163,255,.10)";
+    ctx.fillRect(0,top,chartW,Math.max(2,bottom-top));
+  }
+
+  const line=(value,label,stroke,dash=[6,5])=>{
+    if(!Number.isFinite(value)||value<=0)return;
+    const yy=y(value);
+    ctx.save();ctx.setLineDash(dash);ctx.strokeStyle=stroke;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(chartW,yy);ctx.stroke();
+    ctx.setLineDash([]);ctx.font="700 10px JetBrains Mono";ctx.fillStyle=stroke;
+    ctx.fillText(label,6,Math.max(11,yy-4));ctx.restore();
+  };
+  line(levels.entry,"ENTRY","rgba(77,163,255,.95)",[8,4]);
+  line(levels.sl,"SL","rgba(255,95,118,.95)",[5,4]);
+  line(levels.tp1,"TP1","rgba(56,232,187,.72)");
+  line(levels.tp2,"TP2","rgba(56,232,187,.64)");
+  line(levels.tp3,"TP3","rgba(56,232,187,.58)");
+  line(levels.tp4,"TP4","rgba(56,232,187,.50)");
+  line(levels.tp5,"TP5","rgba(56,232,187,.44)");
+
+  // Japanese candles
+  const n=Math.max(series.length,1),slot=chartW/Math.max(n,18),bodyW=Math.max(3,Math.min(10,slot*.56));
+  series.forEach((c,i)=>{
+    const x=(i+.5)*slot;
+    const bullish=c.close>=c.open;
+    const stroke=bullish?"#38e8bb":"#ff5f76";
+    const yo=y(c.open),yc=y(c.close),yh=y(c.high),yl=y(c.low);
+    ctx.strokeStyle=stroke;ctx.fillStyle=stroke;ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.moveTo(x,yh);ctx.lineTo(x,yl);ctx.stroke();
+    const top=Math.min(yo,yc),h=Math.max(2,Math.abs(yc-yo));
+    ctx.fillRect(x-bodyW/2,top,bodyW,h);
+  });
+
+  // Current price
+  if(Number.isFinite(Number(quote?.price))){
+    const py=y(Number(quote.price));
+    ctx.strokeStyle="#67e8f9";ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(chartW,py);ctx.stroke();ctx.setLineDash([]);
+  }
+
+  // Direction arrow / predicted entry marker.
+  const state=predictionState(row);
+  if((state.prediction==="BUY"||state.prediction==="SELL")&&Number.isFinite(levels.entry)){
+    const ex=Math.max(20,chartW-28),ey=y(levels.entry);
+    ctx.font="900 20px sans-serif";
+    ctx.fillStyle=state.prediction==="BUY"?"#4da3ff":"#ff5f76";
+    ctx.fillText(state.prediction==="BUY"?"↑":"↓",ex,ey+6);
+  }
+
+  // Price scale
+  axis.innerHTML=Array.from({length:5},(_,i)=>{
+    const value=max-(max-min)*(i/4);
+    return `<span style="top:${i*25}%">${fmtEntry(value)}</span>`;
+  }).join("");
+}
+
 function scheduleLiveUi(market){
   if(liveUiFrame)return;
   liveUiFrame=requestAnimationFrame(()=>{
@@ -910,6 +1076,8 @@ function scheduleLiveUi(market){
         $("liveChange").textContent=`Live · ${live.label}`;
         renderLiveEntry(row);
         renderTradeAction(row);
+        renderPredictionPanel(row);
+        renderRealtimeCandles(row);
       }
     }
   });
@@ -967,10 +1135,11 @@ function ensureMarketOption(name){
 }
 function highlightSelected(){document.querySelectorAll(".result-card").forEach(card=>card.classList.toggle("selected",card.querySelector("h3")?.textContent===selected));}
 function drawChart(cls){
-  const paths={buy:"M0 190 C80 176 120 194 190 148 S330 175 420 102 S560 132 650 72 S790 95 900 34",sell:"M0 40 C90 33 118 76 200 61 S332 118 425 102 S565 178 650 146 S790 213 900 202",wait:"M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124"};
-  const path=paths[cls]||paths.wait,line=$("chartLine"),fill=$("chartFillPath");
-  line.setAttribute("d",path);fill.setAttribute("d",`${path} L900 250 L0 250 Z`);line.setAttribute("stroke",cls==="sell"?"#ff6b84":cls==="buy"?"#38e8bb":"#ffd166");
+  const row=selectedSignalRow();
+  renderPredictionPanel(row);
+  renderRealtimeCandles(row);
 }
+
 function setMarketStatus(text,state){$("marketStatus").textContent="";$("marketStatus").append(document.createElement("i"),document.createTextNode(text));$("marketStatus").className=`status-pill ${state}`;}
 function setAiStatus(text,state){$("aiStatus").textContent="";$("aiStatus").append(document.createElement("i"),document.createTextNode(text));$("aiStatus").className=`status-pill ${state}`;}
 function currentSignalText(){
@@ -1009,4 +1178,5 @@ loadSignals();
 connectLivePrice();
 setInterval(()=>loadSignals(false),20000);
 setInterval(updateMetaClocks,1000);
+window.addEventListener("resize",()=>renderRealtimeCandles(selectedSignalRow()));
 setInterval(()=>{if(marketFamily==="synthetic"&&(!liveSocket||liveSocket.readyState>1))connectLivePrice();},5000);
