@@ -5,7 +5,7 @@ const OPENAI_API_KEY=process.env.OPENAI_API_KEY||'';
 const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
-const ENGINE_VERSION='Sera Autonomous Engine v3.2';
+const ENGINE_VERSION='Sera Autonomous Engine v3.3';
 
 const MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -237,9 +237,18 @@ function attachTrendMemory(setup,previous){
   const persistence=Boolean(old&&currentBias!=='NEUTRE'&&currentBias===previousBias);
   const flip=Boolean(old&&previousBias!=='NEUTRE'&&currentBias!=='NEUTRE'&&currentBias!==previousBias);
   const previousFinal=old?.final_verdict||'ATTENDRE';
-  const maturityBonus=persistence?5:0,flipPenalty=flip?10:0;
+  const previousCycles=Number(old?.trend_memory?.bias_cycles)||0;
+  const biasCycles=currentBias==='NEUTRE'?0:(currentBias===previousBias?Math.min(previousCycles+1,24):1);
+  const previousConditions=Number(old?.decision_engine?.condition_pass_percent)||0;
+  const previousScore=Number(old?.decision_engine?.score)||0;
+  const previousExecution=old?.execution_state||old?.execution?.state||'NONE';
+  const maturityBonus=Math.min(7,persistence?3+Math.min(4,biasCycles*.6):0);
+  const flipPenalty=flip?12:0;
   const candidateScore=Math.round(clamp(setup.technical_confidence+maturityBonus+(setup.entry_tf.regime==='TRENDING'?4:0)-flipPenalty,0,100));
-  return {...setup,trend_memory:{previous_bias:previousBias,current_bias:currentBias,previous_final:previousFinal,persistence,flip,candidate_score: candidateScore}};
+  return {...setup,trend_memory:{
+    previous_bias:previousBias,current_bias:currentBias,previous_final:previousFinal,persistence,flip,bias_cycles:biasCycles,
+    previous_conditions:previousConditions,previous_score:previousScore,previous_execution_state:previousExecution,candidate_score:candidateScore
+  }};
 }
 
 function dynamicReadiness(setup,audit,agreed){
@@ -385,6 +394,71 @@ function autonomousDecision(setup){
   };
 }
 
+function executionAssessment(setup,engine,verdict,levels){
+  const e=setup.entry_tf,c=setup.confirmation_tf,m=setup.trend_memory||{};
+  const direction=verdict==='BUY'?1:verdict==='SELL'?-1:0;
+  const atr=Math.max(Number(e.atr)||0,.0000001);
+  const extensionAtr=Math.abs((Number(e.price)||0)-(Number(e.ema20)||0))/atr;
+  const rsi=Number(e.rsi)||50;
+  const stretched=verdict==='BUY'?rsi>=66:verdict==='SELL'?rsi<=34:false;
+  const extreme=verdict==='BUY'?rsi>=72:verdict==='SELL'?rsi<=28:false;
+
+  const baseLimit=setup.mode==='swing'?1.25:1.05;
+  const familyAdjustment=setup.family==='volatility'?0:(setup.family==='boom'||setup.family==='crash'?.10:.05);
+  const adverse=Boolean(setup.intelligence?.adverse_spike_direction);
+  const maxExtensionAtr=Math.max(.85,baseLimit+familyAdjustment-(adverse?.18:0));
+
+  let phase='TRANSITION';
+  if(e.spikeRisk)phase='SPIKE_RISK';
+  else if(e.compression)phase='COMPRESSION';
+  else if(e.retest)phase='PULLBACK';
+  else if(e.regime==='RANGE')phase='RANGE';
+  else if(e.impulse&&e.regime==='TRENDING')phase='IMPULSE';
+  else if(e.regime==='TRENDING')phase='TREND';
+
+  const breakoutChase=engine.setup_type==='BREAKOUT_CONTINUATION'&&!e.retest&&extensionAtr>.90&&stretched;
+  const overextended=extensionAtr>maxExtensionAtr||extreme||breakoutChase;
+  if(overextended&&phase!=='SPIKE_RISK')phase='EXHAUSTION_RISK';
+
+  const persistenceGate=setup.mode!=='swing'||Number(m.bias_cycles)>=2||Number(engine.score)>=92||engine.setup_type==='PULLBACK_CONTINUATION'||engine.setup_type==='REVERSAL';
+  const structuralEntry=Boolean(e.retest||e.rejection||engine.setup_type==='REVERSAL'||(engine.setup_type==='BREAKOUT_CONTINUATION'&&extensionAtr<=.90));
+  let executionScore=Number(engine.score)||0;
+  executionScore+=persistenceGate?4:-8;
+  executionScore+=structuralEntry?5:-2;
+  executionScore-=overextended?18:0;
+  executionScore-=e.spikeRisk?28:0;
+  executionScore-=m.flip?18:0;
+  executionScore=Math.round(clamp(executionScore,0,98));
+
+  let state='WAIT_CONFIRMATION';
+  if(verdict==='ATTENDRE')state='WAIT_CONFIRMATION';
+  else if(!engine.risk_gate||e.spikeRisk||m.flip)state='BLOCKED_RISK';
+  else if(overextended)state='WAIT_RETRACE';
+  else if(!persistenceGate)state='WAIT_CONFIRMATION';
+  else if(executionScore>=78&&engine.condition_pass_percent>=80)state='EXECUTE_NOW';
+
+  const center=Number(e.ema20)||Number(e.price)||0;
+  const zoneLow=verdict==='BUY'?center-atr*.15:center-atr*.35;
+  const zoneHigh=verdict==='BUY'?center+atr*.35:center+atr*.15;
+  const preferredEntryZone=direction===0?null:{min:Math.min(zoneLow,zoneHigh),max:Math.max(zoneLow,zoneHigh)};
+
+  const reason=state==='EXECUTE_NOW'
+    ?'Signal confirmé et entrée jugée exploitable maintenant: structure, persistance, extension et risque sont compatibles.'
+    :state==='WAIT_RETRACE'
+      ?`Signal directionnel confirmé mais prix étendu de ${extensionAtr.toFixed(2)} ATR par rapport à EMA20; attendre un retracement ou une nouvelle structure d’entrée.`
+      :state==='BLOCKED_RISK'
+        ?'Exécution bloquée par un garde-fou de risque, un spike ou un retournement récent.'
+        :'Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.';
+
+  return {
+    state,ready:state==='EXECUTE_NOW',score:executionScore,phase,extension_atr:Number(extensionAtr.toFixed(2)),
+    max_extension_atr:Number(maxExtensionAtr.toFixed(2)),rsi,stretched,extreme,overextended,breakout_chase:breakoutChase,
+    persistence_gate:persistenceGate,bias_cycles:Number(m.bias_cycles)||0,structural_entry:structuralEntry,
+    preferred_entry_zone:preferredEntryZone,current_price:Number(e.price)||0,ema20:Number(e.ema20)||0,
+    stop_reference:levels?.sl??null,reason
+  };
+}
+
 function finalize(setup,luna){
   const engine=setup.autonomous||autonomousDecision(setup);
   const localConfirmed=engine.verdict!=='ATTENDRE';
@@ -397,32 +471,33 @@ function finalize(setup,luna){
   finalConfidence=Math.round(clamp(finalConfidence,localConfirmed?75:18,localConfirmed?96:74));
   const finalVerdict=localConfirmed&&finalConfidence>=75?engine.verdict:'ATTENDRE';
   const levels=finalVerdict==='ATTENDRE'?null:buildLevels(setup,finalVerdict);
+  const execution=executionAssessment(setup,engine,finalVerdict,levels);
   const timing=estimateTiming({...setup,levels},finalVerdict,finalConfidence);
 
   const advisorStatus=!audit?'offline':aiMatches?'confirmed':aiCaution?'caution':'neutral';
   const confirmationSource=finalVerdict==='ATTENDRE'?'none':audit?'autonomous_plus_ai':'autonomous_engine';
   const aiTier=audit?`${ENGINE_VERSION} + ${SCREENING_MODEL} advisor`:`${ENGINE_VERSION} · autonome`;
-  const summary=audit
-    ?`${engine.summary} Luna: ${audit.summary}`
-    :engine.summary;
+  const summaryBase=`${engine.summary} Exécution: ${execution.state}. ${execution.reason}`;
+  const summary=audit?`${summaryBase} Luna: ${audit.summary}`:summaryBase;
 
   const localConfirmations=engine.active_strategies.slice(0,6).map(name=>`Stratégie locale: ${name}`);
   const aiConfirmations=audit?.confirmations||[];
   const contradictions=[
     ...engine.missing_strategies.slice(0,4).map(name=>`À renforcer: ${name}`),
+    ...(execution.state!=='EXECUTE_NOW'&&finalVerdict!=='ATTENDRE'?[execution.reason]:[]),
     ...(audit?.contradictions||[])
   ];
 
   return {
     ...publicSetup(setup),levels,final_verdict:finalVerdict,final_confidence:finalConfidence,timing,
-    decision_engine:engine,confirmation_source:confirmationSource,score_type:finalVerdict!=='ATTENDRE'?'signal_confidence':'setup_readiness',
+    decision_engine:engine,execution,execution_state:execution.state,execution_ready:execution.ready?1:0,execution_score:execution.score,
+    confirmation_source:confirmationSource,score_type:finalVerdict!=='ATTENDRE'?'signal_confidence':'setup_readiness',
     ai_verdict:audit?.verdict||'INDISPONIBLE',ai_confidence:aiConfidence,ai_summary:summary,
     ai_confirmations:[...localConfirmations,...aiConfirmations].slice(0,8),ai_contradictions:contradictions.slice(0,8),
     ai_risk:audit?.risk||'Audit IA non disponible; décision locale autonome.',needs_expert_review:Boolean(audit?.needs_expert_review),
     ai_tier:aiTier,ai_advisor_status:advisorStatus
   };
 }
-
 async function selfTest(){
   const candles=Array.from({length:240},(_,i)=>{
     const base=1000+i*.8,open=base+Math.sin(i/4)*2,close=base+1+Math.sin(i/4)*2;
@@ -432,6 +507,10 @@ async function selfTest(){
   if(!result||!Number.isFinite(result.atr)||!['BUY','SELL'].includes(result.side)||!result.regime)throw new Error('Smart technical engine self-test failed');
   const setup=technicalSetup(MARKETS[0],result,{...result,trendStrong:true,trendQuality:Math.max(70,result.trendQuality),regime:'TRENDING'},MODES[0]);
   if(!setup.entry_tf||!setup.confirmation_tf||!setup.intelligence)throw new Error('Intelligence assembly failed');
+  const memorySetup=attachTrendMemory(setup,null);
+  const engine=autonomousDecision(memorySetup);
+  const execution=executionAssessment(memorySetup,engine,engine.verdict,engine.verdict==='ATTENDRE'?null:buildLevels(memorySetup,engine.verdict));
+  if(!execution||!['EXECUTE_NOW','WAIT_RETRACE','WAIT_CONFIRMATION','BLOCKED_RISK'].includes(execution.state))throw new Error('Execution intelligence self-test failed');
   console.log(ENGINE_VERSION+' self-test passed.');
 }
 
@@ -489,7 +568,7 @@ async function main(){
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:reused.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
-    safety:'Sera Autonomous Engine exige au moins 80% des conditions pertinentes pour le type de setup détecté et les garde-fous critiques avant un BUY/SELL autonome. Luna est un conseiller facultatif. Aucun score ne garantit un gain.'
+    safety:'Sera Autonomous Engine exige au moins 80% des conditions pertinentes et distingue le signal directionnel du timing d'entrée. L'EA n'agit que sur EXECUTE_NOW avec les garde-fous critiques. Luna reste facultative.'
   };
 
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
