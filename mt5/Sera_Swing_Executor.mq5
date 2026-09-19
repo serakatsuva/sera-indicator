@@ -1,10 +1,13 @@
 #property copyright "Sera Indicator"
-#property version   "1.00"
+#property version   "1.10"
 #property strict
 
 #include <Trade/Trade.mqh>
 
 input string SignalsUrl="https://serakatsuva.github.io/sera-indicator/data/signals.json";
+input bool EnableTrendWatch=true;
+input bool EnableTerminalAlert=true;
+input bool EnablePushNotification=false;
 input bool EnableAutomaticTrading=false;
 input bool AllowRealAccount=false;
 input double RiskPercent=0.50;
@@ -119,28 +122,46 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    return MathMax(min_lot,MathMin(volume,max_lot));
 }
 
-void MarkHandled(const string id)
+uint SeraHash(const string id)
 {
    uint hash=2166136261;
    for(int i=0;i<StringLen(id);i++){ hash^=(uint)StringGetCharacter(id,i); hash*=16777619; }
-   GlobalVariableSet("SERA_"+IntegerToString((int)hash),TimeCurrent());
+   return hash;
 }
 
-bool WasHandled(const string id)
+void MarkHandled(const string id){ GlobalVariableSet("SERA_TRADE_"+IntegerToString((int)SeraHash(id)),TimeCurrent()); }
+bool WasHandled(const string id){ return GlobalVariableCheck("SERA_TRADE_"+IntegerToString((int)SeraHash(id))); }
+void MarkAlerted(const string id){ GlobalVariableSet("SERA_ALERT_"+IntegerToString((int)SeraHash(id)),TimeCurrent()); }
+bool WasAlerted(const string id){ return GlobalVariableCheck("SERA_ALERT_"+IntegerToString((int)SeraHash(id))); }
+
+void SendTrendAlert(const string market,const string verdict,const double confidence,const string signal_id)
 {
-   uint hash=2166136261;
-   for(int i=0;i<StringLen(id);i++){ hash^=(uint)StringGetCharacter(id,i); hash*=16777619; }
-   return GlobalVariableCheck("SERA_"+IntegerToString((int)hash));
+   if(!EnableTrendWatch || WasAlerted(signal_id)) return;
+   string message="Sera Trend Watch: "+market+" "+verdict+" Swing H1/H4 confirme a "+DoubleToString(confidence,0)+"%";
+   if(EnableTerminalAlert) Alert(message);
+   if(EnablePushNotification)
+   {
+      ResetLastError();
+      if(!SendNotification(message)) Print("Sera: notification push non envoyee, erreur=",GetLastError());
+   }
+   Print(message);
+   MarkAlerted(signal_id);
 }
 
 void Evaluate(const string json)
 {
-   if(!EnableAutomaticTrading){ Comment("Sera EA prêt — activez EnableAutomaticTrading sur compte Démo"); return; }
-   if(AccountInfoInteger(ACCOUNT_TRADE_MODE)!=ACCOUNT_TRADE_MODE_DEMO && !AllowRealAccount){ Comment("Sera bloque le compte réel — AllowRealAccount=false"); return; }
-   if(JsonString(json,"status")!="ai_analyzed"){ Comment("Sera: aucune validation IA active — aucun ordre"); return; }
-   if(OpenSeraPositions()>=MaximumOpenPositions || TradesToday()>=MaximumTradesPerDay) return;
+   if(JsonString(json,"status")!="ai_analyzed"){ Comment("Sera Trend Watch: validation IA en attente"); return; }
    datetime generated=ParseIsoUtc(JsonString(json,"updated_at"));
-   if(generated==0 || TimeGMT()-generated>MaximumSignalAgeMinutes*60){ Comment("Sera: signal global expiré"); return; }
+   if(generated==0 || TimeGMT()-generated>MaximumSignalAgeMinutes*60){ Comment("Sera Trend Watch: signal global expire"); return; }
+
+   bool can_trade=EnableAutomaticTrading;
+   if(can_trade && AccountInfoInteger(ACCOUNT_TRADE_MODE)!=ACCOUNT_TRADE_MODE_DEMO && !AllowRealAccount)
+   {
+      can_trade=false;
+      Comment("Sera Trend Watch actif — trading reel bloque (AllowRealAccount=false)");
+   }
+   else if(EnableTrendWatch && !EnableAutomaticTrading) Comment("Sera Trend Watch actif — alertes seulement");
+   else if(EnableTrendWatch && EnableAutomaticTrading) Comment("Sera Trend Watch + Auto-trade actifs");
 
    int markets=StringFind(json,"\"markets\""); if(markets<0) return;
    int cursor=StringFind(json,"{",markets);
@@ -153,7 +174,10 @@ void Evaluate(const string json)
       {
          string signal_id=JsonString(object,"id")+":"+TimeToString(generated,TIME_DATE|TIME_MINUTES);
          string symbol=JsonString(object,"market");
-         if(!WasHandled(signal_id) && SymbolSelect(symbol,true))
+
+         SendTrendAlert(symbol,verdict,confidence,signal_id);
+
+         if(can_trade && OpenSeraPositions()<MaximumOpenPositions && TradesToday()<MaximumTradesPerDay && !WasHandled(signal_id) && SymbolSelect(symbol,true))
          {
             int levels_pos=StringFind(object,"\"levels\"");
             string levels=levels_pos>=0?ExtractObjectAt(object,StringFind(object,"{",levels_pos)):"";
@@ -168,7 +192,7 @@ void Evaluate(const string json)
                   trade.SetExpertMagicNumber(MagicNumber); trade.SetDeviationInPoints(DeviationPoints);
                   bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,tp,"Sera Swing"):trade.Sell(volume,symbol,0,sl,tp,"Sera Swing");
                   if(sent){ MarkHandled(signal_id); Print("Sera: ",verdict," ",symbol," volume=",volume," SL=",sl," TP=",tp); return; }
-                  Print("Sera: ordre refusé: ",trade.ResultRetcodeDescription());
+                  Print("Sera: ordre refuse: ",trade.ResultRetcodeDescription());
                }
             }
          }
@@ -181,7 +205,7 @@ int OnInit()
 {
    trade.SetAsyncMode(false);
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Comment("Sera Swing Executor initialisé — Démo par défaut");
+   Comment("Sera Trend Watch initialise — alertes Swing H1/H4 actives");
    return INIT_SUCCEEDED;
 }
 
