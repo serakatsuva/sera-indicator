@@ -355,9 +355,11 @@ function resultCard(row,fresh){
   const status=verdict!=="ATTENDRE"?executionLabel(row):detected?`SETUP ${detectedSide} DÉTECTÉ`:conditions>=80?"80% atteint · garde-fou en attente":"En attente";
   const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:detected?`Setup ${detectedSide}`:`Biais ${bias}`;
   const ensemble=row?.open_source_ai?.ensemble;
-  const oss=ensemble?.available_models
-    ?`OSS ${modelDirectionLabel(ensemble.direction)} ${Math.round(Number(ensemble.consensus)||0)}%`
-    :"OSS en attente";
+  const oss=Number(ensemble?.reliable_models??ensemble?.available_models)>0 && Number.isFinite(Number(ensemble?.consensus))
+    ?`OSS ${modelDirectionLabel(ensemble.direction)} ${Math.round(Number(ensemble.consensus))}%`
+    :Number(ensemble?.connected_models)>0
+      ?`OSS ${ensemble.connected_models}/${ensemble.configured_models||4} connectés`
+      :"OSS connexion…";
   const setupMarker=detected?`<span class="setup-side ${detectedSide.toLowerCase()}"><i></i> SETUP ${detectedSide}</span>`:"";
   const swingBadge=row.mode==="swing"?`<div class="swing-duration-badge ${String(row.timing?.swing_class||"court").toLowerCase()}">${escapeHtml(swingBadgeText(row))}</div>`:"";
   card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${setupMarker}</div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
@@ -473,13 +475,22 @@ function renderOpenSourceModels(row){
     return `<div class="oss-model ${cls}"><small>${escapeHtml(name)}</small><strong>${escapeHtml(modelStatusText(result))}</strong></div>`;
   }).join("");
   const ensemble=oss?.ensemble;
-  if(ensemble?.available_models){
-    summary.textContent=`${modelDirectionLabel(ensemble.direction)} · ${Math.round(Number(ensemble.consensus)||0)}% consensus`;
-    count.textContent=`${ensemble.available_models}/4`;
-    summary.className=signalClass(ensemble.direction);
+  const configured=Number(ensemble?.configured_models??payload?.open_source_models?.configured_models??4);
+  const connected=Number(ensemble?.connected_models??0);
+  const reliable=Number(ensemble?.reliable_models??ensemble?.available_models??0);
+  const consensus=ensemble?.consensus;
+  if(connected>0){
+    if(reliable>0 && Number.isFinite(Number(consensus))){
+      summary.textContent=`${modelDirectionLabel(ensemble.direction)} · ${Math.round(Number(consensus))}% consensus fiable`;
+      summary.className=signalClass(ensemble.direction);
+    }else{
+      summary.textContent="Connectés · aucun vote fiable pour ce cycle";
+      summary.className="wait";
+    }
+    count.textContent=`${connected}/${configured} connectés · ${reliable} fiable(s)`;
   }else{
-    summary.textContent="En attente du cycle ML";
-    count.textContent="0/4";
+    summary.textContent="Connexion des modèles en cours";
+    count.textContent=`0/${configured} connectés`;
     summary.className="wait";
   }
   const qwenButton=$("qwenAdvisorButton"),qwenOutput=$("qwenAdvisorOutput");
@@ -725,7 +736,7 @@ function currentSignalText(){
     `TP4 : ${fmt(row.levels?.tp4)}`,
     `TP5 : ${fmt(row.levels?.tp5)}`,
     `Analyse : ${new Date(payload.updated_at).toLocaleString("fr-FR")}`,
-    `Consensus OSS : ${row.model_ensemble_direction||"NEUTRAL"} ${Math.round(Number(row.model_ensemble_consensus)||0)}% · ${Number(row.model_models_available)||0} modèle(s)`,
+    `Consensus OSS : ${Number.isFinite(Number(row.model_ensemble_consensus))&&Number(row.model_models_available)>0?`${row.model_ensemble_direction||"NEUTRAL"} ${Math.round(Number(row.model_ensemble_consensus))}%`:"aucun vote fiable"} · ${Number(row.model_models_available)||0} vote(s) fiable(s)`,
     `Modèle : ${row.ai_tier}`,
     "",
     "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera v1.50 n’exécute que si l’état est EXECUTE_NOW, applique le garde-fou open source et gère progressivement la protection des objectifs. Aucun gain garanti.",
