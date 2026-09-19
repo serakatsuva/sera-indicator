@@ -56,6 +56,13 @@ const executionLabel=row=>{
   const state=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
   return ({EXECUTE_NOW:"EXÉCUTER MAINTENANT",WAIT_RETRACE:"ATTENDRE RETRACEMENT",WAIT_CONFIRMATION:"ATTENDRE CONFIRMATION",BLOCKED_RISK:"BLOQUÉ RISQUE"})[state]||state;
 };
+const setupSide=row=>{
+  const explicit=row?.setup_direction||row?.decision_engine?.detected_side;
+  if(explicit==="BUY"||explicit==="SELL")return explicit;
+  const e=row?.entry_tf?.side,c=row?.confirmation_tf?.side;
+  return e&&e===c&&(e==="BUY"||e==="SELL")?e:"NEUTRE";
+};
+const hasDetectedSetup=row=>Boolean(row?.setup_detected||row?.decision_engine?.setup_detected)&&setupSide(row)!=="NEUTRE";
 const modelDirectionLabel=value=>value==="BUY"?"BUY":value==="SELL"?"SELL":"NEUTRE";
 const modelStatusText=result=>{
   if(!result)return"En attente";
@@ -305,7 +312,8 @@ function render(){
 }
 
 function signalPriority(row){
-  if(row?.final_verdict==="BUY"||row?.final_verdict==="SELL")return 2;
+  if(row?.final_verdict==="BUY"||row?.final_verdict==="SELL")return 3;
+  if(hasDetectedSetup(row))return 2;
   if(row?.technical_verdict==="BUY"||row?.technical_verdict==="SELL")return 1;
   return 0;
 }
@@ -342,15 +350,17 @@ function resultCard(row,fresh){
   card.className=`result-card${row.market===selected&&row.mode===selectedMode?" selected":""}`;
   const conditions=Number(row?.decision_engine?.condition_pass_percent)||0;
   const setupType=String(row?.decision_engine?.setup_type||"GENERIC").replaceAll("_"," ");
+  const detected=hasDetectedSetup(row),detectedSide=setupSide(row);
   const execState=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
-  const status=verdict!=="ATTENDRE"?executionLabel(row):conditions>=80?"80% atteint · garde-fou en attente":row.technical_verdict!=="ATTENDRE"?"Setup détecté":"En attente";
-  const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`;
+  const status=verdict!=="ATTENDRE"?executionLabel(row):detected?`SETUP ${detectedSide} DÉTECTÉ`:conditions>=80?"80% atteint · garde-fou en attente":"En attente";
+  const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:detected?`Setup ${detectedSide}`:`Biais ${bias}`;
   const ensemble=row?.open_source_ai?.ensemble;
   const oss=ensemble?.available_models
     ?`OSS ${modelDirectionLabel(ensemble.direction)} ${Math.round(Number(ensemble.consensus)||0)}%`
     :"OSS en attente";
+  const setupMarker=detected?`<span class="setup-side ${detectedSide.toLowerCase()}"><i></i> SETUP ${detectedSide}</span>`:"";
   const swingBadge=row.mode==="swing"?`<div class="swing-duration-badge ${String(row.timing?.swing_class||"court").toLowerCase()}">${escapeHtml(swingBadgeText(row))}</div>`:"";
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${setupMarker}</div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
   card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();openSignalModal(row.market);};
   return card;
 }
@@ -376,8 +386,14 @@ function renderSelected(){
   if(row?.mode)selectedMode=row.mode;
   const fresh=Boolean(row)&&resultsAreFresh();
   const verdict=fresh?row.final_verdict:"ATTENDRE",cls=signalClass(verdict);
+  const detected=Boolean(row)&&hasDetectedSetup(row),detectedSide=detected?setupSide(row):"NEUTRE";
   $("verdictBadge").className=`verdict-badge ${cls}`;
   $("verdictBadge").textContent=verdict;
+  const setupBadge=$("setupDirectionBadge");
+  if(setupBadge){
+    setupBadge.className=`setup-direction ${detected?detectedSide.toLowerCase():"wait"}`;
+    setupBadge.innerHTML=detected?`<i></i> SETUP ${detectedSide}`:"<i></i> SETUP EN ATTENTE";
+  }
   $("decisionOrb").className=`decision-orb ${cls}`;
   $("decisionOrb").querySelector("strong").textContent=verdict;
   $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`):"Validation requise";
@@ -397,8 +413,11 @@ function renderSelected(){
   }
   const currentPrice=liveQuote?.symbol===symbols[selected]?liveQuote.price:row?.price;
   $("livePrice").textContent=fmt(currentPrice);
-  $("liveChange").textContent=liveQuote?.symbol===symbols[selected]?"Prix Deriv live":row?`${row.technical_verdict} technique`:"Deriv · attente";
-  const levelValues=verdict!=="ATTENDRE"&&row?.levels?[row.levels.entry,row.levels.sl,row.levels.tp1,row.levels.tp2,row.levels.tp3]:[null,null,null,null,null];
+  $("liveChange").textContent=liveQuote?.symbol===symbols[selected]?"Prix Deriv live":detected?`SETUP ${detectedSide} détecté`:row?`${row.technical_verdict} technique`:"Deriv · attente";
+  const displayedLevels=verdict!=="ATTENDRE"&&row?.levels?row.levels:(detected?row?.projected_levels:null);
+  const levelValues=displayedLevels
+    ?[displayedLevels.entry,displayedLevels.sl,displayedLevels.tp1,displayedLevels.tp2,displayedLevels.tp3,displayedLevels.tp4,displayedLevels.tp5]
+    :[null,null,null,null,null,null,null];
   $("levels").querySelectorAll("strong").forEach((element,index)=>element.textContent=fmt(levelValues[index]));
   const technical=row?.entry_tf||row?.h1;
   const confirmation=row?.confirmation_tf||row?.h4;
@@ -416,9 +435,11 @@ function renderSelected(){
     hoursLabel(timing.tp1_hours),
     hoursLabel(timing.tp2_hours),
     hoursLabel(timing.tp3_hours),
+    hoursLabel(timing.tp4_hours),
+    hoursLabel(timing.tp5_hours),
     `${timing.expires_in_hours} h`,
     `toutes les ${timing.recheck_hours} h`
-  ]:["—","—","—","—","—","—","—","—"];
+  ]:["—","—","—","—","—","—","—","—","—","—"];
   $("timingPanel").querySelectorAll("strong").forEach((element,index)=>element.textContent=timingValues[index]);
   $("timingPanel").className=`timing-panel ${cls}`;
   $("timingNote").textContent=timing?.is_confirmed
@@ -509,6 +530,7 @@ async function runQwenAdvisor(){
       regime:row.intelligence?.regime,
       entry_tf:{side:row.entry_tf?.side,rsi:row.entry_tf?.rsi,trendQuality:row.entry_tf?.trendQuality,spikeRisk:row.entry_tf?.spikeRisk,bos:row.entry_tf?.bos,choch:row.entry_tf?.choch,sweep:row.entry_tf?.sweep,retest:row.entry_tf?.retest},
       confirmation_tf:{side:row.confirmation_tf?.side,rsi:row.confirmation_tf?.rsi,trendQuality:row.confirmation_tf?.trendQuality,spikeRisk:row.confirmation_tf?.spikeRisk},
+      setup_detected:row.setup_detected,setup_direction:row.setup_direction,projected_levels:row.projected_levels,
       oss_ensemble:row.open_source_ai?.ensemble,
       model_votes:row.open_source_ai?.models
     };
@@ -698,11 +720,13 @@ function currentSignalText(){
     `TP1 : ${fmt(row.levels?.tp1)}`,
     `TP2 : ${fmt(row.levels?.tp2)}`,
     `TP3 : ${fmt(row.levels?.tp3)}`,
+    `TP4 : ${fmt(row.levels?.tp4)}`,
+    `TP5 : ${fmt(row.levels?.tp5)}`,
     `Analyse : ${new Date(payload.updated_at).toLocaleString("fr-FR")}`,
     `Consensus OSS : ${row.model_ensemble_direction||"NEUTRAL"} ${Math.round(Number(row.model_ensemble_consensus)||0)}% · ${Number(row.model_models_available)||0} modèle(s)`,
     `Modèle : ${row.ai_tier}`,
     "",
-    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera v1.41 n’exécute que si l’état est EXECUTE_NOW et applique aussi le garde-fou de l’ensemble open source. Aucun gain garanti.",
+    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera v1.50 n’exécute que si l’état est EXECUTE_NOW, applique le garde-fou open source et gère progressivement la protection des objectifs. Aucun gain garanti.",
     location.href
   ].join("\n");
 }
