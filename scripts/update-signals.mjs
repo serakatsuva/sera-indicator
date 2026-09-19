@@ -6,7 +6,7 @@ const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
-const ENGINE_VERSION='Sera Autonomous Engine v3.4';
+const ENGINE_VERSION='Sera Autonomous Engine v3.5';
 
 const MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -322,6 +322,25 @@ function estimateTiming(setup,finalVerdict,finalConfidence){
 }
 
 
+function swingDistanceEstimate(levels,verdict){
+  if(!levels||!['BUY','SELL'].includes(verdict))return null;
+  const pipSize=.001;
+  const direction=verdict==='BUY'?1:-1;
+  const calc=target=>{
+    const priceDistance=(target-levels.entry)*direction;
+    return {price_distance:Number(priceDistance.toFixed(3)),pips_points:Math.max(0,Math.round(priceDistance/pipSize))};
+  };
+  return {
+    unit:'Deriv synthetic normalized point',
+    pip_size:pipSize,
+    direction:verdict,
+    tp1:calc(levels.tp1),tp2:calc(levels.tp2),tp3:calc(levels.tp3),tp4:calc(levels.tp4),tp5:calc(levels.tp5),
+    sl:{price_distance:Number(Math.abs(levels.entry-levels.sl).toFixed(3)),pips_points:Math.round(Math.abs(levels.entry-levels.sl)/pipSize)},
+    estimated_swing_price_distance:Number(Math.abs(levels.tp5-levels.entry).toFixed(3)),
+    estimated_swing_pips_points:Math.round(Math.abs(levels.tp5-levels.entry)/pipSize)
+  };
+}
+
 function buildLevels(setup,verdict){
   if(verdict!=='BUY'&&verdict!=='SELL')return null;
   const entryTf=setup.entry_tf,entry=entryTf.price,atrMultiplier=setup.mode==='day'?1.2:1.5;
@@ -492,6 +511,8 @@ function finalize(setup,luna){
   const finalVerdict=localConfirmed&&finalConfidence>=75?engine.verdict:'ATTENDRE';
   const levels=finalVerdict==='ATTENDRE'?null:buildLevels(setup,finalVerdict);
   const projectedLevels=engine.setup_detected?buildLevels(setup,engine.detected_side):null;
+  const swingDistance=levels?swingDistanceEstimate(levels,finalVerdict):null;
+  const projectedSwingDistance=projectedLevels?swingDistanceEstimate(projectedLevels,engine.detected_side):null;
   const execution=executionAssessment(setup,engine,finalVerdict,levels);
   const timing=estimateTiming({...setup,levels},finalVerdict,finalConfidence);
 
@@ -511,6 +532,7 @@ function finalize(setup,luna){
 
   return {
     ...publicSetup(setup),levels,projected_levels:projectedLevels,
+    swing_distance:swingDistance,projected_swing_distance:projectedSwingDistance,
     setup_detected:engine.setup_detected?1:0,setup_direction:engine.detected_side,
     final_verdict:finalVerdict,final_confidence:finalConfidence,timing,
     decision_engine:engine,execution,execution_state:execution.state,execution_ready:execution.ready?1:0,execution_score:execution.score,
