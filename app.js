@@ -64,6 +64,13 @@ const setupSide=row=>{
 };
 const hasDetectedSetup=row=>Boolean(row?.setup_detected||row?.decision_engine?.setup_detected)&&setupSide(row)!=="NEUTRE";
 const modelDirectionLabel=value=>value==="BUY"?"BUY":value==="SELL"?"SELL":"NEUTRE";
+const signedDistance=(value,side)=>{
+  const n=Number(value);
+  if(!Number.isFinite(n))return"—";
+  const sign=side==="SELL"?"−":"+";
+  return `${sign}${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})} pts`;
+};
+const pipsLabel=value=>Number.isFinite(Number(value))?`≈ ${Math.round(Number(value)).toLocaleString("en-US")} pips/points`:"—";
 const modelStatusText=result=>{
   if(!result)return"En attente";
   if(result.status==="ok")return`${modelDirectionLabel(result.direction)} · ${Math.round(Number(result.confidence)||0)}%`;
@@ -380,6 +387,7 @@ function renderSelected(){
     $("levels").querySelectorAll("strong").forEach(element=>element.textContent="—");
     $("timingPanel").querySelectorAll("strong").forEach(element=>element.textContent="—");
     $("timingNote").textContent="Durée, expiration et objectifs seront calculés après réception des vraies bougies MT5.";
+    renderSwingPips(null);
     $("technicalGrid").innerHTML=[["Sessions","Londres / New York"],["Tendance","H1 + H4"],["Volatilité","ATR Forex"],["Actualités","Contrôle requis"]].map(([label,value])=>`<div class="metric"><small>${label}</small><strong class="no">${value}</strong></div>`).join("");
     $("checks").innerHTML='<div class="check no"><i></i><span>Flux de bougies Deriv MT5 non connecté</span></div><div class="check no"><i></i><span>Aucun signal ni pourcentage ne sera fabriqué</span></div>';
     renderOpenSourceModels(null);
@@ -423,6 +431,7 @@ function renderSelected(){
     ?[displayedLevels.entry,displayedLevels.sl,displayedLevels.tp1,displayedLevels.tp2,displayedLevels.tp3,displayedLevels.tp4,displayedLevels.tp5]
     :[null,null,null,null,null,null,null];
   $("levels").querySelectorAll("strong").forEach((element,index)=>element.textContent=fmt(levelValues[index]));
+  renderSwingPips(row);
   const technical=row?.entry_tf||row?.h1;
   const confirmation=row?.confirmation_tf||row?.h4;
   const metrics=[[`Entrée: ${executionLabel(row)}`,row?.execution_state==="EXECUTE_NOW"],[`Score exécution ${Number(row?.execution_score)||0}% / 78%`,Number(row?.execution_score)>=78],[`Conditions ${Number(row?.decision_engine?.condition_pass_percent)||0}% / 80%`,Number(row?.decision_engine?.condition_pass_percent)>=80],["Consensus stratégies",Number(row?.decision_engine?.consensus)>=62],[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["Régime directionnel",row?.intelligence?.regime==="TRENDING"],["Mémoire tendance",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
@@ -456,6 +465,33 @@ function renderSelected(){
   $("signalActions").hidden=!(fresh&&verdict!=="ATTENDRE");
   drawChart(cls);
   highlightSelected();
+}
+
+function renderSwingPips(row){
+  const panel=$("swingPipsPanel"),total=$("swingPipsTotal"),grid=$("swingPipsGrid");
+  if(!panel||!total||!grid)return;
+  if(!row||row.mode!=="swing"){
+    panel.hidden=true;
+    total.textContent="—";
+    grid.innerHTML="";
+    return;
+  }
+  const detected=hasDetectedSetup(row);
+  const distance=row.swing_distance||(detected?row.projected_swing_distance:null);
+  const side=row.final_verdict!=="ATTENDRE"?row.final_verdict:setupSide(row);
+  if(!distance){
+    panel.hidden=true;
+    total.textContent="—";
+    grid.innerHTML="";
+    return;
+  }
+  panel.hidden=false;
+  total.textContent=`${signedDistance(distance.estimated_swing_price_distance,side)} · ${pipsLabel(distance.estimated_swing_pips_points)}`;
+  const targets=["tp1","tp2","tp3","tp4","tp5"];
+  grid.innerHTML=targets.map(key=>{
+    const item=distance[key];
+    return `<div><small>${key.toUpperCase()}</small><strong>${signedDistance(item?.price_distance,side)}</strong><span>${pipsLabel(item?.pips_points)}</span></div>`;
+  }).join("");
 }
 
 function renderOpenSourceModels(row){
