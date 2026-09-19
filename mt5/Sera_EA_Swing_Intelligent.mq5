@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent"
-#property version   "1.70"
+#property version   "1.71"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -33,6 +33,7 @@ input int MaximumEntryChaseRiskPercent=35;
 input int MaximumSpreadRiskPercent=12;
 input int MaximumSignalAgeMinutes=90;
 input int MaximumOpenPositions=1;
+input int MaximumPendingOrders=1;
 input int MaximumTradesPerDay=2;
 input double MaximumDailyLossUSD=3.00;
 input double MaximumDailyDrawdownPercent=3.00;
@@ -173,6 +174,20 @@ void CancelSeraPendingOrder(const string symbol,const string reason)
    if(ticket<=0) return;
    if(trade.OrderDelete(ticket)) Print("Sera EA Swing Intelligent: pending supprime ",symbol," - ",reason);
    else Print("Sera EA Swing Intelligent: echec suppression pending ",symbol," - ",trade.ResultRetcodeDescription());
+}
+
+void CancelAllSeraPendingOrders(const string reason)
+{
+   for(int i=OrdersTotal()-1;i>=0;i--)
+   {
+      ulong ticket=OrderGetTicket(i);
+      if(ticket<=0 || OrderGetInteger(ORDER_MAGIC)!=MagicNumber) continue;
+      ENUM_ORDER_TYPE type=(ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
+      if(type!=ORDER_TYPE_BUY_LIMIT && type!=ORDER_TYPE_SELL_LIMIT) continue;
+      if(!trade.OrderDelete(ticket))
+         Print("Sera EA Swing Intelligent: echec suppression pending #",ticket," - ",trade.ResultRetcodeDescription());
+   }
+   Print("Sera EA Swing Intelligent: pending globaux controles - ",reason);
 }
 
 datetime StartOfDay()
@@ -487,7 +502,9 @@ void Evaluate(const string json)
    if(generated==0 || TimeGMT()-generated>MaximumSignalAgeMinutes*60){ Comment("Sera Trend Watch: signal global expire"); return; }
 
    bool source_allows_trade=(status=="ai_analyzed")||(status=="autonomous_analyzed"&&AllowAutonomousExecution)||(status=="smart_local"&&AllowAutonomousExecution);
-   bool can_trade=EnableAutomaticTrading&&source_allows_trade&&!RiskCircuitOpen();
+   bool circuit_open=RiskCircuitOpen();
+   if(circuit_open) CancelAllSeraPendingOrders("circuit risque actif");
+   bool can_trade=EnableAutomaticTrading&&source_allows_trade&&!circuit_open;
    if(can_trade && AccountInfoInteger(ACCOUNT_TRADE_MODE)!=ACCOUNT_TRADE_MODE_DEMO && !AllowRealAccount)
    {
       can_trade=false;
@@ -550,7 +567,8 @@ void Evaluate(const string json)
                && execution_score>=MinimumPendingExecutionScore
                && conditions_percent>=MinimumPendingConditionsPercent
                && can_trade
-               && OpenSeraPositions()<MaximumOpenPositions;
+               && OpenSeraPositions()<MaximumOpenPositions
+               && (FindSeraPendingOrder(symbol)>0 || OpenSeraPendingOrders()<MaximumPendingOrders);
 
             if(pending_candidate)
             {
@@ -638,7 +656,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.70"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.70");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.71"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.71");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -670,8 +688,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera EA Swing Intelligent v1.70 — "+mode+" — Market + Smart Limit + Adaptive Risk");
-   Print("Sera EA Swing Intelligent v1.70: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", smart management=",EnableSmartPositionManagement,", daily loss max=",MaximumDailyLossUSD);
+   Comment("Sera EA Swing Intelligent v1.71 — "+mode+" — Market + Smart Limit + Adaptive Risk");
+   Print("Sera EA Swing Intelligent v1.71: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", smart management=",EnableSmartPositionManagement,", daily loss max=",MaximumDailyLossUSD);
    return INIT_SUCCEEDED;
 }
 
