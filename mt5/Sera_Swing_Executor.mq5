@@ -573,7 +573,7 @@ void Evaluate(const string json)
                bool pending_stops_ok=BrokerStopsValid(symbol,verdict,pending_entry,pending_sl,pending_final_tp);
                double pending_volume=pending_stops_ok?SafeVolume(symbol,pending_entry,pending_sl):0;
                double pending_margin=0.0;
-               bool pending_margin_ok=pending_volume>0 && OrderCalcMargin(verdict=="BUY"?ORDER_TYPE_BUY_LIMIT:ORDER_TYPE_SELL_LIMIT,symbol,pending_volume,pending_entry,pending_margin)
+               bool pending_margin_ok=pending_volume>0 && OrderCalcMargin(verdict=="BUY"?ORDER_TYPE_BUY:ORDER_TYPE_SELL,symbol,pending_volume,pending_entry,pending_margin)
                   && pending_margin<=AccountInfoDouble(ACCOUNT_MARGIN_FREE)*0.50;
 
                if(pending_margin_ok)
