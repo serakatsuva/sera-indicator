@@ -5,16 +5,16 @@ Sera Indicator est un système d’aide à la décision et d’exécution Deriv 
 ## Fonctionnement
 
 - Les bougies Deriv M15, H1 et H4 sont récupérées depuis le WebSocket public Deriv.
-- Sera Smart Engine v2 analyse tendance, régime de marché, momentum, structure, liquidité, retest, ATR, mémoire de tendance et risque de spike.
-- OpenAI Luna intervient comme audit supplémentaire lorsqu’il est disponible.
-- Si Luna est indisponible, seuls les setups dépassant les seuils Smart Local renforcés peuvent devenir des signaux finaux.
+- Sera Autonomous Engine v3.1 analyse tendance, régime de marché, momentum, structure, liquidité, retest, ATR, mémoire de tendance et risque de spike.
+- OpenAI Luna intervient uniquement comme conseiller/auditeur facultatif lorsqu’il est disponible.
+- Sans Luna, le moteur peut confirmer seul BUY/SELL lorsque au moins 80 % des conditions applicables sont validées, tout en exigeant les garde-fous critiques.
 - Le résultat final reste BUY, SELL ou ATTENDRE. Aucun score ne garantit un gain.
 
 ## Exécution Deriv MT5 — mode réel
 
 Le dossier `mt5/` contient `Sera_Swing_Executor.mq5`.
 
-La version **v1.20** est configurée pour fonctionner directement sur le compte MT5 connecté :
+La version **v1.31** est configurée pour fonctionner directement sur le compte MT5 connecté :
 
 - `EnableAutomaticTrading = true`
 - `AllowRealAccount = true`
@@ -23,6 +23,7 @@ La version **v1.20** est configurée pour fonctionner directement sur le compte 
 - perte maximale calculée par trade : **1 USD**
 - lot maximum : **0,02**
 - confiance minimale : **75 %**
+- conditions autonomes minimales : **80 %**
 - maximum : **1 position Sera ouverte**
 - maximum : **2 entrées Sera par jour**
 - Stop Loss obligatoire
@@ -38,4 +39,4 @@ Le projet est désormais conçu pour fournir des décisions destinées à un usa
 
 Les limites de risque sont conservées dans l’EA et ne doivent pas être interprétées comme une garantie de protection totale.
 
-La clé `OPENAI_API_KEY` reste exclusivement dans GitHub Actions Secrets et n’est jamais envoyée au navigateur.
+La clé `OPENAI_API_KEY`, si elle est configurée, reste exclusivement dans GitHub Actions Secrets et n’est jamais envoyée au navigateur. Elle n’est pas nécessaire au fonctionnement autonome du moteur.
