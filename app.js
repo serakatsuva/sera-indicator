@@ -372,6 +372,8 @@ function renderSelected(){
     $("decisionOrb").className="decision-orb wait";$("decisionOrb").querySelector("strong").textContent="ATTENDRE";
     $("decisionConfidence").textContent="Connexion MT5 requise";
     $("decisionSummary").textContent=`${selected} est ajouté au scanner. Son analyse H1/H4 par Sera Autonomous Engine démarrera uniquement après connexion des vraies bougies Deriv MT5.`;
+    const setupBadge=$("setupDirectionBadge");
+    if(setupBadge){setupBadge.className="setup-direction wait";setupBadge.innerHTML="<i></i> SETUP EN ATTENTE";}
     $("livePrice").textContent="—";$("liveChange").textContent="Deriv MT5 · attente";
     $("levels").querySelectorAll("strong").forEach(element=>element.textContent="—");
     $("timingPanel").querySelectorAll("strong").forEach(element=>element.textContent="—");
