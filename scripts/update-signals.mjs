@@ -257,21 +257,48 @@ function dynamicReadiness(setup,audit,agreed){
 }
 
 function estimateTiming(setup,finalVerdict,finalConfidence){
-  const entry=setup.entry_tf,confirmation=setup.confirmation_tf;
+  const entry=setup.entry_tf,confirmation=setup.confirmation_tf,mem=setup.trend_memory||{};
   const aligned=entry.side===confirmation.side,bias=aligned?entry.side:'NEUTRE';
   const activeSide=finalVerdict!=='ATTENDRE'?finalVerdict:bias;
   const regimeFactor=entry.regime==='TRENDING'?1.12:entry.regime==='COMPRESSION'?.78:.92;
   const rate=Math.max(entry.atr*.30,entry.atr*(.45+entry.passed*.04+(confirmation.trendStrong?.12:0))*regimeFactor);
   let minHours,maxHours,tp1Hours=null,tp2Hours=null,tp3Hours=null;
+
   if(finalVerdict!=='ATTENDRE'&&setup.levels){
     const eta=target=>Math.max(1,Math.ceil(Math.abs(target-setup.levels.entry)/rate));
     tp1Hours=eta(setup.levels.tp1);tp2Hours=eta(setup.levels.tp2);tp3Hours=eta(setup.levels.tp3);
-    minHours=Math.max(1,Math.floor(tp1Hours*.7));maxHours=Math.min(96,Math.max(minHours+1,Math.ceil(tp3Hours*1.35)));
+    minHours=Math.max(1,Math.floor(tp1Hours*.7));
+    maxHours=Math.min(setup.mode==='swing'?120:36,Math.max(minHours+1,Math.ceil(tp3Hours*1.35)));
+  }else if(setup.mode==='swing'){
+    const strongSwing=aligned&&entry.trendStrong&&confirmation.trendStrong&&entry.regime==='TRENDING'&&confirmation.regime==='TRENDING';
+    const persistent=strongSwing&&mem.persistence&&!mem.flip;
+    const quality=(Number(entry.trendQuality)||0)*.45+(Number(confirmation.trendQuality)||0)*.55;
+    if(persistent&&quality>=72){minHours=36;maxHours=96;}
+    else if(strongSwing&&quality>=62){minHours=24;maxHours=72;}
+    else if(aligned){minHours=12;maxHours=48;}
+    else{minHours=6;maxHours=24;}
   }else if(finalConfidence>=65){minHours=3;maxHours=12;}
   else if(finalConfidence>=45){minHours=6;maxHours=24;}
-  else{minHours=12;maxHours=48;}
-  const style=maxHours<=6?'COURT':maxHours<=24?'MOYEN':'LONG',expiresInHours=style==='COURT'?3:style==='MOYEN'?8:16;
-  return {bias,side:finalVerdict!=='ATTENDRE'?finalVerdict:activeSide,position_style:style,duration_min_hours:minHours,duration_max_hours:maxHours,tp1_hours:tp1Hours,tp2_hours:tp2Hours,tp3_hours:tp3Hours,expires_in_hours:expiresInHours,recheck_hours:setup.mode==='swing'?1:.25,is_confirmed:finalVerdict!=='ATTENDRE',basis:'ATR, régime, mémoire de tendance, structure et force multi-timeframe'};
+  else{minHours=12;maxHours=36;}
+
+  const swingClass=setup.mode==='swing'
+    ?(maxHours>72?'LONG':maxHours>36?'MOYEN':'COURT')
+    :null;
+  const minDays=setup.mode==='swing'?Math.max(.5,Math.round((minHours/24)*2)/2):null;
+  const maxDays=setup.mode==='swing'?Math.max(minDays,Math.round((maxHours/24)*2)/2):null;
+  const dayRange=setup.mode==='swing'
+    ?(maxDays<1?'< 1 jour':minDays===maxDays?`≈ ${maxDays} jour${maxDays>1?'s':''}`:`≈ ${minDays}–${maxDays} jours`)
+    :null;
+
+  const style=setup.mode==='swing'?swingClass:(maxHours<=6?'COURT':maxHours<=24?'MOYEN':'LONG');
+  const expiresInHours=setup.mode==='swing'?(style==='LONG'?24:style==='MOYEN'?16:8):(style==='COURT'?3:style==='MOYEN'?8:16);
+  return {
+    bias,side:finalVerdict!=='ATTENDRE'?finalVerdict:activeSide,position_style:style,
+    swing_class:swingClass,swing_days_min:minDays,swing_days_max:maxDays,swing_days_label:dayRange,
+    duration_min_hours:minHours,duration_max_hours:maxHours,tp1_hours:tp1Hours,tp2_hours:tp2Hours,tp3_hours:tp3Hours,
+    expires_in_hours:expiresInHours,recheck_hours:setup.mode==='swing'?1:.25,is_confirmed:finalVerdict!=='ATTENDRE',
+    basis:'ATR, régime, mémoire de tendance, structure, force H1/H4 et distance vers les objectifs'
+  };
 }
 
 function finalize(setup,luna){
