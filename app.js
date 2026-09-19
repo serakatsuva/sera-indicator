@@ -46,7 +46,7 @@ const ageLabel=iso=>{const minutes=Math.max(0,Math.floor(ageMinutes(iso)));if(!N
 const signalClass=value=>value==="BUY"?"buy":value==="SELL"?"sell":"wait";
 const hoursLabel=value=>Number.isFinite(Number(value))?`≈ ${Math.round(Number(value))} h`:"—";
 const durationLabel=timing=>timing?`${timing.duration_min_hours}–${timing.duration_max_hours} h`:"—";
-const hasDerivResults=()=>payload?.ok===true&&["ai_analyzed","technical_only"].includes(payload?.status)&&payload?.source_broker==="Deriv"&&Array.isArray(payload?.markets);
+const hasDerivResults=()=>payload?.ok===true&&["ai_analyzed","smart_local","technical_only"].includes(payload?.status)&&payload?.source_broker==="Deriv"&&Array.isArray(payload?.markets);
 const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<130;
 
 $("refreshButton").addEventListener("click",()=>loadSignals(true));
@@ -156,13 +156,16 @@ function render(){
 
   setMarketStatus(fresh?"Deriv : données multi-horizon":"Deriv : données anciennes",fresh?"live":"error");
   const aiActive=fresh&&payload.status==="ai_analyzed";
-  setAiStatus(aiActive?"OpenAI : validation récente":fresh?"IA : économie active · technique seulement":"OpenAI : validation expirée",aiActive?"live":fresh?"":"error");
-  notice.className=`notice ${aiActive?"success":"warning"}`;
+  const smartLocal=fresh&&payload.status==="smart_local";
+  setAiStatus(aiActive?"Luna : audit récent":smartLocal?"Smart Engine : autonome":fresh?"Smart Engine : analyse locale":"Validation expirée",aiActive||smartLocal?"live":fresh?"":"error");
+  notice.className=`notice ${aiActive||smartLocal?"success":"warning"}`;
   notice.textContent=aiActive
-    ?`${payload.markets_count} analyses disponibles · ${payload.ai_calls??0} appel(s) IA · ${payload.cached_ai_validations??0} validation(s) réutilisée(s). L’EA MT5 peut exécuter uniquement les Swing confirmés.`
-    :fresh
-      ?`${payload.markets_count} analyses techniques actualisées sans crédit OpenAI. ${payload.technical_candidates??0} candidat(s) détecté(s), mais aucun BUY/SELL n’est confirmé sans validation IA.`
-      :`Validation expirée depuis ${ageLabel(payload.updated_at)}. Les anciens BUY/SELL sont neutralisés sur ATTENDRE jusqu’à une nouvelle analyse.`;
+    ?`${payload.markets_count} analyses disponibles · ${payload.ai_calls??0} appel(s) Luna · ${payload.cached_ai_validations??0} validation(s) réutilisée(s). Les signaux finaux ont passé l’audit IA.`
+    :smartLocal
+      ?`${payload.markets_count} analyses Smart Engine actualisées. Luna est indisponible, mais ${payload.confirmed_signals??0} setup(s) exceptionnellement solide(s) ont dépassé les seuils autonomes renforcés.`
+      :fresh
+        ?`${payload.markets_count} analyses Smart Engine actualisées. ${payload.technical_candidates??0} candidat(s) existent, mais aucun ne dépasse encore les seuils nécessaires pour un signal final.`
+        :`Validation expirée depuis ${ageLabel(payload.updated_at)}. Les anciens BUY/SELL sont neutralisés sur ATTENDRE jusqu’à une nouvelle analyse.`;
   const rows=payload.markets.filter(row=>tradingMode==="all"||row.mode===tradingMode);
   rows.slice().sort(compareSignalPriority).forEach(row=>results.appendChild(resultCard(row,fresh)));
   renderSelected();
