@@ -74,3 +74,32 @@ test('no horizontal page overflow', async ({ page }) => {
   }));
   expect(dims.scrollWidth).toBeLessThanOrEqual(dims.innerWidth + 2);
 });
+
+
+test('BUY or SELL action never flashes while final signal is WAIT', async ({ page }) => {
+  const actionable = page.locator('.trade-action-chip.buy, .trade-action-chip.sell');
+  const count = await actionable.count();
+  for (let i = 0; i < count; i++) {
+    const chip = actionable.nth(i);
+    const card = chip.locator('xpath=ancestor::button[contains(@class,"result-card")]');
+    await expect(card.locator('.signal.buy, .signal.sell')).toHaveCount(1);
+    await expect(chip).toHaveClass(/blink/);
+  }
+});
+
+test('card action and modal action stay identical after click', async ({ page }) => {
+  const cards = page.locator('.result-card');
+  const count = await cards.count();
+  for (let i = 0; i < Math.min(count, 6); i++) {
+    const card = cards.nth(i);
+    const chip = card.locator('.trade-action-chip');
+    if (!(await chip.count())) continue;
+    const cardAction = (await chip.locator('strong').textContent())?.trim();
+    await card.click();
+    await expect(page.locator('#signalModal')).toBeVisible();
+    const modalAction = (await page.locator('#tradeActionLabel').textContent())?.trim();
+    expect(modalAction).toBe(cardAction);
+    await page.locator('#closeSignalModal').click();
+    await expect(page.locator('#signalModal')).toBeHidden();
+  }
+});
