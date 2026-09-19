@@ -42,3 +42,20 @@ Le projet est désormais conçu pour fournir des décisions destinées à un usa
 Les limites de risque sont conservées dans l’EA et ne doivent pas être interprétées comme une garantie de protection totale.
 
 La clé `OPENAI_API_KEY`, si elle est configurée, reste exclusivement dans GitHub Actions Secrets et n’est jamais envoyée au navigateur. Elle n’est pas nécessaire au fonctionnement autonome du moteur.
+
+
+## Ensemble IA open source
+
+Sera ajoute maintenant un ensemble quantitatif open source au moteur autonome :
+
+- **XGBoost** : classification directionnelle entraînée sur les bougies Deriv à chaque cycle.
+- **LightGBM** : second classifieur indépendant, également entraîné sur les données Deriv.
+- **Chronos-2 small** : modèle de prévision de séries temporelles utilisé périodiquement sur les candidats les plus forts.
+- **TimesFM 2.5 200M** : second modèle de prévision temporelle. La version 2.5 est utilisée afin de rester sur les poids Apache-2.0.
+- **Qwen3-0.6B via WebLLM** : conseiller facultatif exécuté localement dans le navigateur lorsque WebGPU est disponible.
+
+Les modèles open source ne peuvent pas transformer un `ATTENDRE` local en ordre réel ni contourner les garde-fous. Ils peuvent confirmer une direction ou mettre l’exécution en attente en cas de désaccord important.
+
+L’EA **v1.41** applique également un garde-fou indépendant : si au moins deux modèles open source disponibles donnent un consensus opposé suffisamment fort, l’ordre `EXECUTE_NOW` est bloqué.
+
+Les classifieurs dont la qualité de validation est insuffisante sont exclus du consensus plutôt que comptés comme des votes.
