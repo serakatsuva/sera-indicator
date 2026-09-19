@@ -177,7 +177,7 @@ def main():
     ]
     send_email(sender, password, recipient, subject, "\n".join(body))
     save(STATE, {"updated_at": signals.get("updated_at"), "setups": current})
-    print(f"Sera Gmail alert: sent {len(actionable)} setup(s) to {recipient}.")
+    print(f"Sera Gmail alert: sent {len(actionable)} setup(s).")
 
 
 if __name__ == "__main__":
