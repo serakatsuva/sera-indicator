@@ -83,6 +83,9 @@ jobs:
       - name: Test open-source ensemble
         run: python scripts/open_source_ensemble.py --self-test
 
+      - name: Test adaptive evidence engine
+        run: python scripts/adaptive_evidence.py --self-test
+
       - name: Validate Gmail alert script
         run: python -m py_compile scripts/send_gmail_alerts.py
 
@@ -101,6 +104,13 @@ jobs:
           --cache data/open-source-ai.json
           --foundation ${{ steps.foundation.outputs.run }}
 
+      - name: Update adaptive evidence memory
+        run: >-
+          python scripts/adaptive_evidence.py
+          --signals data/signals.json
+          --candles /tmp/sera-candles.json
+          --memory data/adaptive-evidence.json
+
       - name: Send Gmail Swing alerts
         env:
           GMAIL_ALERT_FROM: ${{ secrets.GMAIL_ALERT_FROM }}
@@ -112,7 +122,7 @@ jobs:
         run: |
           git config user.name "sera-indicator-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/signals.json data/open-source-ai.json data/email-alert-state.json
+          git add data/signals.json data/open-source-ai.json data/adaptive-evidence.json data/email-alert-state.json
           if git diff --cached --quiet; then
             echo "No signal changes to commit."
           else
