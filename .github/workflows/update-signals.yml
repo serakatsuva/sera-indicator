@@ -7,6 +7,9 @@ on:
     paths:
       - '.github/workflows/update-signals.yml'
       - 'scripts/update-signals.mjs'
+      - 'scripts/open_source_ensemble.py'
+      - 'requirements-ml.txt'
+      - 'requirements-foundation.txt'
   schedule:
     - cron: '5,20,35,50 * * * *'
 
@@ -32,6 +35,44 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements-ml.txt
+            requirements-foundation.txt
+
+      - name: Install core open-source models
+        run: python -m pip install -r requirements-ml.txt
+
+      - name: Decide foundation-model cycle
+        id: foundation
+        shell: bash
+        run: |
+          minute="$(date -u +%M)"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] || [ "$minute" -lt 12 ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Chronos-2 + TimesFM cycle enabled."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Core XGBoost + LightGBM cycle only."
+          fi
+
+      - name: Cache Hugging Face models
+        if: steps.foundation.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            ~/.cache/torch
+          key: sera-foundation-models-v1
+
+      - name: Install Chronos-2 and TimesFM
+        if: steps.foundation.outputs.run == 'true'
+        run: python -m pip install -r requirements-foundation.txt
+
       - name: Check optional OpenAI advisor
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -45,17 +86,29 @@ jobs:
       - name: Test Deriv signal engine
         run: node scripts/update-signals.mjs --self-test
 
+      - name: Test open-source ensemble
+        run: python scripts/open_source_ensemble.py --self-test
+
       - name: Analyze Deriv with autonomous engine and optional Luna
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SCREENING_MODEL: gpt-5.6-luna
+          CANDLES_OUTPUT: /tmp/sera-candles.json
         run: node scripts/update-signals.mjs
+
+      - name: Run open-source model ensemble
+        run: >-
+          python scripts/open_source_ensemble.py
+          --signals data/signals.json
+          --candles /tmp/sera-candles.json
+          --cache data/open-source-ai.json
+          --foundation ${{ steps.foundation.outputs.run }}
 
       - name: Commit validated signals
         run: |
           git config user.name "sera-indicator-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/signals.json
+          git add data/signals.json data/open-source-ai.json
           if git diff --cached --quiet; then
             echo "No signal changes to commit."
           else
