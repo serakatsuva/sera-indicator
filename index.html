@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=sera-20260919-family-ui-1">
+  <link rel="stylesheet" href="./styles.css?v=sera-20260919-detail-modal-1">
   <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
@@ -152,7 +152,18 @@
       <div id="results" class="results-grid" aria-live="polite"></div>
     </section>
 
-    <section class="analysis-grid">
+    <div class="signal-modal" id="signalModal" hidden aria-hidden="true">
+      <div class="signal-modal-backdrop" id="signalModalBackdrop"></div>
+      <div class="signal-modal-content" role="dialog" aria-modal="true" aria-labelledby="signalModalTitle">
+        <div class="signal-modal-header">
+          <div>
+            <span class="eyebrow cyan">Analyse détaillée</span>
+            <h3 id="signalModalTitle">Détail de l’indice</h3>
+          </div>
+          <button class="signal-modal-close" id="closeSignalModal" type="button" aria-label="Fermer">✕</button>
+        </div>
+        <div class="signal-modal-body">
+          <section class="analysis-grid">
       <article class="market-card panel">
         <div class="market-head">
           <div><span class="eyebrow">DERIV · SYNTHETIC INDICES</span><h2 id="selectedMarket">Boom 300 Index</h2><div class="quote"><strong id="livePrice">—</strong><span id="liveChange">M15/H1</span></div></div>
@@ -188,11 +199,14 @@
         <div class="signal-actions" id="signalActions" hidden><button id="copySignal" type="button">Copier le signal</button><button id="shareSignal" type="button">Partager</button></div>
         <p class="manual-note">L’exécution automatique nécessite l’EA Sera actif dans Deriv MT5. Sans EA, aucun ordre n’est envoyé.</p>
       </aside>
-    </section>
+          </section>
+        </div>
+      </div>
+    </div>
 
     <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button>
     <footer><strong>Trading à risque élevé.</strong> L’automatisation ne garantit aucun gain. Testez longuement sur Démo; le passage au compte réel exige une activation volontaire dans l’EA.</footer>
   </main>
-  <script src="./app.js?v=family-ui-20260919-1" defer></script>
+  <script src="./app.js?v=detail-modal-20260919-1" defer></script>
 </body>
 </html>
