@@ -48,6 +48,14 @@ const ageLabel=iso=>{const minutes=Math.max(0,Math.floor(ageMinutes(iso)));if(!N
 const signalClass=value=>value==="BUY"?"buy":value==="SELL"?"sell":"wait";
 const hoursLabel=value=>Number.isFinite(Number(value))?`≈ ${Math.round(Number(value))} h`:"—";
 const durationLabel=timing=>timing?`${timing.duration_min_hours}–${timing.duration_max_hours} h`:"—";
+const swingDurationLabel=timing=>timing?.swing_days_label||durationLabel(timing);
+const swingBadgeText=row=>{
+  if(row?.mode!=="swing")return"";
+  const timing=row?.timing;
+  const kind=timing?.swing_class||"COURT";
+  const prefix=timing?.is_confirmed?"SWING":"PROJECTION SWING";
+  return `${prefix} ${kind} · ${swingDurationLabel(timing)}`;
+};
 const hasDerivResults=()=>payload?.ok===true&&["ai_analyzed","smart_local","technical_only"].includes(payload?.status)&&payload?.source_broker==="Deriv"&&Array.isArray(payload?.markets);
 const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<130;
 
@@ -313,7 +321,8 @@ function resultCard(row,fresh){
   card.className=`result-card${row.market===selected&&row.mode===selectedMode?" selected":""}`;
   const status=verdict!=="ATTENDRE"?"Confirmé":row.technical_verdict!=="ATTENDRE"?"Détecté · validation IA":"En attente";
   const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:`Biais ${bias}`;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(row.intelligence?.regime||"Analyse")}</b></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
+  const swingBadge=row.mode==="swing"?`<div class="swing-duration-badge ${String(row.timing?.swing_class||"court").toLowerCase()}">${escapeHtml(swingBadgeText(row))}</div>`:"";
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p></div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${swingBadge}<div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(row.intelligence?.regime||"Analyse")}</b></div><div class="result-bar"><i style="width:${confidence}%"></i></div>`;
   card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();connectLivePrice();openSignalModal(row.market);};
   return card;
 }
@@ -345,6 +354,17 @@ function renderSelected(){
   $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% de confiance`):"Validation requise";
   $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend une analyse Deriv multi-horizon et une validation OpenAI récente pour ${selected}.`;
   $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
+  const swingBadge=$("swingDurationBadge");
+  if(swingBadge){
+    if(row?.mode==="swing"&&row?.timing){
+      swingBadge.hidden=false;
+      swingBadge.className=`swing-detail-badge ${String(row.timing.swing_class||"court").toLowerCase()}`;
+      swingBadge.textContent=swingBadgeText(row);
+    }else{
+      swingBadge.hidden=true;
+      swingBadge.textContent="";
+    }
+  }
   const currentPrice=liveQuote?.symbol===symbols[selected]?liveQuote.price:row?.price;
   $("livePrice").textContent=fmt(currentPrice);
   $("liveChange").textContent=liveQuote?.symbol===symbols[selected]?"Prix Deriv live":row?`${row.technical_verdict} technique`:"Deriv · attente";
@@ -361,8 +381,8 @@ function renderSelected(){
   const timing=row?.timing;
   const timingValues=timing?[
     timing.is_confirmed?timing.side:`Biais ${timing.bias}`,
-    timing.position_style,
-    durationLabel(timing),
+    row?.mode==="swing"?`SWING ${timing.swing_class||timing.position_style}`:timing.position_style,
+    row?.mode==="swing"?swingDurationLabel(timing):durationLabel(timing),
     hoursLabel(timing.tp1_hours),
     hoursLabel(timing.tp2_hours),
     hoursLabel(timing.tp3_hours),
@@ -372,8 +392,12 @@ function renderSelected(){
   $("timingPanel").querySelectorAll("strong").forEach((element,index)=>element.textContent=timingValues[index]);
   $("timingPanel").className=`timing-panel ${cls}`;
   $("timingNote").textContent=timing?.is_confirmed
-    ?`Estimation basée sur l’ATR H1, la distance vers les TP et la force H1/H4. Le signal expire après ${timing.expires_in_hours} h sans déclenchement.`
-    :`Aucun trade confirmé. Horizon projeté si le biais ${timing?.bias||"actuel"} est validé; réévaluation automatique à la prochaine analyse.`;
+    ?row?.mode==="swing"
+      ?`${swingBadgeText(row)}. Estimation basée sur l’ATR, la persistance de tendance H1/H4 et la distance vers les objectifs; ce n’est pas une durée garantie.`
+      :`Estimation basée sur l’ATR H1, la distance vers les TP et la force H1/H4. Le signal expire après ${timing.expires_in_hours} h sans déclenchement.`
+    :row?.mode==="swing"
+      ?`${swingBadgeText(row)} selon le biais ${timing?.bias||"actuel"}. Projection réévaluée chaque heure tant que le signal n’est pas confirmé.`
+      :`Aucun trade confirmé. Horizon projeté si le biais ${timing?.bias||"actuel"} est validé; réévaluation automatique à la prochaine analyse.`;
   $("signalActions").hidden=!(fresh&&verdict!=="ATTENDRE");
   drawChart(cls);
   highlightSelected();
