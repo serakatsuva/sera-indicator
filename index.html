@@ -156,7 +156,13 @@
           <div class="market-controls"><select id="marketSelect" aria-label="Indice Deriv"></select><span class="timeframe" id="selectedTimeframe">M15 + H1</span><span class="swing-detail-badge" id="swingDurationBadge" hidden></span></div>
         </div>
         <div class="chart-area" id="chartArea">
-          <svg viewBox="0 0 900 250" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166" stop-opacity=".18"/><stop offset="1" stop-color="#ffd166" stop-opacity="0"/></linearGradient></defs><path id="chartFillPath" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124 L900 250 L0 250 Z" fill="url(#chartFill)"/><path id="chartLine" d="M0 132 C110 118 180 145 270 126 S450 142 540 122 S720 139 900 124" fill="none" stroke="#ffd166" stroke-width="4" stroke-linecap="round"/></svg>
+          <canvas id="liveCandlesCanvas" class="live-candles-canvas" aria-label="Bougies japonaises live Deriv"></canvas>
+          <div id="livePriceAxis" class="live-price-axis" aria-hidden="true"></div>
+          <div id="predictionPanel" class="prediction-panel wait">
+            <div><small>Prediction</small><strong id="predictionDirection">NEUTRE</strong></div>
+            <div><small>Status</small><strong id="predictionStatus">WAIT</strong></div>
+            <div><small>Action</small><strong id="predictionAction">WAIT</strong></div>
+          </div>
           <span class="verdict-badge wait" id="verdictBadge">ATTENDRE</span>
           <span class="setup-direction wait" id="setupDirectionBadge"><i></i> SETUP EN ATTENTE</span>
           <div class="trade-action-box wait" id="tradeActionBox" role="status" aria-live="polite">
@@ -223,6 +229,6 @@
     <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button>
     <footer><strong>Trading réel à risque élevé.</strong> Sera fournit une aide à la décision et l’EA peut exécuter automatiquement sur le compte MT5 connecté. Les limites de risque réduisent l’exposition mais ne garantissent aucun gain.</footer>
   </main>
-  <script src="./app.js?v=realtime-meta-20260919-2" defer></script>
+  <script src="./app.js?v=live-candles-20260919-3" defer></script>
 </body>
 </html>
