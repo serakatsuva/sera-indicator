@@ -53,6 +53,14 @@ function closeWelcomePopup(){
 const fmt=n=>Number.isFinite(Number(n))?Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):"—";
 const ageMinutes=iso=>iso?(Date.now()-Date.parse(iso))/60000:Infinity;
 const ageLabel=iso=>{const minutes=Math.max(0,Math.floor(ageMinutes(iso)));if(!Number.isFinite(minutes))return "—";if(minutes<1)return "à l’instant";if(minutes<60)return `${minutes} min`;const hours=Math.floor(minutes/60);if(hours<24)return `${hours} h ${minutes%60} min`;return `${Math.floor(hours/24)} j ${hours%24} h`;};
+const latestLiveEpoch=()=>{let latest=0;for(const q of liveQuotes.values())latest=Math.max(latest,Number(q?.epoch)||0);return latest;};
+const liveAgeLabel=epoch=>{const seconds=Math.max(0,Math.floor(Date.now()/1000-(Number(epoch)||0)));if(!epoch)return"Connexion…";if(seconds<2)return"maintenant";if(seconds<60)return`il y a ${seconds} s`;const minutes=Math.floor(seconds/60);return`il y a ${minutes} min`;};
+function updateMetaClocks(){
+  if($("dataAge"))$("dataAge").textContent=ageLabel(payload?.updated_at);
+  const epoch=latestLiveEpoch();
+  if($("liveUpdatedAt"))$("liveUpdatedAt").textContent=liveAgeLabel(epoch);
+}
+
 const signalClass=value=>value==="BUY"?"buy":value==="SELL"?"sell":"wait";
 const hoursLabel=value=>Number.isFinite(Number(value))?`≈ ${Math.round(Number(value))} h`:"—";
 const durationLabel=timing=>timing?`${timing.duration_min_hours}–${timing.duration_max_hours} h`:"—";
@@ -306,8 +314,8 @@ async function loadSignals(manual=false){
 function render(){
   const notice=$("notice"),results=$("results"),fresh=resultsAreFresh();
   results.innerHTML="";
-  $("updatedAt").textContent=payload?.updated_at?new Date(payload.updated_at).toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"}):"—";
-  $("dataAge").textContent=ageLabel(payload?.updated_at);
+  $("updatedAt").textContent=payload?.updated_at?new Date(payload.updated_at).toLocaleString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—";
+  updateMetaClocks();
   $("sourceName").textContent=payload?.source||"Deriv WebSocket";
   $("modelName").textContent=payload?.model||"Sera Autonomous Engine";
   renderIndexFamilyFilter();
@@ -934,6 +942,7 @@ function connectLivePrice(){
       const price=Number(message.tick.quote),epoch=Number(message.tick.epoch)||Date.now()/1000;
       if(!Number.isFinite(price))return;
       liveQuotes.set(market,{price,epoch,symbol});
+      updateMetaClocks();
       recordLiveTick(market,price,epoch);
       scheduleLiveUi(market);
       setMarketStatus("Deriv : Live temps réel","live");
@@ -999,4 +1008,5 @@ renderTrendWatchUi();
 loadSignals();
 connectLivePrice();
 setInterval(()=>loadSignals(false),20000);
+setInterval(updateMetaClocks,1000);
 setInterval(()=>{if(marketFamily==="synthetic"&&(!liveSocket||liveSocket.readyState>1))connectLivePrice();},5000);
