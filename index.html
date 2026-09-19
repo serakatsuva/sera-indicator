@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=sera-20260919-clear-action-1">
+  <link rel="stylesheet" href="./styles.css?v=sera-20260919-compact-mobile-1">
   <link rel="stylesheet" href="./deriv.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
@@ -48,59 +48,45 @@
   </header>
 
   <main class="shell">
-    <section class="broker-panel panel signal-only-hero">
-      <div class="section-heading">
-        <div><span class="eyebrow">Deriv · indices synthétiques</span><h1>Analyse réelle & exécution MT5</h1><p>Sera analyse les bougies publiques Deriv en M15/H1 et H1/H4 pour des décisions destinées au trading réel. L’EA MT5 v1.50 peut exécuter automatiquement les signaux Swing confirmés avec limites de risque.</p></div>
-        <span class="mode-badge signal-only-badge">MODE RÉEL</span>
-      </div>
-      <div class="signal-scope" aria-label="Périmètre de l'application">
-        <div><small>Broker</small><strong>Deriv</strong></div>
-        <div><small>Données</small><strong>WebSocket public</strong></div>
-        <div><small>Décision</small><strong>BUY / SELL / ATTENDRE</strong></div>
-        <div><small>Exécution</small><strong>EA Deriv MT5 v1.50 · Réel</strong></div>
-      </div>
+    <section class="broker-panel panel signal-only-hero compact-info-strip">
+      <span><b>Deriv Live</b> · Day M15/H1 · Swing H1/H4</span>
+      <span>Décision : <b>BUY / SELL / WAIT</b></span>
+      <a href="#scanner">Voir les signaux</a>
     </section>
 
-    <section class="execution-panel panel" id="mt5Execution">
-      <div class="section-heading">
-        <div>
-          <span class="eyebrow cyan">Exécution Deriv MT5</span>
-          <h2>Passerelle Swing automatique</h2>
-          <p>L’EA Sera s’installe dans Deriv MT5 et surveille les signaux Swing BUY/SELL confirmés. Il est configuré pour fonctionner directement sur un compte réel, avec gestion du risque, Stop Loss et limites d’exposition.</p>
+    <section class="execution-panel panel compact-execution" id="mt5Execution">
+      <div class="compact-exec-main">
+        <div class="compact-exec-status">
+          <span class="mode-badge execution-pending" id="executionStatus">EA RÉEL · NON CONNECTÉ</span>
+          <strong>EA MT5 v1.60</strong>
+          <small>Réel · Risque 0,5 % · max. 1 USD · EXECUTE NOW</small>
         </div>
-        <span class="mode-badge execution-pending" id="executionStatus">EA RÉEL · NON CONNECTÉ</span>
+        <div class="compact-exec-links">
+          <a class="text-link" href="./mt5/Sera_Swing_Executor.mq5" download>Télécharger</a>
+          <button class="text-link" id="showMt5Setup" type="button">Installation</button>
+        </div>
       </div>
-      <div class="execution-grid">
-        <div><small>Mode initial</small><strong>Compte réel</strong></div>
-        <div><small>Risque</small><strong>0,5 % · max. 1 USD</strong></div>
-        <div><small>Déclenchement</small><strong>Auto · ≥80 % + EXECUTE NOW</strong></div>
-        <div><small>Protection</small><strong>SL + anti-doublon</strong></div>
-      </div>
-      <div class="execution-actions">
-        <a class="primary download-ea" href="./mt5/Sera_Swing_Executor.mq5" download>Télécharger l’EA MT5</a>
-        <button id="showMt5Setup" type="button">Voir l’installation</button>
-      </div>
-      <div class="mt5-setup" id="mt5Setup" hidden>
+      <div class="mt5-setup compact-details" id="mt5Setup" hidden>
         <ol>
-          <li>Dans MT5 : <strong>Fichier → Ouvrir le dossier des données → MQL5 → Experts</strong>.</li>
-          <li>Copiez le fichier téléchargé, compilez-le dans MetaEditor, puis attachez-le à un graphique.</li>
-          <li>Autorisez WebRequest vers <code>https://serakatsuva.github.io</code> et activez Algo Trading.</li>
-          <li>La version v1.50 est prête pour le réel : <strong>EnableAutomaticTrading = true</strong> et <strong>AllowRealAccount = true</strong>. Vérifiez toujours le symbole, le volume et les limites de risque avant de laisser l’EA fonctionner sans surveillance.</li>
+          <li>MT5 → Fichier → Ouvrir le dossier des données → MQL5 → Experts.</li>
+          <li>Copier l’EA, compiler dans MetaEditor et l’attacher à un graphique.</li>
+          <li>Autoriser WebRequest vers <code>https://serakatsuva.github.io</code> et activer Algo Trading.</li>
+          <li>EA v1.60 : automatique, compte réel autorisé, protections de risque actives.</li>
         </ol>
-        <p><strong>Important :</strong> le site ne reçoit jamais votre mot de passe MT5. L’EA utilise uniquement le compte déjà connecté dans votre terminal. En compte réel, toute perte est réelle : les protections limitent l’exposition mais n’éliminent pas le risque.</p>
       </div>
     </section>
 
-    <section class="scanner-panel panel">
-      <div class="scanner-heading">
-        <div><span class="eyebrow cyan">Scanner autonome multi-stratégies</span><h2>Day trading et Swing Deriv</h2><p>Choisissez votre style : M15/H1 pour le day trading ou H1/H4 pour le swing.</p></div>
-        <button class="primary" id="refreshButton" type="button"><span>↻</span> Actualiser les signaux</button>
+    <section class="scanner-panel panel" id="scanner">
+      <div class="scanner-heading compact-scanner-heading">
+        <div><span class="eyebrow cyan">Scanner live</span><h2>Signaux Deriv</h2></div>
+        <button class="primary compact-refresh" id="refreshButton" type="button"><span>↻</span> Actualiser</button>
       </div>
-      <div class="meta-strip">
-        <span>Dernière analyse <b id="updatedAt">—</b></span><span>Âge des données <b id="dataAge">—</b></span>
-        <span>Source <b id="sourceName">Deriv WebSocket</b></span>
-        <span>Décision / IA Advisor <b id="modelName">Autonome + Luna</b></span>
-        <span>Mise à jour <b id="updateFrequency">toutes les 15 minutes</b></span>
+      <div class="meta-strip compact-meta">
+        <span>Analyse <b id="updatedAt">—</b></span>
+        <span>Âge <b id="dataAge">—</b></span>
+        <span><b id="sourceName">Deriv WebSocket</b></span>
+        <span><b id="modelName">Autonome + OSS</b></span>
+        <span><b id="updateFrequency">5 min</b></span>
       </div>
       <div class="scanner-controls">
         <div class="control-group">
@@ -124,26 +110,25 @@
         </div>
       </div>
 
-      <div class="trend-watch-panel" id="trendWatchPanel">
-        <div class="trend-watch-head">
-          <div>
-            <span class="eyebrow cyan">Trend Watch · Swing H1/H4</span>
-            <h3>Surveillance de tendance & alerte de position</h3>
-            <p>Surveille l’alignement H1/H4 et signale uniquement un nouveau BUY/SELL final confirmé. L’exécution reste gérée par l’EA MT5.</p>
+      <div class="trend-watch-panel compact-trend-watch" id="trendWatchPanel">
+        <div class="compact-watch-line">
+          <div class="compact-watch-title">
+            <span class="trend-watch-state off" id="trendWatchState"><i></i><span id="trendWatchStatus">OFF</span></span>
+            <strong>Trend Watch</strong>
+            <span>H1 <b id="watchTrendH1">—</b></span>
+            <span>H4 <b id="watchTrendH4">—</b></span>
+            <span class="watch-summary-state" id="watchSetupState">En attente</span>
           </div>
-          <span class="trend-watch-state off" id="trendWatchState"><i></i><span id="trendWatchStatus">Désactivée</span></span>
+          <button class="watch-options-toggle" id="watchOptionsToggle" type="button" aria-expanded="false">Options</button>
         </div>
-        <div class="trend-watch-controls">
-          <label class="watch-switch"><input id="trendWatchToggle" type="checkbox"><span>Surveillance active</span></label>
-          <label><span>Portée</span><select id="trendWatchScope"><option value="selected">Indice sélectionné</option><option value="all">Tous les indices</option></select></label>
-          <label class="watch-check"><input id="trendWatchSound" type="checkbox" checked><span>Son</span></label>
-          <button id="enableBrowserAlerts" type="button">Notifications navigateur</button>
-        </div>
-        <div class="trend-watch-grid">
-          <div><small>Tendance H1</small><strong id="watchTrendH1">—</strong></div>
-          <div><small>Tendance H4</small><strong id="watchTrendH4">—</strong></div>
-          <div><small>État</small><strong id="watchSetupState">En attente</strong></div>
-          <div><small>Dernière alerte</small><strong id="watchLastAlert">Aucune</strong></div>
+        <div class="trend-watch-options" id="trendWatchOptions" hidden>
+          <div class="trend-watch-controls">
+            <label class="watch-switch"><input id="trendWatchToggle" type="checkbox"><span>Activer</span></label>
+            <label><span>Portée</span><select id="trendWatchScope"><option value="selected">Indice sélectionné</option><option value="all">Tous les indices</option></select></label>
+            <label class="watch-check"><input id="trendWatchSound" type="checkbox" checked><span>Son</span></label>
+            <button id="enableBrowserAlerts" type="button">Notifications</button>
+          </div>
+          <div class="compact-last-alert">Dernière alerte : <strong id="watchLastAlert">Aucune</strong></div>
         </div>
         <div class="trend-watch-alert" id="trendWatchAlert" hidden role="status" aria-live="assertive"></div>
       </div>
@@ -237,6 +222,6 @@
     <button class="help-button" id="openHelp" type="button">ⓘ Revoir le guide</button>
     <footer><strong>Trading réel à risque élevé.</strong> Sera fournit une aide à la décision et l’EA peut exécuter automatiquement sur le compte MT5 connecté. Les limites de risque réduisent l’exposition mais ne garantissent aucun gain.</footer>
   </main>
-  <script src="./app.js?v=clear-action-v161-20260919-1" defer></script>
+  <script src="./app.js?v=compact-mobile-v162-20260919-1" defer></script>
 </body>
 </html>
