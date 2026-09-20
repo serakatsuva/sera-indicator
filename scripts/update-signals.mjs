@@ -8,7 +8,7 @@ const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
 const ENGINE_VERSION='Sera Autonomous Engine v3.7';
 
-const MARKETS=[
+let MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
   {market:'Boom 500 Index',symbol:'BOOM500',family:'boom',spikeBias:'UP'},
   {market:'Boom 1000 Index',symbol:'BOOM1000',family:'boom',spikeBias:'UP'},
@@ -21,6 +21,71 @@ const MARKETS=[
   {market:'Volatility 75 Index',symbol:'R_75',family:'volatility',spikeBias:'NONE'},
   {market:'Volatility 100 Index',symbol:'R_100',family:'volatility',spikeBias:'NONE'}
 ];
+
+function marketFamilyFromName(name){
+  const n=String(name||'').toLowerCase();
+  if(n.includes('boom'))return 'boom';
+  if(n.includes('crash'))return 'crash';
+  if(n.includes('jump'))return 'jump';
+  if(n.includes('step'))return 'step';
+  if(n.includes('range break'))return 'range';
+  if(n.includes('dex'))return 'dex';
+  if(n.includes('drift switch'))return 'drift';
+  if(n.includes('volswitch'))return 'volswitch';
+  if(n.includes('volatility')||n.includes('high frequency vol')||n.includes('vol over '))return n.includes('(1s)')?'volatility1s':'volatility';
+  if(n.includes('exponential growth'))return 'exponential';
+  return 'synthetic';
+}
+
+function marketSpikeBias(name){
+  const n=String(name||'').toLowerCase();
+  if(n.includes('boom')&&!n.includes('vol over'))return 'UP';
+  if(n.includes('crash')&&!n.includes('vol over'))return 'DOWN';
+  return 'NONE';
+}
+
+function looksLikeSynthetic(item){
+  const market=String(item?.market||'').toLowerCase();
+  const submarket=String(item?.submarket||'').toLowerCase();
+  const subgroup=String(item?.subgroup||'').toLowerCase();
+  const name=String(item?.display_name||item?.symbol||'').toLowerCase();
+  if(market.includes('synthetic')||market.includes('derived'))return true;
+  if(submarket.includes('synthetic')||submarket.includes('random')||submarket.includes('continuous'))return true;
+  if(subgroup.includes('synthetic')||subgroup.includes('derived'))return true;
+  return /(boom|crash|volatility|jump|step|range break|dex|drift switch|volswitch|high frequency vol|exponential growth|vol over )/.test(name);
+}
+
+async function discoverDerivMarkets(){
+  return new Promise(resolve=>{
+    const ws=new WebSocket(DERIV_WS);
+    let settled=false;
+    const done=markets=>{
+      if(settled)return;settled=true;clearTimeout(timer);
+      try{ws.close();}catch{}
+      resolve(markets?.length?markets:MARKETS);
+    };
+    const timer=setTimeout(()=>done(MARKETS),12000);
+    ws.addEventListener('open',()=>ws.send(JSON.stringify({active_symbols:'brief',req_id:41})));
+    ws.addEventListener('message',event=>{
+      let message;try{message=JSON.parse(String(event.data));}catch{return;}
+      if(message.error)return done(MARKETS);
+      if(!Array.isArray(message.active_symbols))return;
+      const discovered=message.active_symbols
+        .filter(looksLikeSynthetic)
+        .map(item=>({
+          market:String(item.display_name||item.symbol),
+          symbol:String(item.symbol||''),
+          family:marketFamilyFromName(item.display_name||item.symbol),
+          spikeBias:marketSpikeBias(item.display_name||item.symbol)
+        }))
+        .filter(item=>item.market&&item.symbol)
+        .filter((item,index,array)=>array.findIndex(x=>x.symbol===item.symbol)===index)
+        .sort((a,b)=>a.market.localeCompare(b.market));
+      done(discovered);
+    });
+    ws.addEventListener('error',()=>done(MARKETS));
+  });
+}
 
 const MODES=[
   {id:'day',label:'Day trading',entry:'M15',confirmation:'H1',duration:{range:'1–12 h',validity:'3 bougies M15',reanalysis:'5 min'}},
@@ -233,29 +298,33 @@ function technicalSetup(meta,entryTf,confirmationTf,mode){
 
 async function fetchAllCandles(){
   return new Promise((resolve,reject)=>{
-    const ws=new WebSocket(DERIV_WS),requests=new Map(),received=new Map();
-    let settled=false,reqId=100;
+    const ws=new WebSocket(DERIV_WS),requests=new Map(),received=new Map(),completed=new Set();
+    let settled=false,reqId=100,totalRequests=0;
     const finish=error=>{
       if(settled)return; settled=true; clearTimeout(timer);
       try{ws.close();}catch{}
-      if(error)reject(error);else resolve(received);
+      if(error&&received.size===0)reject(error);else resolve(received);
     };
-    const timer=setTimeout(()=>finish(new Error(`Deriv timeout: ${received.size}/${MARKETS.length*3} candle sets`)),45000);
+    const timer=setTimeout(()=>finish(new Error(`Deriv candle timeout: ${completed.size}/${totalRequests} requests completed`)),60000);
     ws.addEventListener('open',()=>{
       for(const market of MARKETS){
         for(const [timeframe,granularity] of [['M15',900],['H1',3600],['H4',14400]]){
-          reqId+=1; requests.set(reqId,{...market,timeframe});
+          reqId+=1;totalRequests+=1;requests.set(reqId,{...market,timeframe});
           ws.send(JSON.stringify({ticks_history:market.symbol,style:'candles',granularity,count:240,end:'latest',adjust_start_time:1,req_id:reqId}));
         }
       }
     });
     ws.addEventListener('message',event=>{
       let message; try{message=JSON.parse(String(event.data));}catch{return;}
-      if(message.error||message.errors)return finish(new Error(`Deriv rejected a candle request: ${message.error?.message||message.errors?.[0]?.message||'unknown error'}`));
-      if(!message.candles)return;
-      const key=Number(message.req_id??message.echo_req?.req_id),request=requests.get(key); if(!request)return;
-      received.set(`${request.symbol}:${request.timeframe}`,message.candles.map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close,epoch:+c.epoch})));
-      if(received.size===MARKETS.length*3)finish();
+      const key=Number(message.req_id??message.echo_req?.req_id),request=requests.get(key);
+      if(!request)return;
+      completed.add(key);
+      if(Array.isArray(message.candles)){
+        received.set(`${request.symbol}:${request.timeframe}`,message.candles.map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close,epoch:+c.epoch})));
+      }else if(message.error){
+        console.warn(`Skipping ${request.market} ${request.timeframe}: ${message.error?.message||'Deriv request rejected'}`);
+      }
+      if(totalRequests>0&&completed.size>=totalRequests)finish();
     });
     ws.addEventListener('error',()=>finish(new Error('Deriv WebSocket connection failed')));
   });
@@ -741,13 +810,16 @@ function reusableAudit(previous,setup){
 
 async function main(){
   if(process.argv.includes('--self-test'))return selfTest();
-  const previous=await readPreviousPayload(),candles=await fetchAllCandles();
+  const previous=await readPreviousPayload();
+  MARKETS=await discoverDerivMarkets();
+  console.log(`Deriv discovery found ${MARKETS.length} synthetic/derived markets.`);
+  const candles=await fetchAllCandles();
 
   const rawSetups=MARKETS.flatMap(meta=>MODES.map(mode=>{
     const entry=inspectCandles(candles.get(`${meta.symbol}:${mode.entry}`)),confirmation=inspectCandles(candles.get(`${meta.symbol}:${mode.confirmation}`));
-    if(!entry||!confirmation)throw new Error(`Insufficient ${mode.id} candles for ${meta.market}`);
+    if(!entry||!confirmation){console.warn(`Skipping ${meta.market} ${mode.id}: insufficient candles`);return null;}
     return technicalSetup(meta,entry,confirmation,mode);
-  }));
+  }).filter(Boolean));
   const setups=rawSetups
     .map(setup=>attachTrendMemory(setup,previous))
     .map(setup=>({...setup,autonomous:autonomousDecision(setup)}));
@@ -776,7 +848,7 @@ async function main(){
     ok:true,status:aiCalls?'ai_analyzed':'autonomous_analyzed',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',
     updated_at:new Date().toISOString(),engine_version:ENGINE_VERSION,
     model:aiCalls?`${ENGINE_VERSION} + ${SCREENING_MODEL} fresh 5m audit`:`${ENGINE_VERSION} · local 5m`,
-    screening_model:SCREENING_MODEL,deep_model:null,markets_count:markets.length,technical_candidates:technicalCandidates.length,
+    screening_model:SCREENING_MODEL,deep_model:null,discovered_markets:MARKETS.length,markets_count:markets.length,technical_candidates:technicalCandidates.length,
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:0,analysis_interval_minutes:5,trend_changes:trendChanges,trend_flips:trendFlips,
     confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
