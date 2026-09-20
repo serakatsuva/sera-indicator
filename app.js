@@ -82,6 +82,7 @@ let liveWatchdogTimer=null;
 let liveLastMessageAt=0;
 let liveReconnectAttempt=0;
 let liveConnectionStartedAt=0;
+let lastMinuteValidationAt=0;
 let marketFamily="synthetic";
 let selectedIndexFamily=localStorage.getItem("seraIndexFamily")||"all";
 let tradingMode="all";
@@ -118,6 +119,13 @@ const ageMinutes=iso=>iso?(Date.now()-Date.parse(iso))/60000:Infinity;
 const ageLabel=iso=>{const minutes=Math.max(0,Math.floor(ageMinutes(iso)));if(!Number.isFinite(minutes))return "—";if(minutes<1)return "à l’instant";if(minutes<60)return `${minutes} min`;const hours=Math.floor(minutes/60);if(hours<24)return `${hours} h ${minutes%60} min`;return `${Math.floor(hours/24)} j ${hours%24} h`;};
 const latestLiveEpoch=()=>{let latest=0;for(const q of liveQuotes.values())latest=Math.max(latest,Number(q?.epoch)||0);return latest;};
 const liveAgeLabel=epoch=>{const seconds=Math.max(0,Math.floor(Date.now()/1000-(Number(epoch)||0)));if(!epoch)return"Connexion…";if(seconds<2)return"maintenant";if(seconds<60)return`il y a ${seconds} s`;const minutes=Math.floor(seconds/60);return`il y a ${minutes} min`;};
+const liveValidationIsFresh=()=>{
+  const epoch=latestLiveEpoch();
+  return epoch>0&&(Date.now()/1000-epoch)<20&&liveIntelligenceState.size>0;
+};
+const minuteValidationLabel=()=>lastMinuteValidationAt
+  ?new Date(lastMinuteValidationAt).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})
+  :"synchronisation";
 function updateMetaClocks(){
   if($("dataAge"))$("dataAge").textContent=ageLabel(payload?.updated_at);
   const epoch=latestLiveEpoch();
@@ -518,6 +526,13 @@ async function loadSignals(manual=false){
   }
 }
 
+function runMinuteValidationCycle(){
+  if(marketFamily!=="synthetic")return;
+  for(const market of availableSyntheticMarkets())refreshLiveIntelligence(market,true);
+  lastMinuteValidationAt=Date.now();
+  if(payload)render();
+}
+
 function render(){
   const notice=$("notice"),results=$("results"),fresh=resultsAreFresh();
   results.innerHTML="";
@@ -545,19 +560,30 @@ function render(){
     return;
   }
 
-  setMarketStatus(fresh?"Deriv : données multi-horizon":"Deriv : données anciennes",fresh?"live":"error");
+  const liveFresh=liveValidationIsFresh();
+  setMarketStatus(
+    fresh?"Deriv : données multi-horizon":liveFresh?"Deriv : Live actif · serveur ancien":"Deriv : données anciennes",
+    fresh||liveFresh?"live":"error"
+  );
   const aiActive=fresh&&payload.status==="ai_analyzed";
   const autonomousActive=fresh&&["autonomous_analyzed","smart_local"].includes(payload.status);
   const ossActive=fresh&&Boolean(payload?.open_source_models);
-  setAiStatus(aiActive?(ossActive?"Autonome + OSS + Luna":"Autonome + Luna"):autonomousActive?(ossActive?"Autonome + OSS":"Moteur autonome actif"):fresh?"Moteur autonome : analyse":"Validation expirée",aiActive||autonomousActive?"live":fresh?"":"error");
-  notice.className=`notice ${aiActive||autonomousActive?"success":"warning"}`;
+  setAiStatus(
+    aiActive?(ossActive?"Autonome + OSS + Luna":"Autonome + Luna"):
+    autonomousActive?(ossActive?"Autonome + OSS":"Moteur autonome actif"):
+    liveFresh?"Validation LIVE active":"Validation serveur expirée",
+    aiActive||autonomousActive||liveFresh?"live":"error"
+  );
+  notice.className=`notice ${aiActive||autonomousActive||liveFresh?"success":"warning"}`;
   notice.textContent=aiActive
     ?`${payload.markets_count} analyses autonomes · ${payload.confirmed_signals??0} signal(aux) final(aux). Luna a audité ${payload.ai_candidates??0} candidat(s), mais la décision primaire reste locale.`
     :autonomousActive
       ?`${payload.markets_count} analyses autonomes actualisées · ${payload.confirmed_signals??0} signal(aux) final(aux). OpenAI n’est pas nécessaire pour prendre la décision.`
       :fresh
         ?`${payload.markets_count} analyses locales actualisées. Le moteur reste sur ATTENDRE quand le consensus des stratégies est insuffisant.`
-        :`Validation expirée depuis ${ageLabel(payload.updated_at)}. Les anciens BUY/SELL sont neutralisés sur ATTENDRE jusqu’à une nouvelle analyse.`;
+        :liveFresh
+          ?`Validation LIVE active · recalcul continu + consolidation chaque minute (dernier cycle ${minuteValidationLabel()}). L’analyse serveur date de ${ageLabel(payload.updated_at)}; ses anciens BUY/SELL restent neutralisés jusqu’au prochain cycle serveur.`
+          :`Validation serveur expirée depuis ${ageLabel(payload.updated_at)} et flux live non validé. Les anciens BUY/SELL sont neutralisés sur ATTENDRE.`;
   const allowedMarkets=new Set(marketsForIndexFamily());
   let rows=payload.markets.filter(row=>allowedMarkets.has(row.market)&&(tradingMode==="all"||row.mode===tradingMode));
 
@@ -1863,6 +1889,7 @@ loadSignals();
 discoverAppDerivMarkets().then(()=>{
   connectLivePrice();
   bootstrapLiveIntelligenceHistory();
+  setTimeout(runMinuteValidationCycle,5000);
 });
 setInterval(()=>loadSignals(false),20000);
 setInterval(updateMetaClocks,1000);
@@ -1871,6 +1898,7 @@ setInterval(()=>{
   for(const market of availableSyntheticMarkets())refreshLiveIntelligence(market,true);
   if(signalModal&&!signalModal.hidden)renderSelected();
 },1000);
+setInterval(runMinuteValidationCycle,60000);
 window.addEventListener("resize",()=>renderRealtimeCandles(selectedSignalRow()));
 setInterval(()=>{
   if(marketFamily!=="synthetic")return;
