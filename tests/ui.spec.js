@@ -271,3 +271,21 @@ test('signal detail exposes separate Live Intelligence panel', async ({ page }) 
   await expect(page.locator('#liveIntelligenceBias')).toBeVisible();
   await expect(page.locator('#liveIntelligenceScore')).toBeVisible();
 });
+
+
+test('Deriv market discovery supports Volatility 1s and Step families dynamically', async ({ page }) => {
+  const families = await page.evaluate(() => [
+    appMarketFamily('Volatility 75 (1s) Index'),
+    appMarketFamily('Step Index'),
+    appMarketFamily('Step Index 200'),
+    appMarketFamily('DEX 600 UP Index'),
+    appMarketFamily('Drift Switch Index 20')
+  ]);
+  expect(families).toEqual(['volatility1s','step','step','dex','drift']);
+});
+
+test('app no longer depends only on the original 11 hardcoded markets', async ({ page }) => {
+  const source = await (await page.request.get('/app.js')).text();
+  expect(source).toContain('active_symbols');
+  expect(source).toContain('discoverAppDerivMarkets');
+});
