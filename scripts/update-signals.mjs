@@ -374,7 +374,7 @@ function publicSetup(setup){
     id:`${setup.symbol}:${setup.mode}`,market:setup.market,symbol:setup.symbol,family:setup.family,spikeBias:setup.spikeBias,mode:setup.mode,
     mode_label:setup.mode_label,timeframes:setup.timeframes,duration:setup.duration,price:setup.price,technical_verdict:setup.technical_verdict,
     technical_confidence:setup.technical_confidence,levels:setup.levels,entry_tf:clean(setup.entry_tf),confirmation_tf:clean(setup.confirmation_tf),
-    intelligence:setup.intelligence,trend_memory:setup.trend_memory,decision_engine:setup.autonomous||null,risk:setup.risk
+    intelligence:setup.intelligence,trend_memory:setup.trend_memory,family_context:setup.family_context||null,decision_engine:setup.autonomous||null,risk:setup.risk
   };
 }
 
@@ -519,8 +519,53 @@ function buildLevels(setup,verdict){
   };
 }
 
+function buildFamilyContexts(setups){
+  const groups=new Map();
+  for(const setup of setups){
+    const key=`${setup.family}:${setup.mode}`;
+    const list=groups.get(key)||[];
+    list.push(setup);
+    groups.set(key,list);
+  }
+  const contexts=new Map();
+  for(const [key,list] of groups){
+    const directional=list.filter(s=>s.entry_tf?.side===s.confirmation_tf?.side&&['BUY','SELL'].includes(s.entry_tf?.side));
+    const buy=directional.filter(s=>s.entry_tf.side==='BUY');
+    const sell=directional.filter(s=>s.entry_tf.side==='SELL');
+    const dominant=buy.length===sell.length?'NEUTRE':buy.length>sell.length?'BUY':'SELL';
+    const dominantCount=Math.max(buy.length,sell.length);
+    const consensus=directional.length?dominantCount/directional.length:0;
+    const avgQuality=directional.length
+      ?Math.round(average(directional.map(s=>((Number(s.entry_tf?.trendQuality)||0)+(Number(s.confirmation_tf?.trendQuality)||0))/2)))
+      :0;
+    contexts.set(key,{
+      family:list[0]?.family||'other',mode:list[0]?.mode||'day',
+      members:list.length,directional_members:directional.length,
+      buy_members:buy.length,sell_members:sell.length,
+      dominant_side:dominant,consensus_percent:Math.round(consensus*100),
+      average_quality:avgQuality,
+      status:directional.length<2?'INSUFFICIENT':consensus>=.70?'STRONG':'MIXED'
+    });
+  }
+  return contexts;
+}
+
+function attachFamilyContext(setup,contexts){
+  const key=`${setup.family}:${setup.mode}`;
+  const base=contexts.get(key)||{
+    family:setup.family,mode:setup.mode,members:1,directional_members:0,
+    buy_members:0,sell_members:0,dominant_side:'NEUTRE',
+    consensus_percent:0,average_quality:0,status:'INSUFFICIENT'
+  };
+  const side=setup.entry_tf?.side;
+  const enough=base.directional_members>=2;
+  const agrees=enough&&base.dominant_side===side&&base.consensus_percent>=55;
+  const contradicts=enough&&['BUY','SELL'].includes(base.dominant_side)&&base.dominant_side!==side&&base.consensus_percent>=70;
+  return {...setup,family_context:{...base,agrees,contradicts}};
+}
+
 function autonomousDecision(setup){
-  const e=setup.entry_tf,c=setup.confirmation_tf,m=setup.trend_memory||{},side=e.side;
+  const e=setup.entry_tf,c=setup.confirmation_tf,m=setup.trend_memory||{},f=setup.family_context||{},side=e.side;
   const aligned=side===c.side;
   const adverse=(setup.family==='boom'&&side==='SELL')||(setup.family==='crash'&&side==='BUY');
   const trending=e.regime==='TRENDING'||c.regime==='TRENDING';
@@ -544,6 +589,7 @@ function autonomousDecision(setup){
     {id:'memory',name:'Trend memory',weight:8,applicable:true,support:Boolean(m.persistence&&!m.flip)},
     {id:'volatility',name:'Volatility control',weight:8,applicable:true,support:Boolean(!e.spikeRisk&&e.volatilityExpansion>.55&&e.volatilityExpansion<2.6)},
     {id:'family',name:'Boom/Crash guard',weight:8,applicable:true,support:Boolean(!adverse||(e.sweep&&(e.bos||e.choch)))},
+    {id:'familycontext',name:'Family context confirmation',weight:7,applicable:Number(f.directional_members)>=2,support:Boolean(f.agrees)},
     {id:'adx',name:'ADX / DMI trend strength',weight:9,applicable:trending,support:Boolean(e.adx>=20&&e.dmiAligned)},
     {id:'macd',name:'MACD momentum alignment',weight:8,applicable:trending||setupType==='BREAKOUT_CONTINUATION',support:Boolean(e.macdAligned)},
     {id:'donchian',name:'Donchian breakout',weight:8,applicable:setupType==='BREAKOUT_CONTINUATION'||(trending&&setupType==='GENERIC'),support:Boolean(e.donchianBreakout)},
@@ -570,6 +616,8 @@ function autonomousDecision(setup){
   if(e.spikeRisk)score-=24;
   if(e.regime==='RANGE'&&!strategies.find(s=>s.id==='range')?.support)score-=10;
   if(adverse)score-=5;
+  if(f.agrees&&Number(f.consensus_percent)>=70)score+=4;
+  if(f.contradicts)score-=8;
   score=Math.round(clamp(score,0,97));
 
   const minimumConditions=80;
@@ -578,8 +626,9 @@ function autonomousDecision(setup){
   const confirmationGate=setup.mode==='swing'?c.trendQuality>=58:c.trendQuality>=54;
   const adverseGate=!adverse||(score>=84&&e.sweep&&(e.bos||e.choch));
   const riskGate=!e.spikeRisk&&!m.flip&&setup.risk?.specific_guard!==false;
+  const familyGate=!f.contradicts;
   const conditionGate=conditionPassPercent>=minimumConditions;
-  const signal=aligned&&confirmationGate&&adverseGate&&riskGate&&conditionGate&&consensus>=minimumConsensus&&score>=minimumScore;
+  const signal=aligned&&confirmationGate&&adverseGate&&riskGate&&familyGate&&conditionGate&&consensus>=minimumConsensus&&score>=minimumScore;
   const verdict=signal?side:'ATTENDRE';
   const setupDetected=aligned&&!e.spikeRisk&&!m.flip&&score>=60&&conditionPassPercent>=50;
   const detectedSide=setupDetected?side:'NEUTRE';
@@ -824,8 +873,10 @@ async function main(){
     if(!entry||!confirmation){console.warn(`Skipping ${meta.market} ${mode.id}: insufficient candles`);return null;}
     return technicalSetup(meta,entry,confirmation,mode);
   }).filter(Boolean));
-  const setups=rawSetups
-    .map(setup=>attachTrendMemory(setup,previous))
+  const memorySetups=rawSetups.map(setup=>attachTrendMemory(setup,previous));
+  const familyContexts=buildFamilyContexts(memorySetups);
+  const setups=memorySetups
+    .map(setup=>attachFamilyContext(setup,familyContexts))
     .map(setup=>({...setup,autonomous:autonomousDecision(setup)}));
   const setupId=setup=>`${setup.symbol}:${setup.mode}`;
 
@@ -855,6 +906,7 @@ async function main(){
     screening_model:SCREENING_MODEL,deep_model:null,discovered_markets:MARKETS.length,markets_count:markets.length,technical_candidates:technicalCandidates.length,
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:0,analysis_interval_minutes:5,trend_changes:trendChanges,trend_flips:trendFlips,
+    family_context_groups:familyContexts.size,
     confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
     safety:"Sera Autonomous Engine v3.4 peut afficher tôt un SETUP BUY/SELL avec Entry, SL et TP1–TP5 projetés, tout en réservant l’exécution réelle aux signaux EXECUTE_NOW qui passent les garde-fous critiques."
