@@ -23,8 +23,8 @@ const MARKETS=[
 ];
 
 const MODES=[
-  {id:'day',label:'Day trading',entry:'M15',confirmation:'H1',duration:{range:'1–12 h',validity:'3 bougies M15',reanalysis:'15 min'}},
-  {id:'swing',label:'Swing',entry:'H1',confirmation:'H4',duration:{range:'12 h–4 jours',validity:'3 bougies H1',reanalysis:'1 h'}}
+  {id:'day',label:'Day trading',entry:'M15',confirmation:'H1',duration:{range:'1–12 h',validity:'3 bougies M15',reanalysis:'5 min'}},
+  {id:'swing',label:'Swing',entry:'H1',confirmation:'H4',duration:{range:'12 h–4 jours',validity:'3 bougies H1',reanalysis:'5 min'}}
 ];
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
@@ -639,7 +639,33 @@ function setupEntryPlan(setup,engine,projectedLevels){
   };
 }
 
-function finalize(setup,luna){
+function trendChange(setup,previous){
+  const id=`${setup.symbol}:${setup.mode}`;
+  const prior=previous?.markets?.find(item=>item.id===id);
+  const currentSide=setup.entry_tf?.side||'NEUTRE';
+  const previousSide=prior?.entry_tf?.side||'NEUTRE';
+  const currentQuality=Number(setup.entry_tf?.trendQuality)||0;
+  const previousQuality=Number(prior?.entry_tf?.trendQuality)||0;
+  const delta=Math.round(currentQuality-previousQuality);
+
+  let state='STABLE';
+  if(prior&&previousSide!==currentSide)state='FLIP';
+  else if(delta>=6)state='STRENGTHENING';
+  else if(delta<=-6)state='WEAKENING';
+
+  return {
+    state,
+    current_side:currentSide,
+    previous_side:previousSide,
+    quality:currentQuality,
+    previous_quality:previousQuality,
+    quality_delta:delta,
+    changed:Boolean(prior)&&(state!=='STABLE'),
+    checked_at:new Date().toISOString()
+  };
+}
+
+function finalize(setup,luna,previous){
   const engine=setup.autonomous||autonomousDecision(setup);
   const localConfirmed=engine.verdict!=='ATTENDRE';
   const audit=luna||null;
@@ -658,6 +684,7 @@ function finalize(setup,luna){
   const execution=executionAssessment(setup,engine,finalVerdict,levels);
   const timing=estimateTiming({...setup,levels},finalVerdict,finalConfidence);
 
+  const trend_change=trendChange(setup,previous);
   const advisorStatus=!audit?'offline':aiMatches?'confirmed':aiCaution?'caution':'neutral';
   const confirmationSource=finalVerdict==='ATTENDRE'?'none':audit?'autonomous_plus_ai':'autonomous_engine';
   const aiTier=audit?`${ENGINE_VERSION} + ${SCREENING_MODEL} advisor`:`${ENGINE_VERSION} · autonome`;
@@ -673,7 +700,7 @@ function finalize(setup,luna){
   ];
 
   return {
-    ...publicSetup(setup),levels,projected_levels:projectedLevels,setup_entry_plan:entryPlan,
+    ...publicSetup(setup),levels,projected_levels:projectedLevels,setup_entry_plan:entryPlan,trend_change,
     swing_distance:swingDistance,projected_swing_distance:projectedSwingDistance,
     setup_detected:engine.setup_detected?1:0,setup_direction:engine.detected_side,
     final_verdict:finalVerdict,final_confidence:finalConfidence,timing,
@@ -731,29 +758,28 @@ async function main(){
     .sort((a,b)=>b.autonomous.confidence-a.autonomous.confidence)
     .slice(0,5);
 
-  const reused=new Map(),newCandidates=[];
-  for(const setup of technicalCandidates){
-    const audit=reusableAudit(previous,setup);
-    if(audit)reused.set(setupId(setup),audit);else newCandidates.push(setup);
-  }
-
+  // Fresh AI audit every cycle: no cached Luna decision is reused.
+  const newCandidates=[...technicalCandidates];
   let luna={results:[],response_id:null,usage:null,error:null};
   if(newCandidates.length&&OPENAI_API_KEY){
     try{luna=await auditMarkets(SCREENING_MODEL,newCandidates);}
     catch(error){luna.error=error instanceof Error?error.message:String(error);console.warn(`OpenAI Luna audit skipped: ${luna.error}`);}
   }else if(newCandidates.length){luna.error='OPENAI_API_KEY unavailable';}
 
-  const lunaMap=new Map([...reused,...luna.results.map(row=>[String(row.id),row])]);
-  const markets=setups.map(setup=>finalize(setup,lunaMap.get(setupId(setup))));
+  const lunaMap=new Map(luna.results.map(row=>[String(row.id),row]));
+  const markets=setups.map(setup=>finalize(setup,lunaMap.get(setupId(setup)),previous));
   const aiCalls=luna.response_id?1:0;
+  const trendFlips=markets.filter(m=>m.trend_change?.state==='FLIP').length;
+  const trendChanges=markets.filter(m=>m.trend_change?.changed).length;
 
   const payload={
-    ok:true,status:aiCalls||reused.size?'ai_analyzed':'autonomous_analyzed',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',
+    ok:true,status:aiCalls?'ai_analyzed':'autonomous_analyzed',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',
     updated_at:new Date().toISOString(),engine_version:ENGINE_VERSION,
-    model:aiCalls||reused.size?`${ENGINE_VERSION} + ${SCREENING_MODEL}`:`${ENGINE_VERSION} · local`,
+    model:aiCalls?`${ENGINE_VERSION} + ${SCREENING_MODEL} fresh 5m audit`:`${ENGINE_VERSION} · local 5m`,
     screening_model:SCREENING_MODEL,deep_model:null,markets_count:markets.length,technical_candidates:technicalCandidates.length,
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
-    cached_ai_validations:reused.size,confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
+    cached_ai_validations:0,analysis_interval_minutes:5,trend_changes:trendChanges,trend_flips:trendFlips,
+    confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
     safety:"Sera Autonomous Engine v3.4 peut afficher tôt un SETUP BUY/SELL avec Entry, SL et TP1–TP5 projetés, tout en réservant l’exécution réelle aux signaux EXECUTE_NOW qui passent les garde-fous critiques."
   };
@@ -767,7 +793,7 @@ async function main(){
   }
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
   await fs.writeFile(OUTPUT,JSON.stringify(payload,null,2));
-  console.log(`Wrote ${markets.length} analyses; ${technicalCandidates.length} smart candidates; ${aiCalls} Luna call(s); ${payload.confirmed_signals} confirmed signals.`);
+  console.log(`Wrote ${markets.length} analyses; ${technicalCandidates.length} smart candidates; ${aiCalls} fresh Luna call(s); ${trendChanges} trend change(s), ${trendFlips} flip(s); ${payload.confirmed_signals} confirmed signals.`);
 }
 
 main().catch(error=>{console.error(error instanceof Error?error.message:error);process.exit(1);});
