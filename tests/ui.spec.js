@@ -136,3 +136,12 @@ test('chart uses strategy timeframe mapping for Day and Swing', async ({ page })
   expect(mapping.swing.confirmation).toBe('H4');
   expect(mapping.swing.granularity).toBe(3600);
 });
+
+
+test('signal loader prefers latest GitHub repository data over stale Pages copy', async ({ page }) => {
+  const script = await page.locator('script[src*="app.js"]').getAttribute('src');
+  expect(script).toBeTruthy();
+  const source = await (await page.request.get('/app.js')).text();
+  expect(source).toContain('raw.githubusercontent.com/serakatsuva/sera-indicator/main/data/signals.json');
+  expect(source).toContain('./data/signals.json');
+});
