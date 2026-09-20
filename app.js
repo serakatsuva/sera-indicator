@@ -142,7 +142,16 @@ const executionLabel=row=>{
 };
 const simpleActionState=row=>{
   if(!row)return{code:"WAIT",label:"WAIT",detail:"Aucun setup exploitable",side:"wait",blink:false};
-  if(!resultsAreFresh())return{code:"WAIT",label:"WAIT",detail:"ANALYSE IA EN ATTENTE",side:"wait",blink:false};
+  if(!resultsAreFresh()){
+    const live=liveValidationFor(row);
+    if(live){
+      const side=(live.state==="BUY"||live.state==="SELL")?live.state:"WAIT";
+      const family=live.family;
+      const familyText=family?(" · FAMILLE "+family.dominant_side+" "+family.consensus_percent+"%"):"";
+      return{code:side,label:side,detail:"VALIDATION LIVE · "+live.score+"%"+familyText,side:side.toLowerCase(),blink:false,live:true};
+    }
+    return{code:"WAIT",label:"WAIT",detail:"VALIDATION LIVE EN SYNCHRONISATION",side:"wait",blink:false};
+  }
   const side=setupSide(row);
   const proposal=liveEntryProposal(row);
   const execution=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
@@ -571,7 +580,7 @@ function render(){
   setAiStatus(
     aiActive?(ossActive?"Autonome + OSS + Luna":"Autonome + Luna"):
     autonomousActive?(ossActive?"Autonome + OSS":"Moteur autonome actif"):
-    liveFresh?"Validation LIVE active":"Validation serveur expirée",
+    liveFresh?"Validation LIVE active":"Analyse serveur ancienne",
     aiActive||autonomousActive||liveFresh?"live":"error"
   );
   notice.className=`notice ${aiActive||autonomousActive||liveFresh?"success":"warning"}`;
@@ -583,7 +592,7 @@ function render(){
         ?`${payload.markets_count} analyses locales actualisées. Le moteur reste sur ATTENDRE quand le consensus des stratégies est insuffisant.`
         :liveFresh
           ?`Validation LIVE active · recalcul continu + consolidation chaque minute (dernier cycle ${minuteValidationLabel()}). L’analyse serveur date de ${ageLabel(payload.updated_at)}; ses anciens BUY/SELL restent neutralisés jusqu’au prochain cycle serveur.`
-          :`Validation serveur expirée depuis ${ageLabel(payload.updated_at)} et flux live non validé. Les anciens BUY/SELL sont neutralisés sur ATTENDRE.`;
+          :`Analyse serveur ancienne depuis ${ageLabel(payload.updated_at)} et flux live non validé. Les anciens BUY/SELL sont neutralisés sur ATTENDRE.`;
   const allowedMarkets=new Set(marketsForIndexFamily());
   let rows=payload.markets.filter(row=>allowedMarkets.has(row.market)&&(tradingMode==="all"||row.mode===tradingMode));
 
@@ -624,14 +633,22 @@ function effectiveSignalState(row){
     setupDetected:hasDetectedSetup(row),
     setupSide:setupSide(row),
     execution:row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION",
-    stale:false
+    stale:false,live:false
+  };
+  const live=liveValidationFor(row);
+  if(live)return{
+    verdict:(live.state==="BUY"||live.state==="SELL")?live.state:"ATTENDRE",
+    setupDetected:live.state==="BUY"||live.state==="SELL",
+    setupSide:(live.state==="BUY"||live.state==="SELL")?live.state:"NEUTRE",
+    execution:"LIVE_VALIDATION",
+    stale:false,live:true,liveScore:live.score
   };
   return{
     verdict:"ATTENDRE",
     setupDetected:false,
     setupSide:"NEUTRE",
     execution:"WAIT_CONFIRMATION",
-    stale:true
+    stale:true,live:false
   };
 }
 
@@ -669,7 +686,9 @@ function renderWaitingCards(container){
 }
 
 function resultCard(row,fresh){
-  const verdict=fresh?row.final_verdict:"ATTENDRE",confidence=fresh?Number(row.final_confidence)||0:0;
+  const state=effectiveSignalState(row);
+  const liveValidation=liveValidationFor(row);
+  const verdict=state.verdict,confidence=fresh?Number(row.final_confidence)||0:Number(liveValidation?.score)||0;
   const card=document.createElement("button");
   card.className=`result-card${row.market===selected&&row.mode===selectedMode?" selected":""}`;
   const conditions=Number(row?.decision_engine?.condition_pass_percent)||0;
@@ -689,12 +708,11 @@ function resultCard(row,fresh){
   const swingDistance=row.swing_distance||(detected?row.projected_swing_distance:null);
   const pipsMini=row.mode==="swing"&&swingDistance?`<div class="swing-pips-mini">${signedDistance(swingDistance.estimated_swing_price_distance,detectedSide||verdict)} · ${pipsLabel(swingDistance.estimated_swing_pips_points)}</div>`:"";
   const action=simpleActionState(row);
-  const state=effectiveSignalState(row);
   const actionChip=`<div class="trade-action-chip ${action.side} ${action.blink?"blink":""}"><i></i><strong>${escapeHtml(action.label)}</strong><span>${escapeHtml(action.detail)}</span></div>`;
   const live=liveScannerState(row);
   card.dataset.liveMarket=row.market;
   card.dataset.liveMode=row.mode;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${state.stale?"":setupMarker}${state.stale?"":pipsMini}</div><span class="signal ${signalClass(state.verdict)}">${state.verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div><div class="live-intelligence-mini wait" data-live-intelligence>Live IA: synchronisation…</div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${state.stale?"wait":detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${state.stale?"ANALYSE IA EN ATTENTE":status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${state.stale?"":setupMarker}${state.stale?"":pipsMini}</div><span class="signal ${signalClass(state.verdict)}">${state.verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div><div class="live-intelligence-mini wait" data-live-intelligence>Live IA: synchronisation…</div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${state.stale?"wait":detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${state.live?"VALIDATION LIVE":state.stale?"VALIDATION LIVE EN SYNCHRONISATION":status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
   card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=liveQuotes.get(row.market)?{symbol:symbols[row.market],price:liveQuotes.get(row.market).price}:null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();openSignalModal(row.market);loadChartHistory(row.market,row);};
   return card;
 }
@@ -728,8 +746,10 @@ function renderSelected(){
   if(row?.mode)selectedMode=row.mode;
   if(row&&marketFamily==="synthetic")loadChartHistory(selected,row);
   const fresh=Boolean(row)&&resultsAreFresh();
-  const verdict=fresh?row.final_verdict:"ATTENDRE",cls=signalClass(verdict);
-  const detected=Boolean(row)&&hasDetectedSetup(row),detectedSide=detected?setupSide(row):"NEUTRE";
+  const effective=row?effectiveSignalState(row):{verdict:"ATTENDRE",setupDetected:false,setupSide:"NEUTRE",live:false,stale:true};
+  const liveValidation=row?liveValidationFor(row):null;
+  const verdict=effective.verdict,cls=signalClass(verdict);
+  const detected=effective.setupDetected,detectedSide=effective.setupSide;
   $("verdictBadge").className=`verdict-badge ${cls}`;
   $("verdictBadge").textContent=verdict;
   const setupBadge=$("setupDirectionBadge");
@@ -739,8 +759,14 @@ function renderSelected(){
   }
   $("decisionOrb").className=`decision-orb ${cls}`;
   $("decisionOrb").querySelector("strong").textContent=verdict;
-  $("decisionConfidence").textContent=fresh?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`):"Validation requise";
-  $("decisionSummary").textContent=fresh&&row?.ai_summary?row.ai_summary:`Sera attend le prochain consensus multi-stratégies pour ${selected}. Luna reste un conseiller facultatif.`;
+  $("decisionConfidence").textContent=fresh
+    ?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`)
+    :liveValidation?`${liveValidation.score}% · VALIDATION LIVE`:"Synchronisation live";
+  $("decisionSummary").textContent=fresh&&row?.ai_summary
+    ?row.ai_summary
+    :liveValidation
+      ?`Validation temps réel Deriv active pour ${selected}. Le calcul serveur est ancien; ses anciens niveaux entrée/SL/TP restent neutralisés.`
+      :`Sera synchronise la validation live pour ${selected}.`;
   renderOpenSourceModels(row);
   renderLiveEntry(row);
   renderTradeAction(row);
@@ -763,7 +789,7 @@ function renderSelected(){
   const currentPrice=liveQuote?.symbol===symbols[selected]?liveQuote.price:row?.price;
   $("livePrice").textContent=fmt(currentPrice);
   $("liveChange").textContent=liveQuote?.symbol===symbols[selected]?"Prix Deriv live":detected?`SETUP ${detectedSide} détecté`:row?`${row.technical_verdict} technique`:"Deriv · attente";
-  const displayedLevels=verdict!=="ATTENDRE"&&row?.levels?row.levels:(detected?row?.projected_levels:null);
+  const displayedLevels=fresh?(verdict!=="ATTENDRE"&&row?.levels?row.levels:(detected?row?.projected_levels:null)):null;
   const levelValues=displayedLevels
     ?[displayedLevels.entry,displayedLevels.sl,displayedLevels.tp1,displayedLevels.tp2,displayedLevels.tp3,displayedLevels.tp4,displayedLevels.tp5]
     :[null,null,null,null,null,null,null];
@@ -1896,7 +1922,8 @@ setInterval(updateMetaClocks,1000);
 setInterval(()=>{
   if(marketFamily!=="synthetic")return;
   for(const market of availableSyntheticMarkets())refreshLiveIntelligence(market,true);
-  if(signalModal&&!signalModal.hidden)renderSelected();
+  if(payload&&liveValidationIsFresh())render();
+  else if(signalModal&&!signalModal.hidden)renderSelected();
 },1000);
 setInterval(runMinuteValidationCycle,60000);
 window.addEventListener("resize",()=>renderRealtimeCandles(selectedSignalRow()));
