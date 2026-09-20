@@ -23,6 +23,9 @@ const liveCandles=new Map();
 const liveCandleSeries=new Map();
 const chartHistoryLoadedAt=new Map();
 const chartHistoryLoading=new Map();
+const liveIntelligenceState=new Map();
+const liveIntelligenceLastRun=new Map();
+let liveHistoryBootstrapped=false;
 let liveUiFrame=0;
 let liveReconnectTimer=null;
 let marketFamily="synthetic";
@@ -308,7 +311,7 @@ function setMarketFamily(family){
   liveQuote=null;
   renderIndexFamilyFilter();
   fillMarketSelect();
-  if(family==="synthetic")connectLivePrice();else if(liveSocket){liveSocket.close();liveSocket=null;}
+  if(family==="synthetic"){connectLivePrice();bootstrapLiveIntelligenceHistory();}else if(liveSocket){liveSocket.close();liveSocket=null;}
   render();
 }
 
@@ -606,7 +609,7 @@ function resultCard(row,fresh){
   const live=liveScannerState(row);
   card.dataset.liveMarket=row.market;
   card.dataset.liveMode=row.mode;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${state.stale?"":setupMarker}${state.stale?"":pipsMini}</div><span class="signal ${signalClass(state.verdict)}">${state.verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${state.stale?"wait":detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${state.stale?"ANALYSE IA EN ATTENTE":status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${state.stale?"":setupMarker}${state.stale?"":pipsMini}</div><span class="signal ${signalClass(state.verdict)}">${state.verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div><div class="live-intelligence-mini wait" data-live-intelligence>Live IA: synchronisation…</div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${state.stale?"wait":detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${state.stale?"ANALYSE IA EN ATTENTE":status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
   card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=liveQuotes.get(row.market)?{symbol:symbols[row.market],price:liveQuotes.get(row.market).price}:null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();openSignalModal(row.market);loadChartHistory(row.market,row);};
   return card;
 }
@@ -657,6 +660,7 @@ function renderSelected(){
   renderLiveEntry(row);
   renderTradeAction(row);
   renderPredictionPanel(row);
+  renderLiveIntelligencePanel(row);
   renderVisualTradePlan(row);
   renderRealtimeCandles(row);
   $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
@@ -1062,6 +1066,7 @@ function updateLiveCandle(market,price,epoch=Date.now()/1000){
   // True trading timeframes used by Sera.
   updateSeriesCandle(market,"M15",900,price,ts);
   updateSeriesCandle(market,"H1",3600,price,ts);
+  updateSeriesCandle(market,"H4",14400,price,ts);
 }
 
 function recordLiveTick(market,price,epoch){
@@ -1115,6 +1120,154 @@ function updateLiveScannerDom(market){
     const motion=card.querySelector("[data-live-motion]");
     if(motion)motion.textContent=live.label;
   });
+}
+
+function emaSeries(values,period){
+  if(!values.length)return 0;
+  const k=2/(period+1);
+  let value=values[0];
+  for(let i=1;i<values.length;i++)value=value+k*(values[i]-value);
+  return value;
+}
+
+function analyzeLiveCandles(candles){
+  if(!Array.isArray(candles)||candles.length<30)return null;
+  const rows=candles.slice(-80).map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close})).filter(c=>Object.values(c).every(Number.isFinite));
+  if(rows.length<30)return null;
+  const closes=rows.map(c=>c.close),last=rows.at(-1);
+  const ema20=emaSeries(closes.slice(-50),20),ema50=emaSeries(closes,Math.min(50,closes.length));
+
+  const deltas=closes.slice(-15).slice(1).map((v,i)=>v-closes.slice(-15)[i]);
+  const gains=deltas.map(v=>Math.max(v,0)),losses=deltas.map(v=>Math.max(-v,0));
+  const avgGain=gains.reduce((a,b)=>a+b,0)/Math.max(1,gains.length);
+  const avgLoss=losses.reduce((a,b)=>a+b,0)/Math.max(1,losses.length);
+  const rsi=avgLoss===0?100:100-(100/(1+avgGain/avgLoss));
+
+  const tr=rows.slice(-15).map((c,i,arr)=>{
+    const prev=i?arr[i-1].close:c.open;
+    return Math.max(c.high-c.low,Math.abs(c.high-prev),Math.abs(c.low-prev));
+  });
+  const atr=tr.reduce((a,b)=>a+b,0)/Math.max(1,tr.length);
+
+  const ema12=emaSeries(closes.slice(-40),12),ema26=emaSeries(closes.slice(-50),26);
+  const macd=ema12-ema26;
+  const macdHist=[];
+  for(let i=Math.max(26,closes.length-18);i<=closes.length;i++){
+    const sub=closes.slice(0,i);
+    macdHist.push(emaSeries(sub.slice(-40),12)-emaSeries(sub.slice(-50),26));
+  }
+  const signal=emaSeries(macdHist,Math.min(9,macdHist.length));
+  const hist=macd-signal;
+
+  const older=rows.slice(-18,-10),newer=rows.slice(-9,-1);
+  const olderHigh=Math.max(...older.map(c=>c.high)),olderLow=Math.min(...older.map(c=>c.low));
+  const newerHigh=Math.max(...newer.map(c=>c.high)),newerLow=Math.min(...newer.map(c=>c.low));
+  const hhhl=newerHigh>olderHigh&&newerLow>olderLow;
+  const lhll=newerHigh<olderHigh&&newerLow<olderLow;
+
+  let side="NEUTRE",score=50;
+  const bullishVotes=[last.close>ema20,ema20>ema50,rsi>52,hist>0,hhhl].filter(Boolean).length;
+  const bearishVotes=[last.close<ema20,ema20<ema50,rsi<48,hist<0,lhll].filter(Boolean).length;
+  if(bullishVotes>=3&&bullishVotes>bearishVotes){side="BUY";score=50+bullishVotes*9-bearishVotes*4;}
+  else if(bearishVotes>=3&&bearishVotes>bullishVotes){side="SELL";score=50+bearishVotes*9-bullishVotes*4;}
+  else score=45+Math.max(bullishVotes,bearishVotes)*5;
+
+  return{
+    side,
+    score:Math.round(Math.max(0,Math.min(95,score))),
+    ema20,ema50,rsi,atr,macd_histogram:hist,
+    structure:hhhl?"HH/HL":lhll?"LH/LL":"MIXTE",
+    price:last.close
+  };
+}
+
+function computeLiveIntelligence(market,mode){
+  const entryTf=mode==="swing"?"H1":"M15";
+  const confirmTf=mode==="swing"?"H4":"H1";
+  const entry=analyzeLiveCandles(liveCandleSeries.get(`${market}:${entryTf}`)||[]);
+  const confirmation=analyzeLiveCandles(liveCandleSeries.get(`${market}:${confirmTf}`)||[]);
+  if(!entry||!confirmation)return null;
+  const aligned=entry.side!=="NEUTRE"&&entry.side===confirmation.side;
+  const side=aligned?entry.side:"NEUTRE";
+  const score=Math.round(entry.score*.58+confirmation.score*.42-(aligned?0:12));
+  return{
+    market,mode,entry_tf:entryTf,confirmation_tf:confirmTf,
+    side,score:Math.max(0,Math.min(95,score)),aligned,
+    entry,confirmation,updated_at:Date.now()
+  };
+}
+
+function refreshLiveIntelligence(market,force=false){
+  const now=Date.now(),last=Number(liveIntelligenceLastRun.get(market)||0);
+  if(!force&&now-last<1000)return;
+  liveIntelligenceLastRun.set(market,now);
+  for(const mode of ["day","swing"]){
+    const state=computeLiveIntelligence(market,mode);
+    if(state)liveIntelligenceState.set(`${market}:${mode}`,state);
+  }
+  updateLiveIntelligenceDom(market);
+}
+
+function liveIntelligenceFor(row){
+  if(!row)return null;
+  return liveIntelligenceState.get(`${row.market}:${row.mode||selectedMode}`)||null;
+}
+
+function updateLiveIntelligenceDom(market){
+  document.querySelectorAll(`.result-card[data-live-market="${CSS.escape(market)}"]`).forEach(card=>{
+    const row=payload?.markets?.find(r=>r.market===market&&r.mode===card.dataset.liveMode);
+    const state=liveIntelligenceFor(row);
+    const el=card.querySelector("[data-live-intelligence]");
+    if(!el)return;
+    if(!state){el.textContent="Live IA: synchronisation…";el.className="live-intelligence-mini wait";return;}
+    el.textContent=`Live IA ${state.side} · ${state.score}% · ${state.entry_tf}/${state.confirmation_tf}`;
+    el.className=`live-intelligence-mini ${state.side.toLowerCase()}`;
+  });
+
+  if(market===selected)renderLiveIntelligencePanel(selectedSignalRow());
+}
+
+function renderLiveIntelligencePanel(row){
+  const panel=$("liveIntelligencePanel");
+  if(!panel)return;
+  const state=liveIntelligenceFor(row);
+  if(!state){panel.className="live-intelligence-panel wait";$("liveIntelligenceBias").textContent="SYNC…";$("liveIntelligenceScore").textContent="—";$("liveIntelligenceTf").textContent="—";$("liveIntelligenceDetail").textContent="Chargement des bougies live…";return;}
+  panel.className=`live-intelligence-panel ${state.side.toLowerCase()}`;
+  $("liveIntelligenceBias").textContent=state.side;
+  $("liveIntelligenceScore").textContent=`${state.score}%`;
+  $("liveIntelligenceTf").textContent=`${state.entry_tf} + ${state.confirmation_tf}`;
+  $("liveIntelligenceDetail").textContent=`RSI ${state.entry.rsi.toFixed(1)} · MACD ${state.entry.macd_histogram>=0?"↑":"↓"} · Structure ${state.entry.structure} · ${state.aligned?"aligné":"confirmation divergente"}`;
+}
+
+function bootstrapLiveIntelligenceHistory(){
+  if(liveHistoryBootstrapped||marketFamily!=="synthetic")return;
+  liveHistoryBootstrapped=true;
+  const requests=new Map();
+  let req=3100,received=0;
+  const total=availableSyntheticMarkets().length*3;
+  const ws=new WebSocket("wss://api.derivws.com/trading/v1/options/ws/public");
+  const timer=setTimeout(()=>{try{ws.close();}catch{}},20000);
+  ws.addEventListener("open",()=>{
+    for(const market of availableSyntheticMarkets()){
+      const symbol=symbols[market];
+      if(!symbol)continue;
+      for(const [tf,granularity] of [["M15",900],["H1",3600],["H4",14400]]){
+        const id=++req;requests.set(id,{market,tf});
+        ws.send(JSON.stringify({ticks_history:symbol,style:"candles",granularity,count:90,end:"latest",adjust_start_time:1,req_id:id}));
+      }
+    }
+  });
+  ws.addEventListener("message",event=>{
+    let message;try{message=JSON.parse(event.data);}catch{return;}
+    if(!Array.isArray(message.candles))return;
+    const meta=requests.get(Number(message.req_id??message.echo_req?.req_id));
+    if(!meta)return;
+    mergeChartHistory(meta.market,meta.tf,message.candles);
+    received+=1;
+    refreshLiveIntelligence(meta.market,true);
+    if(received>=total){clearTimeout(timer);try{ws.close();}catch{}}
+  });
+  ws.addEventListener("error",()=>{clearTimeout(timer);try{ws.close();}catch{}});
 }
 
 function chartSpecForRow(row){
@@ -1431,6 +1584,7 @@ function scheduleLiveUi(market){
         renderLiveEntry(row);
         renderTradeAction(row);
         renderPredictionPanel(row);
+        renderLiveIntelligencePanel(row);
         renderVisualTradePlan(row);
         renderRealtimeCandles(row);
       }
@@ -1467,6 +1621,7 @@ function connectLivePrice(){
       liveQuotes.set(market,{price,epoch,symbol});
       updateMetaClocks();
       recordLiveTick(market,price,epoch);
+      refreshLiveIntelligence(market);
       scheduleLiveUi(market);
       setMarketStatus("Deriv : Live temps réel","live");
     });
@@ -1532,6 +1687,7 @@ renderTrendWatchUi();
 renderReadyAlerts();
 loadSignals();
 connectLivePrice();
+bootstrapLiveIntelligenceHistory();
 setInterval(()=>loadSignals(false),20000);
 setInterval(updateMetaClocks,1000);
 window.addEventListener("resize",()=>renderRealtimeCandles(selectedSignalRow()));
