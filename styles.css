@@ -364,3 +364,39 @@
     overflow-y:hidden!important;
   }
 }
+
+
+/* Ready-position notification bell */
+.topbar-actions{display:flex;align-items:center;gap:10px;margin-left:auto}
+.signal-notification-center{position:relative;flex:0 0 auto}
+.signal-bell{position:relative;width:40px;height:40px;border:1px solid rgba(103,232,249,.16);border-radius:12px;background:rgba(10,24,39,.82);display:grid;place-items:center;cursor:pointer;color:#d8e8f7}
+.signal-bell:hover,.signal-bell:focus-visible{border-color:rgba(103,232,249,.38);outline:none}
+.signal-bell.has-alerts{box-shadow:0 0 0 1px rgba(77,163,255,.08),0 0 18px rgba(77,163,255,.12)}
+.signal-bell-icon{font-size:17px;line-height:1}
+.signal-bell-badge{position:absolute;right:-5px;top:-6px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#ff5f76;color:white;border:2px solid #07111d;font:900 9px "JetBrains Mono",monospace;line-height:15px;text-align:center}
+.signal-notification-panel{position:absolute;right:0;top:48px;z-index:1000;width:min(360px,calc(100vw - 24px));max-height:430px;overflow:hidden;border:1px solid rgba(103,232,249,.18);border-radius:14px;background:rgba(7,17,29,.98);box-shadow:0 18px 50px rgba(0,0,0,.45);backdrop-filter:blur(16px)}
+.signal-notification-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;border-bottom:1px solid rgba(255,255,255,.07)}
+.signal-notification-head small{display:block;color:#72859b;font-size:7px;text-transform:uppercase;letter-spacing:.09em}
+.signal-notification-head strong{display:block;margin-top:2px;font-size:11px;color:#e3effa}
+.signal-notification-head button{border:0;background:none;color:#67e8f9;font:800 8px "DM Sans",sans-serif;cursor:pointer}
+.signal-notification-list{max-height:360px;overflow:auto;padding:6px}
+.signal-notification-empty{margin:0;padding:16px;color:#7f91a6;font-size:9px;text-align:center}
+.signal-notification-item{width:100%;display:grid;grid-template-columns:9px 1fr auto;align-items:center;gap:8px;text-align:left;border:0;border-bottom:1px solid rgba(255,255,255,.045);background:transparent;padding:10px 8px;color:#c8d8e8;cursor:pointer}
+.signal-notification-item:last-child{border-bottom:0}
+.signal-notification-item:hover{background:rgba(255,255,255,.035)}
+.signal-notification-dot{width:7px;height:7px;border-radius:50%;background:#718196}
+.signal-notification-item.buy .signal-notification-dot{background:#4da3ff}
+.signal-notification-item.sell .signal-notification-dot{background:#ff5f76}
+.signal-notification-item.unread{background:rgba(77,163,255,.045)}
+.signal-notification-item.unread .signal-notification-dot{box-shadow:0 0 9px currentColor}
+.signal-notification-copy{min-width:0}
+.signal-notification-copy strong{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.signal-notification-copy small{display:block;margin-top:3px;color:#7d90a6;font:700 7px "JetBrains Mono",monospace}
+.signal-notification-item time{font:700 7px "JetBrains Mono",monospace;color:#6f8195;white-space:nowrap}
+@media(max-width:720px){
+  .topbar-actions{gap:6px}
+  .signal-bell{width:36px;height:36px;border-radius:10px}
+  .signal-bell-icon{font-size:15px}
+  .signal-notification-panel{position:fixed;right:10px;left:10px;top:86px;width:auto;max-height:60vh}
+  .signal-notification-list{max-height:calc(60vh - 58px)}
+}
