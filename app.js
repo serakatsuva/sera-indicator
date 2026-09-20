@@ -1271,6 +1271,46 @@ function liveIntelligenceFor(row){
   return liveIntelligenceState.get(`${row.market}:${row.mode||selectedMode}`)||null;
 }
 
+function liveFamilyContextFor(row){
+  if(!row)return null;
+  const family=marketFamilyKey(row.market,row);
+  const mode=row.mode||selectedMode;
+  const candidates=[];
+  for(const [key,state] of liveIntelligenceState.entries()){
+    const suffix=":"+mode;
+    if(!key.endsWith(suffix))continue;
+    const market=key.slice(0,-suffix.length);
+    const sourceRow=payload?.markets?.find(r=>r.market===market&&r.mode===mode)||{market,family:appMarketFamily(market)};
+    if(marketFamilyKey(market,sourceRow)!==family)continue;
+    if(state?.side==="BUY"||state?.side==="SELL")candidates.push(state);
+  }
+  if(!candidates.length)return null;
+  const buy=candidates.filter(s=>s.side==="BUY");
+  const sell=candidates.filter(s=>s.side==="SELL");
+  const dominant=buy.length===sell.length?"NEUTRE":buy.length>sell.length?"BUY":"SELL";
+  const dominantCount=Math.max(buy.length,sell.length);
+  const consensus=Math.round((dominantCount/candidates.length)*100);
+  const own=liveIntelligenceFor(row);
+  return {
+    family,mode,members:candidates.length,dominant_side:dominant,consensus_percent:consensus,
+    agrees:Boolean(own&&(own.side==="BUY"||own.side==="SELL")&&own.side===dominant&&consensus>=55),
+    contradicts:Boolean(own&&(own.side==="BUY"||own.side==="SELL")&&dominant!=="NEUTRE"&&own.side!==dominant&&consensus>=70),
+    status:candidates.length<2?"INSUFFICIENT":consensus>=70?"STRONG":"MIXED"
+  };
+}
+
+function liveValidationFor(row){
+  const intel=liveIntelligenceFor(row);
+  if(!intel)return null;
+  const family=liveFamilyContextFor(row);
+  let score=Number(intel.score)||0;
+  if(family?.agrees&&family.consensus_percent>=70)score+=4;
+  if(family?.contradicts)score-=8;
+  score=Math.max(0,Math.min(95,Math.round(score)));
+  let state="WAIT";
+  if(intel.aligned&&!family?.contradicts&&score>=78&&(intel.side==="BUY"||intel.side==="SELL"))state=intel.side;
+  return {state,score,intel,family,updated_at:Date.now()};
+}
 function updateLiveIntelligenceDom(market){
   document.querySelectorAll(`.result-card[data-live-market="${CSS.escape(market)}"]`).forEach(card=>{
     const row=payload?.markets?.find(r=>r.market===market&&r.mode===card.dataset.liveMode);
@@ -1278,7 +1318,10 @@ function updateLiveIntelligenceDom(market){
     const el=card.querySelector("[data-live-intelligence]");
     if(!el)return;
     if(!state){el.textContent="Live IA: synchronisation…";el.className="live-intelligence-mini wait";return;}
-    el.textContent=`Live IA ${state.side} · ${state.score}% · ${state.entry_tf}/${state.confirmation_tf}`;
+    const validation=liveValidationFor(row);
+    const family=validation?.family;
+    const familyText=family?` · Famille ${family.dominant_side} ${family.consensus_percent}%`:"";
+    el.textContent=`Live IA ${state.side} · ${state.score}% · ${state.entry_tf}/${state.confirmation_tf}${familyText}`;
     el.className=`live-intelligence-mini ${state.side.toLowerCase()}`;
   });
 
@@ -1294,7 +1337,16 @@ function renderLiveIntelligencePanel(row){
   $("liveIntelligenceBias").textContent=state.side;
   $("liveIntelligenceScore").textContent=`${state.score}%`;
   $("liveIntelligenceTf").textContent=`${state.entry_tf} + ${state.confirmation_tf}`;
-  $("liveIntelligenceDetail").textContent=`RSI ${state.entry.rsi.toFixed(1)} · MACD ${state.entry.macd_histogram>=0?"↑":"↓"} · Structure ${state.entry.structure} · ${state.aligned?"aligné":"confirmation divergente"}`;
+  const validation=liveValidationFor(row);
+  const family=validation?.family;
+  const familyText=family?` · Famille ${family.dominant_side} ${family.consensus_percent}% (${family.members})`:" · Famille en synchronisation";
+  $("liveIntelligenceDetail").textContent=`RSI ${state.entry.rsi.toFixed(1)} · MACD ${state.entry.macd_histogram>=0?"↑":"↓"} · Structure ${state.entry.structure} · ${state.aligned?"aligné":"confirmation divergente"}${familyText}`;
+  if($("liveValidationState")){
+    $("liveValidationState").textContent=validation?.state||"WAIT";
+    $("liveValidationScore").textContent=validation?`${validation.score}%`:"—";
+    $("liveFamilyConsensus").textContent=family?`${family.dominant_side} ${family.consensus_percent}%`:"SYNC…";
+    $("liveValidationBox").className=`live-validation-box ${String(validation?.state||"WAIT").toLowerCase()}`;
+  }
 }
 
 function bootstrapLiveIntelligenceHistory(){
@@ -1750,5 +1802,10 @@ discoverAppDerivMarkets().then(()=>{
 });
 setInterval(()=>loadSignals(false),20000);
 setInterval(updateMetaClocks,1000);
+setInterval(()=>{
+  if(marketFamily!=="synthetic")return;
+  for(const market of availableSyntheticMarkets())refreshLiveIntelligence(market,true);
+  if(signalModal&&!signalModal.hidden)renderSelected();
+},1000);
 window.addEventListener("resize",()=>renderRealtimeCandles(selectedSignalRow()));
 setInterval(()=>{if(marketFamily==="synthetic"&&(!liveSocket||liveSocket.readyState>1))connectLivePrice();},5000);
