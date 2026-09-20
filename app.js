@@ -302,9 +302,9 @@ function familyLabel(key){
 
 function availableSyntheticMarkets(){
   const fromPayload=hasDerivResults()
-    ?[...new Set(payload.markets.map(row=>row.market).filter(Boolean))]
-    :derivMarkets;
-  return fromPayload.length?fromPayload:derivMarkets;
+    ?payload.markets.map(row=>row.market).filter(Boolean)
+    :[];
+  return [...new Set([...derivMarkets,...fromPayload])].sort((a,b)=>a.localeCompare(b));
 }
 
 function marketsForIndexFamily(){
