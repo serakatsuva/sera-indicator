@@ -45,10 +45,10 @@ function marketSpikeBias(name){
 }
 
 function looksLikeSynthetic(item){
-  const market=String(item?.market||'').toLowerCase();
-  const submarket=String(item?.submarket||'').toLowerCase();
-  const subgroup=String(item?.subgroup||'').toLowerCase();
-  const name=String(item?.display_name||item?.symbol||'').toLowerCase();
+  const market=String(item?.market||item?.market_type||'').toLowerCase();
+  const submarket=String(item?.submarket||item?.submarket_type||'').toLowerCase();
+  const subgroup=String(item?.subgroup||item?.subgroup_type||'').toLowerCase();
+  const name=String(item?.underlying_symbol_name||item?.display_name||item?.underlying_symbol||item?.symbol||'').toLowerCase();
   if(market.includes('synthetic')||market.includes('derived'))return true;
   if(submarket.includes('synthetic')||submarket.includes('random')||submarket.includes('continuous'))return true;
   if(subgroup.includes('synthetic')||subgroup.includes('derived'))return true;
@@ -72,12 +72,16 @@ async function discoverDerivMarkets(){
       if(!Array.isArray(message.active_symbols))return;
       const discovered=message.active_symbols
         .filter(looksLikeSynthetic)
-        .map(item=>({
-          market:String(item.display_name||item.symbol),
-          symbol:String(item.symbol||''),
-          family:marketFamilyFromName(item.display_name||item.symbol),
-          spikeBias:marketSpikeBias(item.display_name||item.symbol)
-        }))
+        .map(item=>{
+          const marketName=String(item.underlying_symbol_name||item.display_name||item.underlying_symbol||item.symbol||'');
+          const symbol=String(item.underlying_symbol||item.symbol||'');
+          return {
+            market:marketName,
+            symbol,
+            family:marketFamilyFromName(marketName),
+            spikeBias:marketSpikeBias(marketName)
+          };
+        })
         .filter(item=>item.market&&item.symbol)
         .filter((item,index,array)=>array.findIndex(x=>x.symbol===item.symbol)===index)
         .sort((a,b)=>a.market.localeCompare(b.market));
