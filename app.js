@@ -302,11 +302,15 @@ async function loadSignals(manual=false){
   const button=$("refreshButton");
   if(manual){button.disabled=true;button.innerHTML="<span>↻</span> Actualisation…";}
   try{
-    const response=await fetch(`./data/signals.json?t=${Date.now()}`,{cache:"no-store"});
+    const stamp=Date.now();
+    const remote=`https://raw.githubusercontent.com/serakatsuva/sera-indicator/main/data/signals.json?t=${stamp}`;
+    const local=`./data/signals.json?t=${stamp}`;
+    let response=await fetch(remote,{cache:"no-store"});
+    if(!response.ok)response=await fetch(local,{cache:"no-store"});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     payload=await response.json();
   }catch{
-    payload={ok:false,status:"load_error",source_broker:"Deriv",note:"Impossible de charger les résultats IA."};
+    payload={ok:false,status:"load_error",source_broker:"Deriv",note:"Impossible de charger les derniers résultats IA."};
   }finally{
     button.disabled=false;
     button.innerHTML="<span>↻</span> Actualiser les signaux";
@@ -320,7 +324,7 @@ function render(){
   results.innerHTML="";
   $("updatedAt").textContent=payload?.updated_at?new Date(payload.updated_at).toLocaleString("fr-FR",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—";
   updateMetaClocks();
-  $("sourceName").textContent=payload?.source||"Deriv WebSocket";
+  $("sourceName").textContent=(payload?.source||"Deriv WebSocket")+" · GitHub live";
   $("modelName").textContent=payload?.model||"Sera Autonomous Engine";
   renderIndexFamilyFilter();
   renderTrendWatchUi();
