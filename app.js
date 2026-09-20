@@ -560,7 +560,7 @@ function resultCard(row,fresh){
   const live=liveScannerState(row);
   card.dataset.liveMarket=row.market;
   card.dataset.liveMode=row.mode;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${setupMarker}${pipsMini}</div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><span><i></i> LIVE</span><b data-live-price>${live.price}</b><strong data-live-motion>${escapeHtml(live.label)}</strong></div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${setupMarker}${pipsMini}</div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
   card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=liveQuotes.get(row.market)?{symbol:symbols[row.market],price:liveQuotes.get(row.market).price}:null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();openSignalModal(row.market);loadChartHistory(row.market,row);};
   return card;
 }
@@ -1043,15 +1043,15 @@ function liveScannerState(row){
   const proposal=liveEntryProposal(row);
 
   if(proposal?.live_state==="IN_ENTRY_ZONE"&&hasDetectedSetup(row))
-    return{price:fmtEntry(latest),label:`ZONE ${side} · tick live`,cls:side.toLowerCase(),deltaPct,momentum};
+    return{price:fmtEntry(latest),label:`ZONE ${side}\nTick live`,cls:side.toLowerCase(),deltaPct,momentum};
   if(Math.abs(momentum)>=0.05||rangeAtr>=0.22){
     const rising=momentum>0;
     const aligned=(side==="BUY"&&rising)||(side==="SELL"&&!rising);
-    return{price:fmtEntry(latest),label:`${aligned?"ACCÉLÉRATION SETUP":"MOUVEMENT FORT"} ${rising?"↑":"↓"}`,cls:aligned?side.toLowerCase():"watch",deltaPct,momentum};
+    return{price:fmtEntry(latest),label:`${aligned?"ACCÉLÉRATION":"MOUVEMENT FORT"} ${rising?"↑":"↓"}`,cls:aligned?side.toLowerCase():"watch",deltaPct,momentum};
   }
   if(Math.abs(deltaPct)>=0.02)
     return{price:fmtEntry(latest),label:`MOUVEMENT ${deltaPct>0?"↑":"↓"} ${Math.abs(deltaPct).toFixed(3)}%`,cls:"watch",deltaPct,momentum};
-  return{price:fmtEntry(latest),label:"Bougie en formation",cls:"live",deltaPct,momentum};
+  return{price:fmtEntry(latest),label:"BOUGIE EN FORMATION",cls:"live",deltaPct,momentum};
 }
 
 function updateLiveScannerDom(market){
