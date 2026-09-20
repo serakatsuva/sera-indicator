@@ -25,10 +25,10 @@ function appMarketFamily(name){
 }
 
 function appLooksSynthetic(item){
-  const market=String(item?.market||"").toLowerCase();
-  const submarket=String(item?.submarket||"").toLowerCase();
-  const subgroup=String(item?.subgroup||"").toLowerCase();
-  const name=String(item?.display_name||item?.symbol||"").toLowerCase();
+  const market=String(item?.market||item?.market_type||"").toLowerCase();
+  const submarket=String(item?.submarket||item?.submarket_type||"").toLowerCase();
+  const subgroup=String(item?.subgroup||item?.subgroup_type||"").toLowerCase();
+  const name=String(item?.underlying_symbol_name||item?.display_name||item?.underlying_symbol||item?.symbol||"").toLowerCase();
   return market.includes("synthetic")||market.includes("derived")||submarket.includes("synthetic")||subgroup.includes("synthetic")||
     /(boom|crash|volatility|jump|step|range break|dex|drift switch|volswitch|high frequency vol|exponential growth|vol over )/.test(name);
 }
@@ -43,7 +43,10 @@ function discoverAppDerivMarkets(){
     ws.addEventListener("message",event=>{
       let message;try{message=JSON.parse(event.data);}catch{return;}
       if(!Array.isArray(message.active_symbols))return;
-      const found=message.active_symbols.filter(appLooksSynthetic).map(item=>({name:String(item.display_name||item.symbol),symbol:String(item.symbol||"")})).filter(x=>x.name&&x.symbol);
+      const found=message.active_symbols.filter(appLooksSynthetic).map(item=>({
+        name:String(item.underlying_symbol_name||item.display_name||item.underlying_symbol||item.symbol||""),
+        symbol:String(item.underlying_symbol||item.symbol||"")
+      })).filter(x=>x.name&&x.symbol);
       if(found.length){
         derivMarkets=[...new Set(found.map(x=>x.name))].sort((a,b)=>a.localeCompare(b));
         for(const item of found)symbols[item.name]=item.symbol;
