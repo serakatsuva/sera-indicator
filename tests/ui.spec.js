@@ -167,3 +167,19 @@ test('ready notification logic excludes WAIT signals', async ({ page }) => {
     expect(row.execution).toBe('EXECUTE_NOW');
   }
 });
+
+
+test('stale AI analysis is neutralized while live prices can continue', async ({ page }) => {
+  const state = await page.evaluate(() => {
+    const original = payload.updated_at;
+    payload.updated_at = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const row = payload.markets?.find(r => r.final_verdict === 'BUY' || r.final_verdict === 'SELL') || payload.markets?.[0];
+    const action = simpleActionState(row);
+    const prediction = predictionState(row);
+    payload.updated_at = original;
+    return { action, prediction };
+  });
+  expect(state.action.label).toBe('WAIT');
+  expect(state.action.detail).toContain('ANALYSE IA EN ATTENTE');
+  expect(state.prediction.prediction).toBe('NEUTRE');
+});
