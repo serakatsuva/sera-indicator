@@ -525,3 +525,41 @@
 @media(max-width:420px){
   .visual-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* Keep BUY / SELL / WAIT visible without covering candles */
+.trade-action-box.trade-action-below-chart{
+  position:relative!important;
+  right:auto!important;
+  bottom:auto!important;
+  top:auto!important;
+  left:auto!important;
+  margin:8px 14px 0!important;
+  width:calc(100% - 28px)!important;
+  min-width:0!important;
+  max-width:none!important;
+  justify-content:flex-start!important;
+  border-radius:10px!important;
+  padding:8px 10px!important;
+  box-sizing:border-box!important;
+  z-index:1!important;
+}
+.trade-action-box.trade-action-below-chart strong{
+  flex:0 0 auto;
+}
+.trade-action-box.trade-action-below-chart span{
+  min-width:0;
+  white-space:normal!important;
+  overflow-wrap:anywhere;
+}
+@media(max-width:560px){
+  .trade-action-box.trade-action-below-chart{
+    margin:7px 10px 0!important;
+    width:calc(100% - 20px)!important;
+    min-width:0!important;
+    padding:7px 9px!important;
+    gap:7px!important;
+  }
+  .trade-action-box.trade-action-below-chart strong{font-size:9px!important}
+  .trade-action-box.trade-action-below-chart span{font-size:6.5px!important;line-height:1.35!important}
+}
