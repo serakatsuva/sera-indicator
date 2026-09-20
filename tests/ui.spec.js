@@ -289,3 +289,20 @@ test('app no longer depends only on the original 11 hardcoded markets', async ({
   expect(source).toContain('active_symbols');
   expect(source).toContain('discoverAppDerivMarkets');
 });
+
+
+test('new Deriv active_symbols schema maps Step indices correctly', async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const item = {
+      underlying_symbol: 'stpRNG',
+      underlying_symbol_name: 'Step Index 200',
+      market_type: 'derived'
+    };
+    return {
+      synthetic: appLooksSynthetic(item),
+      family: appMarketFamily(item.underlying_symbol_name)
+    };
+  });
+  expect(result.synthetic).toBeTruthy();
+  expect(result.family).toBe('step');
+});
