@@ -326,3 +326,12 @@ test('family context is exposed in analyzed signals when available', async ({ pa
   expect(source).toContain('family_context');
   expect(source).toContain('Famille ');
 });
+
+
+test("signal detail exposes realtime validation and family consensus boxes", async ({ page }) => {
+  await page.locator(".result-card").first().click();
+  await expect(page.locator("#signalModal")).toBeVisible();
+  await expect(page.locator("#liveValidationBox")).toBeVisible();
+  await expect(page.locator("#liveValidationState")).toBeVisible();
+  await expect(page.locator("#liveFamilyConsensus")).toBeVisible();
+});
