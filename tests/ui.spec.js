@@ -201,3 +201,29 @@ test('Tous mode shows one card per market while Day and Swing remain separate fi
   const swingModes = await page.locator('.result-card').evaluateAll(cards => cards.map(c => c.dataset.liveMode));
   expect(swingModes.every(mode => mode === 'swing')).toBeTruthy();
 });
+
+
+test('detected setup detail can show visual risk reward plan with timeframe', async ({ page }) => {
+  const card = page.locator('.result-card').filter({has: page.locator('.setup-side.buy, .setup-side.sell')}).first();
+  if (await card.count()) {
+    await card.click();
+    await expect(page.locator('#signalModal')).toBeVisible();
+    await expect(page.locator('#visualTradePlan')).toBeVisible();
+    await expect(page.locator('#visualPlanTf')).toHaveText(/M15 \/ H1|H1 \/ H4/);
+    await expect(page.locator('#visualPlanSide')).toHaveText(/BUY|SELL/);
+    await expect(page.locator('#visualPlanRR')).toHaveText(/1 : /);
+  }
+});
+
+test('visual trade plan uses TP3 as primary displayed target', async ({ page }) => {
+  const info = await page.evaluate(() => {
+    const row = payload?.markets?.find(r => (r.setup_detected || r.decision_engine?.setup_detected) && (r.projected_levels?.tp3 || r.levels?.tp3));
+    if (!row) return null;
+    const plan = visualTradePlan(row);
+    return plan && { target: plan.target, tp3: plan.tp3, side: plan.side };
+  });
+  if (info) {
+    expect(info.target).toBe(info.tp3);
+    expect(['BUY','SELL']).toContain(info.side);
+  }
+});
