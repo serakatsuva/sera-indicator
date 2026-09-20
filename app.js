@@ -1,4 +1,4 @@
-const derivMarkets=[
+let derivMarkets=[
   "Boom 300 Index","Boom 500 Index","Boom 1000 Index",
   "Crash 300 Index","Crash 500 Index","Crash 1000 Index",
   "Volatility 10 Index","Volatility 25 Index","Volatility 50 Index",
@@ -10,6 +10,52 @@ const symbols={
   "Volatility 10 Index":"R_10","Volatility 25 Index":"R_25","Volatility 50 Index":"R_50",
   "Volatility 75 Index":"R_75","Volatility 100 Index":"R_100"
 };
+function appMarketFamily(name){
+  const n=String(name||"").toLowerCase();
+  if(n.includes("boom"))return"boom";
+  if(n.includes("crash"))return"crash";
+  if(n.includes("jump"))return"jump";
+  if(n.includes("step"))return"step";
+  if(n.includes("range break"))return"range";
+  if(n.includes("dex"))return"dex";
+  if(n.includes("drift switch"))return"drift";
+  if(n.includes("volswitch"))return"volswitch";
+  if(n.includes("volatility")||n.includes("high frequency vol")||n.includes("vol over "))return n.includes("(1s)")?"volatility1s":"volatility";
+  return"other";
+}
+
+function appLooksSynthetic(item){
+  const market=String(item?.market||"").toLowerCase();
+  const submarket=String(item?.submarket||"").toLowerCase();
+  const subgroup=String(item?.subgroup||"").toLowerCase();
+  const name=String(item?.display_name||item?.symbol||"").toLowerCase();
+  return market.includes("synthetic")||market.includes("derived")||submarket.includes("synthetic")||subgroup.includes("synthetic")||
+    /(boom|crash|volatility|jump|step|range break|dex|drift switch|volswitch|high frequency vol|exponential growth|vol over )/.test(name);
+}
+
+function discoverAppDerivMarkets(){
+  return new Promise(resolve=>{
+    const ws=new WebSocket("wss://api.derivws.com/trading/v1/options/ws/public");
+    let settled=false;
+    const done=()=>{if(settled)return;settled=true;clearTimeout(timer);try{ws.close();}catch{}resolve(derivMarkets);};
+    const timer=setTimeout(done,10000);
+    ws.addEventListener("open",()=>ws.send(JSON.stringify({active_symbols:"brief",req_id:42})));
+    ws.addEventListener("message",event=>{
+      let message;try{message=JSON.parse(event.data);}catch{return;}
+      if(!Array.isArray(message.active_symbols))return;
+      const found=message.active_symbols.filter(appLooksSynthetic).map(item=>({name:String(item.display_name||item.symbol),symbol:String(item.symbol||"")})).filter(x=>x.name&&x.symbol);
+      if(found.length){
+        derivMarkets=[...new Set(found.map(x=>x.name))].sort((a,b)=>a.localeCompare(b));
+        for(const item of found)symbols[item.name]=item.symbol;
+      }
+      renderIndexFamilyFilter();
+      fillMarketSelect();
+      done();
+    });
+    ws.addEventListener("error",done);
+  });
+}
+
 const forexMarkets=["EUR/USD","GBP/USD","USD/JPY","USD/CHF","USD/CAD","AUD/USD","NZD/USD"];
 const forexSymbols={"EUR/USD":"EURUSD","GBP/USD":"GBPUSD","USD/JPY":"USDJPY","USD/CHF":"USDCHF","USD/CAD":"USDCAD","AUD/USD":"AUDUSD","NZD/USD":"NZDUSD"};
 const $=id=>document.getElementById(id);
@@ -236,15 +282,19 @@ function marketFamilyKey(name,row=null){
   const family=String(row?.family||"").toLowerCase();
   if(family==="boom"||/^boom\b/i.test(name))return"boom";
   if(family==="crash"||/^crash\b/i.test(name))return"crash";
-  if(family==="volatility"||/^volatility\b/i.test(name))return"volatility";
+  if(family==="volatility1s"||/volatility.*\(1s\)/i.test(name))return"volatility1s";
+  if(family==="volatility"||/^volatility\b/i.test(name)||/high frequency vol/i.test(name))return"volatility";
   if(family==="jump"||/^jump\b/i.test(name))return"jump";
-  if(family==="step"||/^step\b/i.test(name))return"step";
-  if(family==="range"||/range/i.test(name))return"range";
+  if(family==="step"||/step/i.test(name))return"step";
+  if(family==="range"||/range break/i.test(name))return"range";
+  if(family==="dex"||/^dex\b/i.test(name))return"dex";
+  if(family==="drift"||/drift switch/i.test(name))return"drift";
+  if(family==="volswitch"||/volswitch/i.test(name))return"volswitch";
   return"other";
 }
 
 function familyLabel(key){
-  return({all:"Tous les indices",boom:"Boom",crash:"Crash",volatility:"Volatility",jump:"Jump",step:"Step",range:"Range",other:"Autres"})[key]||key;
+  return({all:"Tous les indices",boom:"Boom",crash:"Crash",volatility:"Volatility",volatility1s:"Volatility 1s",jump:"Jump",step:"Step",range:"Range Break",dex:"DEX",drift:"Drift Switch",volswitch:"VolSwitch",other:"Autres"})[key]||key;
 }
 
 function availableSyntheticMarkets(){
@@ -270,7 +320,7 @@ function renderIndexFamilyFilter(){
   if(marketFamily!=="synthetic")return;
 
   const markets=availableSyntheticMarkets();
-  const keys=["boom","crash","volatility","jump","step","range","other"];
+  const keys=["boom","crash","volatility","volatility1s","jump","step","range","dex","drift","volswitch","other"];
   const counts=Object.fromEntries(keys.map(key=>[key,markets.filter(name=>{
     const row=hasDerivResults()?payload.markets.find(item=>item.market===name):null;
     return marketFamilyKey(name,row)===key;
@@ -1686,8 +1736,10 @@ fillMarketSelect();
 renderTrendWatchUi();
 renderReadyAlerts();
 loadSignals();
-connectLivePrice();
-bootstrapLiveIntelligenceHistory();
+discoverAppDerivMarkets().then(()=>{
+  connectLivePrice();
+  bootstrapLiveIntelligenceHistory();
+});
 setInterval(()=>loadSignals(false),20000);
 setInterval(updateMetaClocks,1000);
 window.addEventListener("resize",()=>renderRealtimeCandles(selectedSignalRow()));
