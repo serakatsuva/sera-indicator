@@ -35,6 +35,9 @@ let trendWatchSound=localStorage.getItem("seraTrendWatchSound")!=="0";
 let trendWatchSnapshots=loadTrendWatchSnapshots();
 let trendWatchLastAlert=localStorage.getItem("seraTrendWatchLastAlert")||"";
 let trendWatchBannerTimer=null;
+let readyAlertHistory=loadReadyAlertHistory();
+let readyAlertSeen=new Set(loadReadyAlertSeen());
+let readyAlertPanelOpen=false;
 let qwenEngine=null;
 let qwenLoading=false;
 let qwenLoadedModel="";
@@ -176,6 +179,23 @@ $("watchOptionsToggle")?.addEventListener("click",()=>{
   button.setAttribute("aria-expanded",String(open));
   button.textContent=open?"Fermer":"Options";
 });
+$("signalBell")?.addEventListener("click",()=>{
+  readyAlertPanelOpen=!readyAlertPanelOpen;
+  renderReadyAlerts();
+  if(readyAlertPanelOpen)markReadyAlertsRead();
+});
+$("markReadyAlertsRead")?.addEventListener("click",event=>{
+  event.stopPropagation();
+  markReadyAlertsRead();
+});
+document.addEventListener("click",event=>{
+  const center=$("signalNotificationCenter");
+  if(!center||center.contains(event.target))return;
+  if(readyAlertPanelOpen){
+    readyAlertPanelOpen=false;
+    renderReadyAlerts();
+  }
+});
 $("qwenAdvisorButton")?.addEventListener("click",runQwenAdvisor);
 $("closeSignalModal")?.addEventListener("click",closeSignalModal);
 $("signalModalBackdrop")?.addEventListener("click",closeSignalModal);
@@ -298,6 +318,121 @@ function fillMarketSelect(){
   $("marketSelect").value=selected;
 }
 
+function loadReadyAlertHistory(){
+  try{
+    const parsed=JSON.parse(localStorage.getItem("seraReadyAlertHistory")||"[]");
+    return Array.isArray(parsed)?parsed.slice(0,30):[];
+  }catch{return[];}
+}
+
+function loadReadyAlertSeen(){
+  try{
+    const parsed=JSON.parse(localStorage.getItem("seraReadyAlertSeen")||"[]");
+    return Array.isArray(parsed)?parsed:[];
+  }catch{return[];}
+}
+
+function saveReadyAlerts(){
+  localStorage.setItem("seraReadyAlertHistory",JSON.stringify(readyAlertHistory.slice(0,30)));
+  localStorage.setItem("seraReadyAlertSeen",JSON.stringify([...readyAlertSeen].slice(-100)));
+}
+
+function readySignalFingerprint(row){
+  const stamp=row?.entry_tf?.closedAt||row?.confirmation_tf?.closedAt||payload?.updated_at||"";
+  return [row?.id||row?.symbol||row?.market,row?.mode,row?.final_verdict,stamp].join("|");
+}
+
+function readySignalRows(){
+  if(!hasDerivResults()||!resultsAreFresh())return[];
+  return payload.markets.filter(row=>{
+    const execution=row?.execution_state||row?.execution?.state;
+    return (row?.final_verdict==="BUY"||row?.final_verdict==="SELL")&&execution==="EXECUTE_NOW";
+  });
+}
+
+function captureReadySignalAlerts(){
+  for(const row of readySignalRows()){
+    const fingerprint=readySignalFingerprint(row);
+    if(readyAlertHistory.some(item=>item.fingerprint===fingerprint))continue;
+    readyAlertHistory.unshift({
+      fingerprint,
+      market:row.market,
+      mode:row.mode||"swing",
+      verdict:row.final_verdict,
+      confidence:Number(row.final_confidence)||0,
+      execution:"EXECUTE_NOW",
+      createdAt:payload?.updated_at||new Date().toISOString(),
+      entry:Number(row?.levels?.entry||row?.setup_entry_plan?.suggested_entry)||null
+    });
+  }
+  readyAlertHistory=readyAlertHistory.slice(0,30);
+  saveReadyAlerts();
+  renderReadyAlerts();
+}
+
+function unreadReadyAlertCount(){
+  return readyAlertHistory.filter(item=>!readyAlertSeen.has(item.fingerprint)).length;
+}
+
+function markReadyAlertsRead(){
+  for(const item of readyAlertHistory)readyAlertSeen.add(item.fingerprint);
+  saveReadyAlerts();
+  renderReadyAlerts();
+}
+
+function openReadyAlert(item){
+  const row=payload?.markets?.find(r=>r.market===item.market&&r.mode===item.mode)
+    ||payload?.markets?.find(r=>r.market===item.market);
+  if(!row)return;
+  selected=row.market;
+  selectedMode=row.mode||"swing";
+  liveQuote=liveQuotes.get(row.market)?{symbol:symbols[row.market],price:liveQuotes.get(row.market).price}:null;
+  ensureMarketOption(row.market);
+  $("marketSelect").value=selected;
+  renderSelected();
+  openSignalModal(row.market);
+  loadChartHistory(row.market,row);
+  readyAlertPanelOpen=false;
+  renderReadyAlerts();
+}
+
+function renderReadyAlerts(){
+  const panel=$("signalNotificationPanel"),button=$("signalBell"),badge=$("signalBellBadge"),list=$("signalNotificationList");
+  if(!panel||!button||!badge||!list)return;
+  panel.hidden=!readyAlertPanelOpen;
+  button.setAttribute("aria-expanded",String(readyAlertPanelOpen));
+  const unread=unreadReadyAlertCount();
+  badge.hidden=unread===0;
+  badge.textContent=unread>99?"99+":String(unread);
+  button.classList.toggle("has-alerts",unread>0);
+
+  if(!readyAlertHistory.length){
+    list.innerHTML='<p class="signal-notification-empty">Aucune nouvelle position prête.</p>';
+    return;
+  }
+  list.innerHTML=readyAlertHistory.slice(0,12).map(item=>{
+    const unreadClass=readyAlertSeen.has(item.fingerprint)?"":" unread";
+    const side=item.verdict==="BUY"?"buy":"sell";
+    const when=item.createdAt?new Date(item.createdAt).toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"";
+    const entry=Number.isFinite(Number(item.entry))?fmtEntry(item.entry):"—";
+    return `<button class="signal-notification-item ${side}${unreadClass}" type="button" data-ready-fingerprint="${escapeHtml(item.fingerprint)}">
+      <span class="signal-notification-dot"></span>
+      <span class="signal-notification-copy"><strong>${escapeHtml(item.market)} · ${item.verdict}</strong><small>${item.mode==="swing"?"Swing H1/H4":"Day M15/H1"} · ${Math.round(item.confidence)}% · Entrée ${entry}</small></span>
+      <time>${escapeHtml(when)}</time>
+    </button>`;
+  }).join("");
+  list.querySelectorAll("[data-ready-fingerprint]").forEach(button=>{
+    button.addEventListener("click",()=>{
+      const item=readyAlertHistory.find(x=>x.fingerprint===button.dataset.readyFingerprint);
+      if(item){
+        readyAlertSeen.add(item.fingerprint);
+        saveReadyAlerts();
+        openReadyAlert(item);
+      }
+    });
+  });
+}
+
 async function loadSignals(manual=false){
   const button=$("refreshButton");
   if(manual){button.disabled=true;button.innerHTML="<span>↻</span> Actualisation…";}
@@ -315,6 +450,7 @@ async function loadSignals(manual=false){
     button.disabled=false;
     button.innerHTML="<span>↻</span> Actualiser les signaux";
     render();
+    captureReadySignalAlerts();
     evaluateTrendWatch();
   }
 }
@@ -1267,6 +1403,7 @@ function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({"&":"
 renderIndexFamilyFilter();
 fillMarketSelect();
 renderTrendWatchUi();
+renderReadyAlerts();
 loadSignals();
 connectLivePrice();
 setInterval(()=>loadSignals(false),20000);
