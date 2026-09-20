@@ -501,3 +501,27 @@
   .result-card .live-scan-top b{max-width:60%!important;font-size:10px!important}
   .result-card .live-scan-motion{font-size:7.5px!important}
 }
+
+
+/* Visual trade-plan summary below realtime chart */
+.visual-trade-plan{margin:10px 14px 0;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.025);padding:10px}
+.visual-trade-plan.buy{border-color:rgba(77,163,255,.22);background:rgba(77,163,255,.035)}
+.visual-trade-plan.sell{border-color:rgba(255,95,118,.22);background:rgba(255,95,118,.03)}
+.visual-plan-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.visual-plan-head small{display:block;color:#708398;font-size:7px;text-transform:uppercase;letter-spacing:.09em}
+.visual-plan-head strong{display:block;margin-top:2px;font-size:10px;color:#dbe8f5}
+.visual-plan-head>span{border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:4px 7px;font:800 7px "JetBrains Mono",monospace;color:#9bb0c6}
+.visual-plan-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:8px}
+.visual-plan-grid>div{min-width:0;border:1px solid rgba(255,255,255,.06);border-radius:8px;background:rgba(0,0,0,.12);padding:7px}
+.visual-plan-grid small{display:block;color:#718399;font-size:6.5px}
+.visual-plan-grid strong{display:block;margin-top:3px;font:800 8px "JetBrains Mono",monospace;color:#d7e5f4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.visual-trade-plan.buy #visualPlanSide{color:#4da3ff}
+.visual-trade-plan.sell #visualPlanSide{color:#ff5f76}
+#visualPlanStop{color:#ff8294}
+@media(max-width:720px){
+  .visual-trade-plan{margin:8px 10px 0;padding:8px}
+  .visual-plan-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:420px){
+  .visual-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
