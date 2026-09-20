@@ -631,6 +631,7 @@ function renderSelected(){
     renderLiveEntry(null);
     renderTradeAction(null);
     renderPredictionPanel(null);
+    renderVisualTradePlan(null);
     renderRealtimeCandles(null);
     $("signalActions").hidden=true;drawChart("wait");highlightSelected();return;
   }
@@ -656,6 +657,7 @@ function renderSelected(){
   renderLiveEntry(row);
   renderTradeAction(row);
   renderPredictionPanel(row);
+  renderVisualTradePlan(row);
   renderRealtimeCandles(row);
   $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
   const swingBadge=$("swingDurationBadge");
@@ -1231,6 +1233,51 @@ function chartLevels(row){
   };
 }
 
+function visualTradePlan(row){
+  if(!row||!resultsAreFresh())return null;
+  const side=(row.final_verdict==="BUY"||row.final_verdict==="SELL")?row.final_verdict:(hasDetectedSetup(row)?setupSide(row):"NEUTRE");
+  if(side!=="BUY"&&side!=="SELL")return null;
+
+  const source=(row.final_verdict==="BUY"||row.final_verdict==="SELL")?(row.levels||{}):(row.projected_levels||{});
+  const plan=row.setup_entry_plan||{};
+  const entry=Number(plan.suggested_entry??source.entry);
+  const sl=Number(source.sl);
+  const tp1=Number(source.tp1),tp2=Number(source.tp2),tp3=Number(source.tp3),tp4=Number(source.tp4),tp5=Number(source.tp5);
+  if(![entry,sl,tp3].every(Number.isFinite))return null;
+
+  // TP3 is the default strategic target shown in the risk/reward box.
+  const target=tp3;
+  const risk=Math.abs(entry-sl);
+  const reward=Math.abs(target-entry);
+  const rr=risk>0?reward/risk:0;
+  const spec=chartSpecForRow(row);
+  const execution=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
+  return{
+    side,entry,sl,target,tp1,tp2,tp3,tp4,tp5,
+    rr,
+    timeframe:`${spec.entry} / ${spec.confirmation}`,
+    state:executionLabel(row),
+    isProjected:row.final_verdict!=="BUY"&&row.final_verdict!=="SELL"
+  };
+}
+
+function renderVisualTradePlan(row){
+  const host=$("visualTradePlan");
+  if(!host)return;
+  const plan=visualTradePlan(row);
+  host.hidden=!plan;
+  if(!plan)return;
+  host.className=`visual-trade-plan ${plan.side.toLowerCase()}`;
+  $("visualPlanTitle").textContent=plan.isProjected?"Scénario projeté":"Plan confirmé";
+  $("visualPlanTf").textContent=plan.timeframe;
+  $("visualPlanSide").textContent=plan.side;
+  $("visualPlanEntry").textContent=fmtEntry(plan.entry);
+  $("visualPlanStop").textContent=fmtEntry(plan.sl);
+  $("visualPlanTarget").textContent=`TP3 · ${fmtEntry(plan.target)}`;
+  $("visualPlanRR").textContent=`1 : ${plan.rr.toFixed(2)}`;
+  $("visualPlanState").textContent=plan.state;
+}
+
 function renderRealtimeCandles(row){
   const canvas=$("liveCandlesCanvas"),axis=$("livePriceAxis");
   if(!canvas||!axis)return;
@@ -1264,6 +1311,37 @@ function renderRealtimeCandles(row){
   min-=span*.06;max+=span*.06;
   const y=value=>height-((value-min)/(max-min))*height;
   const chartW=width-54;
+
+  // Risk/reward projection inspired by a classic long/short position tool.
+  const tradePlan=visualTradePlan(row);
+  if(tradePlan){
+    const x0=Math.max(12,chartW*.56),x1=chartW-8,w=Math.max(28,x1-x0);
+    const yEntry=y(tradePlan.entry),yTarget=y(tradePlan.target),yStop=y(tradePlan.sl);
+    const rewardTop=Math.min(yEntry,yTarget),rewardBottom=Math.max(yEntry,yTarget);
+    const riskTop=Math.min(yEntry,yStop),riskBottom=Math.max(yEntry,yStop);
+
+    ctx.fillStyle=tradePlan.side==="BUY"?"rgba(77,163,255,.16)":"rgba(255,95,118,.14)";
+    ctx.strokeStyle=tradePlan.side==="BUY"?"rgba(77,163,255,.50)":"rgba(255,95,118,.48)";
+    ctx.lineWidth=1;
+    ctx.fillRect(x0,rewardTop,w,Math.max(2,rewardBottom-rewardTop));
+    ctx.strokeRect(x0,rewardTop,w,Math.max(2,rewardBottom-rewardTop));
+
+    ctx.fillStyle="rgba(120,126,138,.13)";
+    ctx.strokeStyle="rgba(255,95,118,.38)";
+    ctx.fillRect(x0,riskTop,w,Math.max(2,riskBottom-riskTop));
+    ctx.strokeRect(x0,riskTop,w,Math.max(2,riskBottom-riskTop));
+
+    ctx.font="800 9px JetBrains Mono";
+    ctx.fillStyle=tradePlan.side==="BUY"?"#7db7ff":"#ff8294";
+    ctx.fillText(`${tradePlan.side} · R:R 1:${tradePlan.rr.toFixed(2)}`,x0+6,Math.max(13,rewardTop+13));
+
+    ctx.fillStyle="rgba(220,230,240,.82)";
+    ctx.font="700 8px JetBrains Mono";
+    ctx.fillText(`TARGET ${fmtEntry(tradePlan.target)}`,x0+6,Math.max(22,rewardTop+26));
+    ctx.fillText(`ENTRY ${fmtEntry(tradePlan.entry)}`,x0+6,Math.min(height-8,yEntry-5));
+    ctx.fillStyle="#ff8294";
+    ctx.fillText(`SL ${fmtEntry(tradePlan.sl)}`,x0+6,Math.min(height-8,riskBottom-5));
+  }
 
   // grid
   ctx.lineWidth=1;
@@ -1353,6 +1431,7 @@ function scheduleLiveUi(market){
         renderLiveEntry(row);
         renderTradeAction(row);
         renderPredictionPanel(row);
+        renderVisualTradePlan(row);
         renderRealtimeCandles(row);
       }
     }
