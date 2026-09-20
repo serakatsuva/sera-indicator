@@ -183,3 +183,21 @@ test('stale AI analysis is neutralized while live prices can continue', async ({
   expect(state.action.detail).toContain('ANALYSE IA EN ATTENTE');
   expect(state.prediction.prediction).toBe('NEUTRE');
 });
+
+
+test('Tous mode shows one card per market while Day and Swing remain separate filters', async ({ page }) => {
+  await page.locator('.mode-filter[data-mode="all"]').click();
+  await page.waitForTimeout(250);
+  const markets = await page.locator('.result-card h3').allTextContents();
+  expect(new Set(markets).size).toBe(markets.length);
+
+  await page.locator('.mode-filter[data-mode="day"]').click();
+  await page.waitForTimeout(150);
+  const dayModes = await page.locator('.result-card').evaluateAll(cards => cards.map(c => c.dataset.liveMode));
+  expect(dayModes.every(mode => mode === 'day')).toBeTruthy();
+
+  await page.locator('.mode-filter[data-mode="swing"]').click();
+  await page.waitForTimeout(150);
+  const swingModes = await page.locator('.result-card').evaluateAll(cards => cards.map(c => c.dataset.liveMode));
+  expect(swingModes.every(mode => mode === 'swing')).toBeTruthy();
+});
