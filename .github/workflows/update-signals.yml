@@ -12,7 +12,10 @@ on:
       - 'requirements-ml.txt'
       - 'requirements-foundation.txt'
   schedule:
-    - cron: '*/5 * * * *'
+    # Two staggered 10-minute schedules = one analysis every 5 minutes.
+    # Avoids GitHub's busiest :00/:05 cron boundaries.
+    - cron: '2,12,22,32,42,52 * * * *'
+    - cron: '7,17,27,37,47,57 * * * *'
 
 permissions:
   contents: write
@@ -30,6 +33,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Cadence watchdog
+        shell: bash
+        run: |
+          echo "Sera scheduled cadence: every 5 minutes (staggered)."
+          echo "Run event: ${{ github.event_name }}"
+          echo "Run started: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 
       - name: Setup Node
         uses: actions/setup-node@v4
