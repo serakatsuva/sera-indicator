@@ -306,3 +306,16 @@ test('new Deriv active_symbols schema maps Step indices correctly', async ({ pag
   expect(result.synthetic).toBeTruthy();
   expect(result.family).toBe('step');
 });
+
+
+test('available synthetic markets merges Deriv discovery with analyzed payload', async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const original = [...derivMarkets];
+    derivMarkets = ['Step Index','Step Index 200','Volatility 10 Index'];
+    const markets = availableSyntheticMarkets();
+    derivMarkets = original;
+    return markets;
+  });
+  expect(result).toContain('Step Index');
+  expect(result).toContain('Step Index 200');
+});
