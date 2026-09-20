@@ -77,6 +77,7 @@ const executionLabel=row=>{
 };
 const simpleActionState=row=>{
   if(!row)return{code:"WAIT",label:"WAIT",detail:"Aucun setup exploitable",side:"wait",blink:false};
+  if(!resultsAreFresh())return{code:"WAIT",label:"WAIT",detail:"ANALYSE IA EN ATTENTE",side:"wait",blink:false};
   const side=setupSide(row);
   const proposal=liveEntryProposal(row);
   const execution=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
@@ -129,7 +130,7 @@ const swingBadgeText=row=>{
   return `${prefix} ${kind} · ${swingDurationLabel(timing)}`;
 };
 const hasDerivResults=()=>payload?.ok===true&&["ai_analyzed","autonomous_analyzed","smart_local","technical_only"].includes(payload?.status)&&payload?.source_broker==="Deriv"&&Array.isArray(payload?.markets);
-const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<130;
+const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<20;
 
 $("refreshButton").addEventListener("click",()=>loadSignals(true));
 $("marketSelect").addEventListener("change",event=>{
@@ -502,6 +503,24 @@ function render(){
   renderSelected();
 }
 
+function effectiveSignalState(row){
+  const fresh=resultsAreFresh();
+  if(fresh)return{
+    verdict:row?.final_verdict||"ATTENDRE",
+    setupDetected:hasDetectedSetup(row),
+    setupSide:setupSide(row),
+    execution:row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION",
+    stale:false
+  };
+  return{
+    verdict:"ATTENDRE",
+    setupDetected:false,
+    setupSide:"NEUTRE",
+    execution:"WAIT_CONFIRMATION",
+    stale:true
+  };
+}
+
 function signalPriority(row){
   if(row?.final_verdict==="BUY"||row?.final_verdict==="SELL")return 3;
   if(hasDetectedSetup(row))return 2;
@@ -556,11 +575,12 @@ function resultCard(row,fresh){
   const swingDistance=row.swing_distance||(detected?row.projected_swing_distance:null);
   const pipsMini=row.mode==="swing"&&swingDistance?`<div class="swing-pips-mini">${signedDistance(swingDistance.estimated_swing_price_distance,detectedSide||verdict)} · ${pipsLabel(swingDistance.estimated_swing_pips_points)}</div>`:"";
   const action=simpleActionState(row);
+  const state=effectiveSignalState(row);
   const actionChip=`<div class="trade-action-chip ${action.side} ${action.blink?"blink":""}"><i></i><strong>${escapeHtml(action.label)}</strong><span>${escapeHtml(action.detail)}</span></div>`;
   const live=liveScannerState(row);
   card.dataset.liveMarket=row.market;
   card.dataset.liveMode=row.mode;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${setupMarker}${pipsMini}</div><span class="signal ${signalClass(verdict)}">${verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${state.stale?"":setupMarker}${state.stale?"":pipsMini}</div><span class="signal ${signalClass(state.verdict)}">${state.verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${state.stale?"wait":detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${state.stale?"ANALYSE IA EN ATTENTE":status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
   card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=liveQuotes.get(row.market)?{symbol:symbols[row.market],price:liveQuotes.get(row.market).price}:null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();openSignalModal(row.market);loadChartHistory(row.market,row);};
   return card;
 }
@@ -1149,6 +1169,7 @@ function loadChartHistory(market,row,force=false){
 
 function predictionState(row){
   if(!row)return{prediction:"NEUTRE",status:"WAIT",action:"WAIT",side:"wait"};
+  if(!resultsAreFresh())return{prediction:"NEUTRE",status:"ANALYSE IA EN ATTENTE",action:"WAIT",side:"wait"};
   const final=row.final_verdict==="BUY"||row.final_verdict==="SELL"?row.final_verdict:null;
   const setup=hasDetectedSetup(row)?setupSide(row):null;
   const prediction=final||setup||"NEUTRE";
