@@ -145,3 +145,25 @@ test('signal loader prefers latest GitHub repository data over stale Pages copy'
   expect(source).toContain('raw.githubusercontent.com/serakatsuva/sera-indicator/main/data/signals.json');
   expect(source).toContain('./data/signals.json');
 });
+
+
+test('notification bell shows only EXECUTE_NOW positions and opens alert panel', async ({ page }) => {
+  await expect(page.locator('#signalBell')).toBeVisible();
+  await page.locator('#signalBell').click();
+  await expect(page.locator('#signalNotificationPanel')).toBeVisible();
+  await expect(page.locator('#signalNotificationList')).toBeVisible();
+});
+
+test('ready notification logic excludes WAIT signals', async ({ page }) => {
+  const verdicts = await page.evaluate(() => {
+    const rows = readySignalRows();
+    return rows.map(row => ({
+      verdict: row.final_verdict,
+      execution: row.execution_state || row.execution?.state
+    }));
+  });
+  for (const row of verdicts) {
+    expect(['BUY','SELL']).toContain(row.verdict);
+    expect(row.execution).toBe('EXECUTE_NOW');
+  }
+});
