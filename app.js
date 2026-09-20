@@ -77,6 +77,11 @@ const liveIntelligenceLastRun=new Map();
 let liveHistoryBootstrapped=false;
 let liveUiFrame=0;
 let liveReconnectTimer=null;
+let liveHeartbeatTimer=null;
+let liveWatchdogTimer=null;
+let liveLastMessageAt=0;
+let liveReconnectAttempt=0;
+let liveConnectionStartedAt=0;
 let marketFamily="synthetic";
 let selectedIndexFamily=localStorage.getItem("seraIndexFamily")||"all";
 let tradingMode="all";
@@ -1703,50 +1708,108 @@ function scheduleLiveUi(market){
   });
 }
 
+function clearLiveConnectionTimers(){
+  if(liveHeartbeatTimer){clearInterval(liveHeartbeatTimer);liveHeartbeatTimer=null;}
+  if(liveWatchdogTimer){clearInterval(liveWatchdogTimer);liveWatchdogTimer=null;}
+}
+
+function scheduleLiveReconnect(reason="reconnexion"){
+  if(marketFamily!=="synthetic")return;
+  if(liveReconnectTimer)return;
+  const delay=Math.min(10000,1200*Math.max(1,2**Math.min(liveReconnectAttempt,3)));
+  liveReconnectAttempt+=1;
+  setMarketStatus(`Deriv : ${reason}…`,"error");
+  liveReconnectTimer=setTimeout(()=>{
+    liveReconnectTimer=null;
+    connectLivePrice();
+  },delay);
+}
+
+function startLiveConnectionGuards(socket){
+  clearLiveConnectionTimers();
+  liveHeartbeatTimer=setInterval(()=>{
+    if(socket!==liveSocket||socket.readyState!==WebSocket.OPEN)return;
+    try{socket.send(JSON.stringify({ping:1}));}catch{}
+  },15000);
+
+  liveWatchdogTimer=setInterval(()=>{
+    if(socket!==liveSocket)return;
+    const now=Date.now();
+    const silentFor=liveLastMessageAt?now-liveLastMessageAt:now-liveConnectionStartedAt;
+    if(socket.readyState!==WebSocket.OPEN||silentFor>18000){
+      try{socket.close();}catch{}
+      scheduleLiveReconnect("flux figé, reconnexion");
+    }
+  },5000);
+}
+
 function connectLivePrice(){
   if(liveReconnectTimer){clearTimeout(liveReconnectTimer);liveReconnectTimer=null;}
+  clearLiveConnectionTimers();
   if(liveSocket){try{liveSocket.close();}catch{} liveSocket=null;}
   if(marketFamily!=="synthetic")return;
 
   try{
     const socket=new WebSocket("wss://api.derivws.com/trading/v1/options/ws/public");
     liveSocket=socket;
+    liveConnectionStartedAt=Date.now();
+    liveLastMessageAt=0;
+
     socket.addEventListener("open",()=>{
+      if(socket!==liveSocket)return;
+      liveReconnectAttempt=0;
+      liveLastMessageAt=Date.now();
       let req=900;
       for(const market of availableSyntheticMarkets()){
         const symbol=symbols[market];
         if(symbol)socket.send(JSON.stringify({ticks:symbol,subscribe:1,req_id:++req,passthrough:{market}}));
       }
-      setMarketStatus("Deriv : scanner live connecté","live");
+      startLiveConnectionGuards(socket);
+      setMarketStatus("Deriv : connexion live active","live");
     });
+
     socket.addEventListener("message",event=>{
+      if(socket!==liveSocket)return;
+      liveLastMessageAt=Date.now();
       let message;
       try{message=JSON.parse(event.data);}catch{return;}
-      if(message.error){setMarketStatus("Deriv : flux partiellement interrompu","error");return;}
+      if(message.error){
+        setMarketStatus("Deriv : flux partiellement interrompu","error");
+        return;
+      }
+      if(message.msg_type==="ping"||message.msg_type==="pong")return;
       if(!message.tick?.quote)return;
+
       const symbol=String(message.echo_req?.ticks||message.tick.symbol||"");
       const market=Object.keys(symbols).find(name=>symbols[name]===symbol);
       if(!market)return;
       const price=Number(message.tick.quote),epoch=Number(message.tick.epoch)||Date.now()/1000;
       if(!Number.isFinite(price))return;
+
       liveQuotes.set(market,{price,epoch,symbol});
       updateMetaClocks();
       recordLiveTick(market,price,epoch);
-      refreshLiveIntelligence(market);
+      refreshLiveIntelligence(market,true);
       scheduleLiveUi(market);
-      setMarketStatus("Deriv : Live temps réel","live");
+      setMarketStatus("Deriv : Live temps réel · validation active","live");
     });
+
     socket.addEventListener("close",()=>{
-      if(liveSocket===socket)liveSocket=null;
-      if(marketFamily==="synthetic"){
-        setMarketStatus("Deriv : reconnexion live…","error");
-        liveReconnectTimer=setTimeout(connectLivePrice,2500);
-      }
+      if(socket!==liveSocket)return;
+      clearLiveConnectionTimers();
+      liveSocket=null;
+      scheduleLiveReconnect("reconnexion automatique");
     });
-    socket.addEventListener("error",()=>setMarketStatus("Deriv : flux live indisponible","error"));
+
+    socket.addEventListener("error",()=>{
+      if(socket!==liveSocket)return;
+      setMarketStatus("Deriv : incident flux · reprise automatique","error");
+      try{socket.close();}catch{}
+    });
   }catch{
-    setMarketStatus("Deriv : flux live indisponible","error");
-    liveReconnectTimer=setTimeout(connectLivePrice,3000);
+    clearLiveConnectionTimers();
+    liveSocket=null;
+    scheduleLiveReconnect("reconnexion automatique");
   }
 }
 
@@ -1809,4 +1872,19 @@ setInterval(()=>{
   if(signalModal&&!signalModal.hidden)renderSelected();
 },1000);
 window.addEventListener("resize",()=>renderRealtimeCandles(selectedSignalRow()));
-setInterval(()=>{if(marketFamily==="synthetic"&&(!liveSocket||liveSocket.readyState>1))connectLivePrice();},5000);
+setInterval(()=>{
+  if(marketFamily!=="synthetic")return;
+  if(!liveSocket||liveSocket.readyState>1)scheduleLiveReconnect("connexion inactive");
+},5000);
+
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible"&&marketFamily==="synthetic"){
+    const stale=!liveLastMessageAt||(Date.now()-liveLastMessageAt>10000);
+    if(stale||!liveSocket||liveSocket.readyState!==WebSocket.OPEN)connectLivePrice();
+    for(const market of availableSyntheticMarkets())refreshLiveIntelligence(market,true);
+  }
+});
+
+window.addEventListener("online",()=>{
+  if(marketFamily==="synthetic")connectLivePrice();
+});
