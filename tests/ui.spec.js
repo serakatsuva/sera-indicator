@@ -227,3 +227,14 @@ test('visual trade plan uses TP3 as primary displayed target', async ({ page }) 
     expect(['BUY','SELL']).toContain(info.side);
   }
 });
+
+
+test('WAIT BUY SELL action bar does not overlay realtime candle chart', async ({ page }) => {
+  await page.locator('.result-card').first().click();
+  await expect(page.locator('#signalModal')).toBeVisible();
+  const chart = await page.locator('#chartArea').boundingBox();
+  const action = await page.locator('#tradeActionBox').boundingBox();
+  expect(chart).toBeTruthy();
+  expect(action).toBeTruthy();
+  expect(action.y).toBeGreaterThanOrEqual(chart.y + chart.height - 1);
+});
