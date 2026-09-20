@@ -454,3 +454,50 @@
   .live-scan-top b{max-width:62%}
   .live-scan-motion{font-size:.50rem}
 }
+
+
+/* 2026-09-20 force narrow-card live text stacking */
+@media(max-width:640px){
+  .result-card .live-scan-row{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:3px!important;
+    width:100%!important;
+    overflow:hidden!important;
+  }
+  .result-card .live-scan-top{
+    display:flex!important;
+    width:100%!important;
+    align-items:center!important;
+    min-width:0!important;
+  }
+  .result-card .live-scan-top span{
+    flex:0 0 auto!important;
+    font-size:10px!important;
+  }
+  .result-card .live-scan-top b{
+    margin-left:auto!important;
+    max-width:66%!important;
+    font-size:11px!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+  .result-card .live-scan-motion{
+    display:block!important;
+    width:100%!important;
+    margin:2px 0 0!important;
+    padding:3px 0 0!important;
+    border-top:1px solid rgba(255,255,255,.06)!important;
+    font-size:8px!important;
+    line-height:1.35!important;
+    white-space:pre-line!important;
+    text-align:left!important;
+    overflow:visible!important;
+  }
+}
+
+@media(max-width:420px){
+  .result-card .live-scan-top b{max-width:60%!important;font-size:10px!important}
+  .result-card .live-scan-motion{font-size:7.5px!important}
+}
