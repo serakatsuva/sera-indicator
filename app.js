@@ -328,7 +328,8 @@ function renderIndexFamilyFilter(){
     const row=hasDerivResults()?payload.markets.find(item=>item.market===name):null;
     return marketFamilyKey(name,row)===key;
   }).length]));
-  const visible=["all",...keys.filter(key=>counts[key]>0)];
+  const alwaysVisible=new Set(["boom","crash","volatility","volatility1s","jump","step"]);
+  const visible=["all",...keys.filter(key=>alwaysVisible.has(key)||counts[key]>0)];
   if(!visible.includes(selectedIndexFamily))selectedIndexFamily="all";
 
   host.innerHTML=visible.map(key=>{
