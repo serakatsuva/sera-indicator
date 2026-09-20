@@ -335,3 +335,10 @@ test("signal detail exposes realtime validation and family consensus boxes", asy
   await expect(page.locator("#liveValidationState")).toBeVisible();
   await expect(page.locator("#liveFamilyConsensus")).toBeVisible();
 });
+
+
+test('Jump and Step family filters remain visible even during live discovery sync', async ({ page }) => {
+  const families = await page.locator('#indexFamilyFilter [data-family]').evaluateAll(nodes => nodes.map(n => n.dataset.family));
+  expect(families).toContain('jump');
+  expect(families).toContain('step');
+});
