@@ -342,3 +342,13 @@ test('Jump and Step family filters remain visible even during live discovery syn
   expect(families).toContain('jump');
   expect(families).toContain('step');
 });
+
+
+test('persistent Deriv live connection includes heartbeat watchdog and auto reconnect', async ({ page }) => {
+  const source = await (await page.request.get('/app.js')).text();
+  expect(source).toContain('startLiveConnectionGuards');
+  expect(source).toContain('ping:1');
+  expect(source).toContain('flux figé, reconnexion');
+  expect(source).toContain('visibilitychange');
+  expect(source).toContain('reconnexion automatique');
+});
