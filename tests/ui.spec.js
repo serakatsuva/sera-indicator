@@ -238,3 +238,36 @@ test('WAIT BUY SELL action bar does not overlay realtime candle chart', async ({
   expect(action).toBeTruthy();
   expect(action.y).toBeGreaterThanOrEqual(chart.y + chart.height - 1);
 });
+
+
+test('browser live intelligence computes Day and Swing states from realtime candle series', async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const market = availableSyntheticMarkets()[0];
+    const make = (count, step, seconds) => Array.from({length:count}, (_,i) => {
+      const base = 1000 + i * step;
+      return {epoch:1700000000+i*seconds, open:base, high:base+2, low:base-2, close:base+step};
+    });
+    liveCandleSeries.set(`${market}:M15`, make(80,1,900));
+    liveCandleSeries.set(`${market}:H1`, make(80,1.5,3600));
+    liveCandleSeries.set(`${market}:H4`, make(80,2,14400));
+    return {
+      day: computeLiveIntelligence(market,'day'),
+      swing: computeLiveIntelligence(market,'swing')
+    };
+  });
+  expect(result.day).toBeTruthy();
+  expect(result.swing).toBeTruthy();
+  expect(['BUY','SELL','NEUTRE']).toContain(result.day.side);
+  expect(['BUY','SELL','NEUTRE']).toContain(result.swing.side);
+  expect(result.day.entry_tf).toBe('M15');
+  expect(result.swing.entry_tf).toBe('H1');
+  expect(result.swing.confirmation_tf).toBe('H4');
+});
+
+test('signal detail exposes separate Live Intelligence panel', async ({ page }) => {
+  await page.locator('.result-card').first().click();
+  await expect(page.locator('#signalModal')).toBeVisible();
+  await expect(page.locator('#liveIntelligencePanel')).toBeVisible();
+  await expect(page.locator('#liveIntelligenceBias')).toBeVisible();
+  await expect(page.locator('#liveIntelligenceScore')).toBeVisible();
+});
