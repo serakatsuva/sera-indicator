@@ -41,9 +41,26 @@
       <span class="brand-mark" aria-hidden="true">↗</span>
       <span><strong>Sera <em>Indicator</em></strong><small>Deriv · Day M15/H1 · Swing H1/H4</small></span>
     </a>
-    <div class="status-row" aria-live="polite">
-      <span class="status-pill" id="marketStatus"><i></i>Deriv : connexion</span>
-      <span class="status-pill" id="aiStatus"><i></i>OpenAI : vérification</span>
+    <div class="topbar-actions">
+      <div class="signal-notification-center" id="signalNotificationCenter">
+        <button class="signal-bell" id="signalBell" type="button" aria-label="Notifications de positions prêtes" aria-expanded="false">
+          <span class="signal-bell-icon" aria-hidden="true">🔔</span>
+          <span class="signal-bell-badge" id="signalBellBadge" hidden>0</span>
+        </button>
+        <div class="signal-notification-panel" id="signalNotificationPanel" hidden>
+          <div class="signal-notification-head">
+            <div><small>Alertes Sera</small><strong>Positions prêtes</strong></div>
+            <button id="markReadyAlertsRead" type="button">Tout marquer lu</button>
+          </div>
+          <div class="signal-notification-list" id="signalNotificationList">
+            <p class="signal-notification-empty">Aucune nouvelle position prête.</p>
+          </div>
+        </div>
+      </div>
+      <div class="status-row" aria-live="polite">
+        <span class="status-pill" id="marketStatus"><i></i>Deriv : connexion</span>
+        <span class="status-pill" id="aiStatus"><i></i>OpenAI : vérification</span>
+      </div>
     </div>
   </header>
 
