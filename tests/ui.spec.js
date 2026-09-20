@@ -352,3 +352,11 @@ test('persistent Deriv live connection includes heartbeat watchdog and auto reco
   expect(source).toContain('visibilitychange');
   expect(source).toContain('reconnexion automatique');
 });
+
+
+test('formal live validation consolidates every 60 seconds', async ({ page }) => {
+  const source = await (await page.request.get('/app.js')).text();
+  expect(source).toContain('setInterval(runMinuteValidationCycle,60000)');
+  expect(source).toContain('Validation LIVE active');
+  expect(source).toContain('consolidation chaque minute');
+});
