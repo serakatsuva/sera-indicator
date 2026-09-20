@@ -497,7 +497,33 @@ function render(){
         ?`${payload.markets_count} analyses locales actualisées. Le moteur reste sur ATTENDRE quand le consensus des stratégies est insuffisant.`
         :`Validation expirée depuis ${ageLabel(payload.updated_at)}. Les anciens BUY/SELL sont neutralisés sur ATTENDRE jusqu’à une nouvelle analyse.`;
   const allowedMarkets=new Set(marketsForIndexFamily());
-  const rows=payload.markets.filter(row=>allowedMarkets.has(row.market)&&(tradingMode==="all"||row.mode===tradingMode));
+  let rows=payload.markets.filter(row=>allowedMarkets.has(row.market)&&(tradingMode==="all"||row.mode===tradingMode));
+
+  // In "Tous", show one card per market. Day and Swing remain available
+  // through their dedicated filters, but are not duplicated side by side.
+  if(tradingMode==="all"){
+    const grouped=new Map();
+    for(const row of rows){
+      const current=grouped.get(row.market);
+      if(!current){
+        grouped.set(row.market,row);
+        continue;
+      }
+      const candidates=[current,row].sort((a,b)=>{
+        const priority=signalPriority(b)-signalPriority(a);
+        if(priority)return priority;
+        const executionA=(a?.execution_state||a?.execution?.state)==="EXECUTE_NOW"?1:0;
+        const executionB=(b?.execution_state||b?.execution?.state)==="EXECUTE_NOW"?1:0;
+        if(executionB!==executionA)return executionB-executionA;
+        const confidence=(Number(b?.final_confidence)||0)-(Number(a?.final_confidence)||0);
+        if(confidence)return confidence;
+        return a.mode==="swing"?-1:1;
+      });
+      grouped.set(row.market,candidates[0]);
+    }
+    rows=[...grouped.values()];
+  }
+
   rows.slice().sort(compareSignalPriority).forEach(row=>results.appendChild(resultCard(row,fresh)));
   $("visibleResultsCount")?.remove?.();
   renderSelected();
