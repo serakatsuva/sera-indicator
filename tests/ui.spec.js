@@ -360,3 +360,10 @@ test('formal live validation consolidates every 60 seconds', async ({ page }) =>
   expect(source).toContain('Validation LIVE active');
   expect(source).toContain('consolidation chaque minute');
 });
+
+test("stale server falls back to realtime validation", async ({ page }) => {
+  const source = await (await page.request.get("/app.js")).text();
+  expect(source).toContain("VALIDATION LIVE");
+  expect(source).toContain("LIVE_VALIDATION");
+  expect(source).toContain("const displayedLevels=fresh");
+});
