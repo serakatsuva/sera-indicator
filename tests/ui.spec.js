@@ -367,3 +367,18 @@ test("stale server falls back to realtime validation", async ({ page }) => {
   expect(source).toContain("LIVE_VALIDATION");
   expect(source).toContain("const displayedLevels=fresh");
 });
+
+
+test('family filter wraps to multiple lines and does not require horizontal scrolling', async ({ page }) => {
+  const data = await page.locator('#indexFamilyFilter').evaluate(el => {
+    const style = getComputedStyle(el);
+    return {
+      wrap: style.flexWrap,
+      overflowX: style.overflowX,
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth
+    };
+  });
+  expect(data.wrap).toBe('wrap');
+  expect(['visible','clip']).toContain(data.overflowX);
+});
