@@ -319,3 +319,10 @@ test('available synthetic markets merges Deriv discovery with analyzed payload',
   expect(result).toContain('Step Index');
   expect(result).toContain('Step Index 200');
 });
+
+
+test('family context is exposed in analyzed signals when available', async ({ page }) => {
+  const source = await (await page.request.get('/app.js')).text();
+  expect(source).toContain('family_context');
+  expect(source).toContain('Famille ');
+});
