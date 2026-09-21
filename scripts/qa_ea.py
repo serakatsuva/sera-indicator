@@ -27,6 +27,14 @@ required = {
     "adaptive loss cap": "AdaptiveLossCap",
     "pending cancellation": "CancelSeraPendingOrder",
     "EA intelligent name": "Sera EA Swing Intelligent",
+    "local swing intelligence": "RunLocalSwingIntelligence",
+    "gold profile": 'return "GOLD"',
+    "crypto profile": 'return "CRYPTO"',
+    "asset adaptive risk": "AssetRiskFactor",
+    "ATR profit guard": "ManageLocalATRProfit",
+    "H1/H4 local trend": "PERIOD_H4",
+    "local MACD": "MACDHistogram",
+    "local ADX": "ADXValue",
 }
 for name, token in required.items():
     if token not in text:
