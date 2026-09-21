@@ -726,11 +726,11 @@ bool PlaceOrUpdatePendingLimit(const string setup_id,const string symbol,const s
    MqlTick tick;
    if(!SymbolInfoTick(symbol,tick)) return false;
    int digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
-   entry=NormalizeDouble(entry,digits);
-   sl=NormalizeDouble(sl,digits);
-   tp=NormalizeDouble(tp,digits);
+   double normalized_entry=NormalizeDouble(entry,digits);
+   double normalized_sl=NormalizeDouble(sl,digits);
+   double normalized_tp=NormalizeDouble(tp,digits);
 
-   bool valid=verdict=="BUY" ? (entry<tick.ask && sl<entry && tp>entry) : (entry>tick.bid && sl>entry && tp<entry);
+   bool valid=verdict=="BUY" ? (normalized_entry<tick.ask && normalized_sl<normalized_entry && normalized_tp>normalized_entry) : (normalized_entry>tick.bid && normalized_sl>normalized_entry && normalized_tp<normalized_entry);
    if(!valid) return false;
 
    ulong existing=FindSeraPendingOrder(symbol);
@@ -738,21 +738,21 @@ bool PlaceOrUpdatePendingLimit(const string setup_id,const string symbol,const s
    {
       double oldPrice=OrderGetDouble(ORDER_PRICE_OPEN);
       double point=SymbolInfoDouble(symbol,SYMBOL_POINT);
-      if(MathAbs(oldPrice-entry)<=point*2) return true;
+      if(MathAbs(oldPrice-normalized_entry)<=point*2) return true;
       CancelSeraPendingOrder(symbol,"mise a jour zone entree");
    }
 
    datetime expiration=TimeCurrent()+PendingExpirationHours*3600;
    trade.SetExpertMagicNumber(MagicNumber);
    bool sent=verdict=="BUY"
-      ? trade.BuyLimit(volume,entry,symbol,sl,tp,ORDER_TIME_SPECIFIED,expiration,"Sera Intelligent Swing BUY LIMIT")
-      : trade.SellLimit(volume,entry,symbol,sl,tp,ORDER_TIME_SPECIFIED,expiration,"Sera Intelligent Swing SELL LIMIT");
+      ? trade.BuyLimit(volume,normalized_entry,symbol,normalized_sl,normalized_tp,ORDER_TIME_SPECIFIED,expiration,"Sera Intelligent Swing BUY LIMIT")
+      : trade.SellLimit(volume,normalized_entry,symbol,normalized_sl,normalized_tp,ORDER_TIME_SPECIFIED,expiration,"Sera Intelligent Swing SELL LIMIT");
 
    if(sent)
    {
       StoreState("SERA_PENDINGSTATE_",setup_id,VerdictState(verdict));
-      StoreLevel("SERA_ENTRY_",setup_id,entry);
-      Print("Sera EA Swing Intelligent: ",verdict," LIMIT ",symbol," @ ",DoubleToString(entry,digits)," volume=",volume);
+      StoreLevel("SERA_ENTRY_",setup_id,normalized_entry);
+      Print("Sera EA Swing Intelligent: ",verdict," LIMIT ",symbol," @ ",DoubleToString(normalized_entry,digits)," volume=",volume);
       return true;
    }
    Print("Sera EA Swing Intelligent: pending refuse ",trade.ResultRetcodeDescription());
