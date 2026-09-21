@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent"
-#property version   "1.71"
+#property version   "1.80"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -48,8 +48,28 @@ input int PollEverySeconds=30;
 input long MagicNumber=26091801;
 input int DeviationPoints=30;
 
+// --- Local multi-asset Swing intelligence (MT5 candles)
+input bool EnableLocalSwingIntelligence=true;
+input bool EnableLocalAutoEntry=false;
+input int LocalMinimumScore=78;
+input double LocalMinimumADX=20.0;
+input bool EnableAssetAdaptiveProfiles=true;
+input double GoldRiskFactor=0.85;
+input double CryptoRiskFactor=0.70;
+input double ForexRiskFactor=0.90;
+input double SyntheticRiskFactor=1.00;
+input double GoldATRMultiplier=2.20;
+input double CryptoATRMultiplier=2.70;
+input double ForexATRMultiplier=1.80;
+input double SyntheticATRMultiplier=2.00;
+input bool EnableATRProfitTrail=true;
+input double ProfitProtectionStartR=1.20;
+input double ProfitLockR=0.35;
+input double ATRTrailMultiplier=1.60;
+
 CTrade trade;
 datetime last_poll=0;
+datetime local_last_h1_bar=0;
 
 string JsonString(const string object,const string key)
 {
@@ -274,6 +294,251 @@ bool BrokerStopsValid(const string symbol,const string verdict,const double entr
    return false;
 }
 
+
+string UpperCopy(string value)
+{
+   StringToUpper(value);
+   return value;
+}
+
+int AssetProfile(const string symbol)
+{
+   string s=UpperCopy(symbol);
+   if(StringFind(s,"XAU")>=0 || StringFind(s,"GOLD")>=0) return 1; // Gold
+   if(StringFind(s,"BTC")>=0 || StringFind(s,"ETH")>=0 || StringFind(s,"SOL")>=0 ||
+      StringFind(s,"XRP")>=0 || StringFind(s,"LTC")>=0 || StringFind(s,"ADA")>=0 ||
+      StringFind(s,"DOGE")>=0 || StringFind(s,"BNB")>=0 || StringFind(s,"AVAX")>=0) return 2; // Crypto
+   if(StringFind(s,"BOOM")>=0 || StringFind(s,"CRASH")>=0 || StringFind(s,"VOLATILITY")>=0 ||
+      StringFind(s,"STEP")>=0 || StringFind(s,"JUMP")>=0 || StringFind(s,"RANGE")>=0) return 3; // Synthetic
+   return 4; // Forex / other CFD
+}
+
+string AssetProfileName(const string symbol)
+{
+   int p=AssetProfile(symbol);
+   if(p==1) return "GOLD";
+   if(p==2) return "CRYPTO";
+   if(p==3) return "SYNTHETIC";
+   return "FOREX/CFD";
+}
+
+double AssetRiskFactor(const string symbol)
+{
+   if(!EnableAssetAdaptiveProfiles) return 1.0;
+   int p=AssetProfile(symbol);
+   if(p==1) return GoldRiskFactor;
+   if(p==2) return CryptoRiskFactor;
+   if(p==3) return SyntheticRiskFactor;
+   return ForexRiskFactor;
+}
+
+double AssetATRMultiplier(const string symbol)
+{
+   if(!EnableAssetAdaptiveProfiles) return 2.0;
+   int p=AssetProfile(symbol);
+   if(p==1) return GoldATRMultiplier;
+   if(p==2) return CryptoATRMultiplier;
+   if(p==3) return SyntheticATRMultiplier;
+   return ForexATRMultiplier;
+}
+
+double IndicatorValue(const int handle,const int buffer,const int shift)
+{
+   if(handle==INVALID_HANDLE) return EMPTY_VALUE;
+   double values[];
+   ArraySetAsSeries(values,true);
+   int copied=CopyBuffer(handle,buffer,shift,1,values);
+   if(copied<1) return EMPTY_VALUE;
+   return values[0];
+}
+
+double EMAValue(const string symbol,ENUM_TIMEFRAMES tf,const int period,const int shift=0)
+{
+   int h=iMA(symbol,tf,period,0,MODE_EMA,PRICE_CLOSE);
+   if(h==INVALID_HANDLE) return EMPTY_VALUE;
+   double v=IndicatorValue(h,0,shift);
+   IndicatorRelease(h);
+   return v;
+}
+
+double RSIValue(const string symbol,ENUM_TIMEFRAMES tf,const int period=14,const int shift=0)
+{
+   int h=iRSI(symbol,tf,period,PRICE_CLOSE);
+   if(h==INVALID_HANDLE) return EMPTY_VALUE;
+   double v=IndicatorValue(h,0,shift);
+   IndicatorRelease(h);
+   return v;
+}
+
+double ATRValue(const string symbol,ENUM_TIMEFRAMES tf,const int period=14,const int shift=0)
+{
+   int h=iATR(symbol,tf,period);
+   if(h==INVALID_HANDLE) return EMPTY_VALUE;
+   double v=IndicatorValue(h,0,shift);
+   IndicatorRelease(h);
+   return v;
+}
+
+double ADXValue(const string symbol,ENUM_TIMEFRAMES tf,const int period=14,const int shift=0)
+{
+   int h=iADX(symbol,tf,period);
+   if(h==INVALID_HANDLE) return EMPTY_VALUE;
+   double v=IndicatorValue(h,0,shift);
+   IndicatorRelease(h);
+   return v;
+}
+
+double MACDHistogram(const string symbol,ENUM_TIMEFRAMES tf,const int shift=0)
+{
+   int h=iMACD(symbol,tf,12,26,9,PRICE_CLOSE);
+   if(h==INVALID_HANDLE) return EMPTY_VALUE;
+   double main=IndicatorValue(h,0,shift);
+   double signal=IndicatorValue(h,1,shift);
+   IndicatorRelease(h);
+   if(main==EMPTY_VALUE || signal==EMPTY_VALUE) return EMPTY_VALUE;
+   return main-signal;
+}
+
+bool LocalSwingDecision(const string symbol,string &side,double &score,double &atr)
+{
+   side="WAIT"; score=0.0;
+   double h1Fast=EMAValue(symbol,PERIOD_H1,20,1);
+   double h1Slow=EMAValue(symbol,PERIOD_H1,50,1);
+   double h4Fast=EMAValue(symbol,PERIOD_H4,20,1);
+   double h4Slow=EMAValue(symbol,PERIOD_H4,50,1);
+   double rsi=RSIValue(symbol,PERIOD_H1,14,1);
+   double adx=ADXValue(symbol,PERIOD_H1,14,1);
+   double macdH1=MACDHistogram(symbol,PERIOD_H1,1);
+   double macdH4=MACDHistogram(symbol,PERIOD_H4,1);
+   atr=ATRValue(symbol,PERIOD_H1,14,1);
+
+   if(h1Fast==EMPTY_VALUE || h1Slow==EMPTY_VALUE || h4Fast==EMPTY_VALUE || h4Slow==EMPTY_VALUE ||
+      rsi==EMPTY_VALUE || adx==EMPTY_VALUE || macdH1==EMPTY_VALUE || macdH4==EMPTY_VALUE ||
+      atr==EMPTY_VALUE || atr<=0) return false;
+
+   bool buyH1=h1Fast>h1Slow, sellH1=h1Fast<h1Slow;
+   bool buyH4=h4Fast>h4Slow, sellH4=h4Fast<h4Slow;
+   if(buyH1 && buyH4) side="BUY";
+   else if(sellH1 && sellH4) side="SELL";
+   else return true;
+
+   score=45.0; // H1/H4 trend alignment
+   if(side=="BUY" && rsi>=52.0 && rsi<=72.0) score+=15.0;
+   if(side=="SELL" && rsi<=48.0 && rsi>=28.0) score+=15.0;
+   if(side=="BUY" && macdH1>0) score+=12.0;
+   if(side=="SELL" && macdH1<0) score+=12.0;
+   if(side=="BUY" && macdH4>0) score+=13.0;
+   if(side=="SELL" && macdH4<0) score+=13.0;
+   if(adx>=LocalMinimumADX) score+=15.0;
+
+   score=MathMin(100.0,score);
+   if(score<LocalMinimumScore) side="WAIT";
+   return true;
+}
+
+void ManageLocalATRProfit(const string symbol)
+{
+   if(!EnableATRProfitTrail || !PositionSelect(symbol)) return;
+   if(PositionGetInteger(POSITION_MAGIC)!=MagicNumber) return;
+
+   long type=PositionGetInteger(POSITION_TYPE);
+   double open=PositionGetDouble(POSITION_PRICE_OPEN);
+   double currentSL=PositionGetDouble(POSITION_SL);
+   double currentTP=PositionGetDouble(POSITION_TP);
+   double initialRisk=StoredLevel("SERA_LOCALRISK_",symbol);
+   if(initialRisk<=0) return;
+
+   MqlTick tick;
+   if(!SymbolInfoTick(symbol,tick)) return;
+   double price=type==POSITION_TYPE_BUY?tick.bid:tick.ask;
+   double profitDistance=type==POSITION_TYPE_BUY?price-open:open-price;
+   double r=profitDistance/initialRisk;
+   if(r<ProfitProtectionStartR) return;
+
+   double atr=ATRValue(symbol,PERIOD_H1,14,0);
+   if(atr==EMPTY_VALUE || atr<=0) return;
+
+   double locked=initialRisk*ProfitLockR;
+   double protective=type==POSITION_TYPE_BUY?open+locked:open-locked;
+   double atrTrail=type==POSITION_TYPE_BUY?price-atr*ATRTrailMultiplier:price+atr*ATRTrailMultiplier;
+   double desired=type==POSITION_TYPE_BUY?MathMax(protective,atrTrail):MathMin(protective,atrTrail);
+
+   double point=SymbolInfoDouble(symbol,SYMBOL_POINT);
+   double stopDistance=(double)SymbolInfoInteger(symbol,SYMBOL_TRADE_STOPS_LEVEL)*point;
+   bool valid=type==POSITION_TYPE_BUY?desired<tick.bid-stopDistance:desired>tick.ask+stopDistance;
+   bool improves=type==POSITION_TYPE_BUY?(currentSL<=0 || desired>currentSL+point):(currentSL<=0 || desired<currentSL-point);
+   if(!valid || !improves) return;
+
+   int digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
+   desired=NormalizeDouble(desired,digits);
+   if(trade.PositionModify(symbol,desired,currentTP))
+      Print("Sera ATR Profit Guard: ",symbol," R=",DoubleToString(r,2)," SL=",DoubleToString(desired,digits));
+}
+
+void RunLocalSwingIntelligence()
+{
+   if(!EnableLocalSwingIntelligence) return;
+   string symbol=_Symbol;
+   ManageLocalATRProfit(symbol);
+
+   datetime bar=iTime(symbol,PERIOD_H1,0);
+   if(bar<=0 || bar==local_last_h1_bar) return;
+   local_last_h1_bar=bar;
+
+   string side; double score=0.0,atr=0.0;
+   if(!LocalSwingDecision(symbol,side,score,atr)) return;
+
+   Comment("Sera EA Swing Intelligent v1.80 | ",AssetProfileName(symbol),
+           " | Local Swing H1/H4: ",side," ",DoubleToString(score,0),"%",
+           " | Risk ",DoubleToString(AdaptiveRiskPercent()*AssetRiskFactor(symbol),2),"%");
+
+   if(!EnableLocalAutoEntry || side=="WAIT") return;
+   if(!EnableAutomaticTrading || RiskCircuitOpen()) return;
+   if(AccountInfoInteger(ACCOUNT_TRADE_MODE)!=ACCOUNT_TRADE_MODE_DEMO && !AllowRealAccount) return;
+   if(OpenSeraPositions()>=MaximumOpenPositions || TradesToday()>=MaximumTradesPerDay) return;
+   if(PositionSelect(symbol)) return;
+
+   MqlTick tick;
+   if(!SymbolInfoTick(symbol,tick)) return;
+   double entry=side=="BUY"?tick.ask:tick.bid;
+   double riskDistance=atr*AssetATRMultiplier(symbol);
+   if(riskDistance<=0) return;
+
+   double sl=side=="BUY"?entry-riskDistance:entry+riskDistance;
+   double tp1=side=="BUY"?entry+riskDistance*1.5:entry-riskDistance*1.5;
+   double tp2=side=="BUY"?entry+riskDistance*2.4:entry-riskDistance*2.4;
+   double tp3=side=="BUY"?entry+riskDistance*3.6:entry-riskDistance*3.6;
+   int digits=(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS);
+   sl=NormalizeDouble(sl,digits); tp1=NormalizeDouble(tp1,digits);
+   tp2=NormalizeDouble(tp2,digits); tp3=NormalizeDouble(tp3,digits);
+
+   if(!BrokerStopsValid(symbol,side,entry,sl,tp3)) return;
+   double volume=SafeVolume(symbol,entry,sl);
+   if(volume<=0) return;
+
+   double requiredMargin=0.0;
+   bool marginOk=OrderCalcMargin(side=="BUY"?ORDER_TYPE_BUY:ORDER_TYPE_SELL,symbol,volume,entry,requiredMargin)
+      && requiredMargin<=AccountInfoDouble(ACCOUNT_MARGIN_FREE)*0.50;
+   if(!marginOk) return;
+
+   trade.SetExpertMagicNumber(MagicNumber);
+   trade.SetDeviationInPoints(DeviationPoints);
+   bool sent=side=="BUY"
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v1.80")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v1.80");
+   if(sent)
+   {
+      StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
+      StoreLevel("SERA_TP1_","LOCAL_"+symbol,tp1);
+      StoreLevel("SERA_TP2_","LOCAL_"+symbol,tp2);
+      StoreLevel("SERA_TP3_","LOCAL_"+symbol,tp3);
+      StoreLevel("SERA_FINALTP_","LOCAL_"+symbol,tp3);
+      Print("Sera Local Swing: ",AssetProfileName(symbol)," ",side," ",symbol,
+            " score=",DoubleToString(score,0)," volume=",DoubleToString(volume,2),
+            " SL=",DoubleToString(sl,digits)," TP=",DoubleToString(tp3,digits));
+   }
+}
+
 double AdaptiveRiskPercent()
 {
    double risk=RiskPercent;
@@ -324,8 +589,8 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    double max_lot=MathMin(SymbolInfoDouble(symbol,SYMBOL_VOLUME_MAX),MaximumLot);
    double step=SymbolInfoDouble(symbol,SYMBOL_VOLUME_STEP);
    if(tick_size<=0 || tick_value<=0 || step<=0 || MathAbs(entry-sl)<=0) return 0;
-   double adaptiveRisk=AdaptiveRiskPercent();
-   double lossCap=AdaptiveLossCap();
+   double adaptiveRisk=AdaptiveRiskPercent()*AssetRiskFactor(symbol);
+   double lossCap=AdaptiveLossCap()*AssetRiskFactor(symbol);
    double risk=MathMin(AccountInfoDouble(ACCOUNT_EQUITY)*adaptiveRisk/100.0,lossCap);
    double loss_per_lot=(MathAbs(entry-sl)/tick_size)*tick_value;
    double volume=MathFloor((risk/loss_per_lot)/step)*step;
@@ -656,7 +921,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.71"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.71");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.80"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.80");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -688,10 +953,19 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera EA Swing Intelligent v1.71 — "+mode+" — Market + Smart Limit + Adaptive Risk");
-   Print("Sera EA Swing Intelligent v1.71: compte ",mode,", auto=",EnableAutomaticTrading,", reel=",AllowRealAccount,", conditions min=",MinimumAutonomousConditionsPercent,"%, execution score min=",MinimumExecutionScore,", OSS guard=",UseOpenSourceModelGuard,", smart management=",EnableSmartPositionManagement,", daily loss max=",MaximumDailyLossUSD);
+   Comment("Sera EA Swing Intelligent v1.80 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
+   Print("Sera EA Swing Intelligent v1.80: compte ",mode,", actif=",AssetProfileName(_Symbol),
+         ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
+         ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
+         "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
+         ", OSS guard=",UseOpenSourceModelGuard,", smart management=",EnableSmartPositionManagement);
    return INIT_SUCCEEDED;
 }
 
 void OnDeinit(const int reason){ EventKillTimer(); Comment(""); }
-void OnTimer(){ string json; if(FetchSignals(json)) Evaluate(json); }
+void OnTimer()
+{
+   RunLocalSwingIntelligence();
+   string json;
+   if(FetchSignals(json)) Evaluate(json);
+}
