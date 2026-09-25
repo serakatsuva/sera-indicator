@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 
+// Release guard: the public v4 UI must keep its dynamic H1/H4/D1 validation.
+
 const errors = [];
 const html = fs.readFileSync('index.html', 'utf8');
 const app = fs.readFileSync('app.js', 'utf8');
