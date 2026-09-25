@@ -42,8 +42,9 @@ def fmt_int(value: Any) -> str:
 def setup_fingerprint(row: dict[str, Any]) -> str:
     plan = row.get("setup_entry_plan") or {}
     return "|".join([
-        str(row.get("setup_direction") or ""),
+        str(row.get("final_verdict") or ""),
         str(row.get("execution_state") or ""),
+        str((row.get("decision_engine") or {}).get("confirmation_progress") or ""),
         str(plan.get("status") or ""),
         str(round(float(plan.get("suggested_entry") or 0), 3)),
         str(round(float(row.get("final_confidence") or 0), 0)),
@@ -51,10 +52,14 @@ def setup_fingerprint(row: dict[str, Any]) -> str:
 
 
 def is_alertable(row: dict[str, Any]) -> bool:
+    engine = row.get("decision_engine") or {}
     return (
         row.get("mode") == "swing"
-        and bool(row.get("setup_detected"))
-        and row.get("setup_direction") in ("BUY", "SELL")
+        and row.get("final_verdict") in ("BUY", "SELL")
+        and engine.get("confirmation_progress") == "2/2"
+        and float(engine.get("score") or 0) >= 84
+        and float(engine.get("consensus") or 0) >= 72
+        and float(engine.get("condition_pass_percent") or 0) >= 80
         and isinstance(row.get("setup_entry_plan"), dict)
     )
 
@@ -76,7 +81,8 @@ def render_row(row: dict[str, Any]) -> str:
         consensus_text = f"{ensemble.get('direction','NEUTRAL')} {float(consensus):.0f}%"
 
     return f"""
-{row.get('market','—')} — SWING {row.get('setup_direction','—')}
+{row.get('market','—')} — SWING HAUTE CONVICTION {row.get('final_verdict','—')}
+Confirmation : {engine.get('confirmation_progress','—')} · H1/H4/D1
 État entrée : {row.get('execution_state','WAIT_CONFIRMATION')}
 Plan setup : {plan.get('status','—')}
 Entrée proposée : {fmt(plan.get('suggested_entry'))}
@@ -157,23 +163,23 @@ def main():
         reverse=True,
     )
 
-    subject_direction = actionable[0].get("setup_direction", "SWING")
+    subject_direction = actionable[0].get("final_verdict", "SWING")
     subject_market = actionable[0].get("market", "Sera")
     if len(actionable) == 1:
         subject = f"Sera Swing Alert · {subject_market} · {subject_direction}"
     else:
-        subject = f"Sera Swing Alert · {len(actionable)} setups détectés"
+        subject = f"Sera Swing Alert · {len(actionable)} signaux confirmés"
 
     body = [
         "SERA INDICATOR — ALERTE SWING",
         f"Analyse : {signals.get('updated_at','—')}",
         f"Moteur : {signals.get('engine_version','—')}",
         "",
-        "Un setup détecté n'est pas forcément une entrée immédiate. Vérifier le statut d'entrée ci-dessous.",
+        "Chaque signal a validé H1/H4/D1, les seuils haute conviction et la confirmation 2/2. Vérifier encore le statut d'entrée ci-dessous.",
         "",
         "\n\n" + ("\n\n" + ("-" * 68) + "\n\n").join(render_row(row) for row in actionable),
         "",
-        "Sera n'exécute automatiquement que les setups qui passent à EXECUTE_NOW et les garde-fous EA.",
+        "Sera n'exécute automatiquement que les signaux qui passent à EXECUTE_NOW et les garde-fous EA. Aucun gain ni absence de retournement n'est garanti.",
     ]
     send_email(sender, password, recipient, subject, "\n".join(body))
     save(STATE, {"updated_at": signals.get("updated_at"), "setups": current})

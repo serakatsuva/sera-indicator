@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#07111d">
-  <meta name="description" content="Sera Indicator — signaux Deriv multi-horizon avec passerelle sécurisée pour Deriv MT5.">
-  <title>Sera Indicator — Signaux Deriv</title>
+  <meta name="description" content="Sera Indicator — signaux Deriv et Forex, avec Swing haute conviction H1/H4/D1.">
+  <title>Sera Indicator — Swing haute conviction</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
@@ -20,12 +20,12 @@
       <div class="welcome-icon" aria-hidden="true">↗</div>
       <span class="eyebrow cyan">Bienvenue sur</span>
       <h1 id="welcomeTitle">Sera Indicator</h1>
-      <p id="welcomeDescription">Un moteur autonome multi-stratégies pour analyser les indices synthétiques Deriv en Day M15/H1 et Swing H1/H4, avec Luna comme conseiller facultatif.</p>
+      <p id="welcomeDescription">Un moteur autonome multi-stratégies pour analyser les indices synthétiques Deriv et 27 paires Forex, avec un Swing haute conviction H1/H4/D1 confirmé sur deux cycles.</p>
       <div class="welcome-features">
         <div><span>◈</span><p><strong>Analyse hybride</strong><small>Décision locale par consensus multi-stratégies; OpenAI intervient seulement comme audit facultatif.</small></p></div>
         <div><span>↗</span><p><strong>Signaux simples</strong><small>BUY, SELL ou ATTENDRE, avec confiance, entrée, SL et TP1–TP5.</small></p></div>
         <div><span>◷</span><p><strong>Actualisation adaptée</strong><small>Prix et bougie en formation suivis tick par tick; moteur complet recalculé périodiquement.</small></p></div>
-        <div><span>◎</span><p><strong>Trend Watch</strong><small>Surveille H1/H4 et vous alerte lorsqu’un nouveau BUY/SELL confirmé apparaît.</small></p></div>
+        <div><span>◎</span><p><strong>Trend Watch</strong><small>Surveille H1/H4/D1 et vous alerte après deux analyses cohérentes lorsqu’un BUY/SELL est réellement confirmé.</small></p></div>
         <div><span>⚠</span><p><strong>Exécution réelle protégée</strong><small>L’EA est configuré pour le compte réel avec limites de risque strictes. Aucun résultat n’est garanti.</small></p></div>
       </div>
       <div class="welcome-feedback">
@@ -39,7 +39,7 @@
   <header class="topbar">
     <a class="brand" href="./" aria-label="Sera Indicator Deriv">
       <span class="brand-mark" aria-hidden="true">↗</span>
-      <span><strong>Sera <em>Indicator</em></strong><small>Deriv · Day M15/H1 · Swing H1/H4</small></span>
+      <span><strong>Sera <em>Indicator</em></strong><small>Deriv + Forex · Swing H1/H4/D1</small></span>
     </a>
     <div class="topbar-actions">
       <div class="signal-notification-center" id="signalNotificationCenter">
@@ -66,7 +66,7 @@
 
   <main class="shell">
     <section class="broker-panel panel signal-only-hero compact-info-strip">
-      <span><b>Deriv Live temps réel</b> · ticks + bougie en formation · Day M15/H1 · Swing H1/H4</span>
+      <span><b>Deriv Live + Forex indicatif</b> · Day M15/H1 · Swing haute conviction H1/H4/D1</span>
       <span>Décision : <b>BUY / SELL / WAIT</b></span>
       <a href="#scanner">Voir les signaux</a>
     </section>
@@ -75,7 +75,7 @@
       <div class="compact-exec-main">
         <div class="compact-exec-status">
           <span class="mode-badge execution-pending" id="executionStatus">EA RÉEL · NON CONNECTÉ</span>
-          <strong>Sera EA Swing Intelligent v1.71</strong>
+          <strong>Sera EA Swing Intelligent v1.80</strong>
           <small>Réel · Risque 0,5 % · max. 1 USD · EXECUTE NOW</small>
         </div>
         <div class="compact-exec-links">
@@ -88,14 +88,14 @@
           <li>MT5 → Fichier → Ouvrir le dossier des données → MQL5 → Experts.</li>
           <li>Copier l’EA, compiler dans MetaEditor et l’attacher à un graphique.</li>
           <li>Autoriser WebRequest vers <code>https://serakatsuva.github.io</code> et activer Algo Trading.</li>
-          <li>EA Intelligent v1.71 : automatique, compte réel autorisé, protections de risque actives.</li>
+          <li>EA Intelligent v1.80 : automatique, compte réel autorisé, protections de risque actives.</li>
         </ol>
       </div>
     </section>
 
     <section class="scanner-panel panel" id="scanner">
       <div class="scanner-heading compact-scanner-heading">
-        <div><span class="eyebrow cyan">Scanner live</span><h2>Signaux Deriv</h2></div>
+        <div><span class="eyebrow cyan">Scanner multi-marchés</span><h2>Signaux Deriv + Forex</h2></div>
         <button class="primary compact-refresh" id="refreshButton" type="button"><span>↻</span> Actualiser</button>
       </div>
       <div class="meta-strip compact-meta">
@@ -104,14 +104,14 @@
         <span>Âge IA <b id="dataAge">—</b></span>
         <span><b id="sourceName">Deriv WebSocket</b></span>
         <span><b id="modelName">Autonome + OSS</b></span>
-        <span><b id="updateFrequency">Ticks live · IA ~5 min</b></span>
+        <span><b id="updateFrequency">Ticks live · consolidation 1 min · serveur ~5 min</b></span>
       </div>
       <div class="scanner-controls">
         <div class="control-group">
           <span class="control-label">Marché</span>
           <div class="market-family-filter compact-tabs" role="tablist" aria-label="Type de marché">
             <button class="family-filter active" id="syntheticFilter" type="button" role="tab" aria-selected="true">Synthétiques</button>
-            <button class="family-filter" id="forexFilter" type="button" role="tab" aria-selected="false">Forex MT5</button>
+            <button class="family-filter" id="forexFilter" type="button" role="tab" aria-selected="false">Forex · 27 paires</button>
           </div>
         </div>
         <div class="control-group synthetic-family-group" id="syntheticFamilyGroup">
@@ -123,7 +123,7 @@
           <div class="trading-mode-filter compact-tabs" role="tablist" aria-label="Style de trading">
             <button class="mode-filter active" data-mode="all" type="button" role="tab" aria-selected="true">Tous</button>
             <button class="mode-filter" data-mode="day" type="button" role="tab" aria-selected="false">Day <small>M15/H1</small></button>
-            <button class="mode-filter" data-mode="swing" type="button" role="tab" aria-selected="false">Swing <small>H1/H4</small></button>
+            <button class="mode-filter" data-mode="swing" type="button" role="tab" aria-selected="false">Swing fort <small>H1/H4/D1</small></button>
           </div>
         </div>
       </div>
@@ -135,6 +135,7 @@
             <strong>Trend Watch</strong>
             <span>H1 <b id="watchTrendH1">—</b></span>
             <span>H4 <b id="watchTrendH4">—</b></span>
+            <span>D1 <b id="watchTrendD1">—</b></span>
             <span class="watch-summary-state" id="watchSetupState">En attente</span>
           </div>
           <button class="watch-options-toggle" id="watchOptionsToggle" type="button" aria-expanded="false">Options</button>
@@ -151,7 +152,7 @@
         <div class="trend-watch-alert" id="trendWatchAlert" hidden role="status" aria-live="assertive"></div>
       </div>
 
-      <div id="notice" class="notice loading">Chargement des signaux Deriv validés…</div>
+      <div id="notice" class="notice loading">Chargement des analyses multi-marchés…</div>
       <div id="results" class="results-grid" aria-live="polite"></div>
     </section>
 
@@ -169,11 +170,11 @@
           <section class="analysis-grid">
       <article class="market-card panel">
         <div class="market-head">
-          <div><span class="eyebrow">DERIV · SYNTHETIC INDICES</span><h2 id="selectedMarket">Boom 300 Index</h2><div class="quote"><strong id="livePrice">—</strong><span id="liveChange">M15/H1</span></div></div>
-          <div class="market-controls"><select id="marketSelect" aria-label="Indice Deriv"></select><span class="timeframe" id="selectedTimeframe">M15 + H1</span><span class="swing-detail-badge" id="swingDurationBadge" hidden></span></div>
+          <div><span class="eyebrow" id="selectedMarketType">DERIV · SYNTHETIC INDICES</span><h2 id="selectedMarket">Boom 300 Index</h2><div class="quote"><strong id="livePrice">—</strong><span id="liveChange">M15/H1</span></div></div>
+          <div class="market-controls"><select id="marketSelect" aria-label="Instrument analysé"></select><span class="timeframe" id="selectedTimeframe">M15 + H1</span><span class="swing-detail-badge" id="swingDurationBadge" hidden></span></div>
         </div>
         <div class="chart-area" id="chartArea">
-          <canvas id="liveCandlesCanvas" class="live-candles-canvas" aria-label="Bougies japonaises live Deriv"></canvas>
+          <canvas id="liveCandlesCanvas" class="live-candles-canvas" aria-label="Bougies japonaises de l’instrument"></canvas>
           <div id="livePriceAxis" class="live-price-axis" aria-hidden="true"></div>
           <div id="predictionPanel" class="prediction-panel wait">
             <div><small>Prediction</small><strong id="predictionDirection">NEUTRE</strong></div>
@@ -237,7 +238,7 @@
         <div class="swing-pips-panel" id="swingPipsPanel" hidden>
           <div class="swing-pips-head"><small>Amplitude estimée du swing</small><strong id="swingPipsTotal">—</strong></div>
           <div class="swing-pips-grid" id="swingPipsGrid"></div>
-          <p>Indices synthétiques : estimation en distance de prix et points normalisés (unité 0.001), différente du pip Forex standard.</p>
+          <p id="swingPipsNote">Indices synthétiques : estimation en distance de prix et points normalisés (unité 0.001), différente du pip Forex standard.</p>
         </div>
         <div class="position-profile" id="positionProfile"><div><small>Mode</small><strong>—</strong></div><div><small>Durée estimée</small><strong>—</strong></div><div><small>Validité</small><strong>—</strong></div><div><small>Prochaine analyse</small><strong>—</strong></div></div>
         <div class="technical-grid" id="technicalGrid"></div>
@@ -246,7 +247,7 @@
       <aside class="decision-card panel">
         <div class="decision-title"><div><span class="eyebrow cyan">Signal final</span><h2>Sera Autonomous Engine + Luna Advisor</h2></div><span class="ai-chip">Aide à la décision</span></div>
         <div class="decision-orb wait" id="decisionOrb"><strong>ATTENDRE</strong><small id="decisionConfidence">Validation requise</small></div>
-        <p class="decision-summary" id="decisionSummary">Sera peut confirmer BUY ou SELL sans OpenAI avec au moins 80 % des conditions pertinentes. Le panneau principal indique simplement BUY, SELL ou WAIT. BUY/SELL clignote uniquement lorsque l’entrée est réellement prête ou que le prix est dans la zone d’entrée. Luna reste un conseiller facultatif.</p>
+        <p class="decision-summary" id="decisionSummary">Le Swing haute conviction exige H1/H4/D1 alignés, un score minimal de 84/100, 72 % de consensus, 80 % des conditions et deux cycles cohérents. BUY/SELL clignote uniquement lorsque l’entrée est réellement prête. Luna reste un conseiller facultatif.</p>
         <div class="oss-ai-panel">
           <div class="oss-ai-head">
             <div><small>Ensemble open source</small><strong id="modelEnsembleSummary">En attente</strong></div>
@@ -261,7 +262,7 @@
         </div>
         <div class="audit-list"><h3>Contrôles du setup</h3><div id="checks"></div></div>
         <div class="signal-actions" id="signalActions" hidden><button id="copySignal" type="button">Copier le signal</button><button id="shareSignal" type="button">Partager</button></div>
-        <p class="manual-note">Sera EA Swing Intelligent v1.71 est configuré pour l’exécution automatique sur le compte MT5 réel connecté. Sans EA actif, aucun ordre n’est envoyé.</p>
+        <p class="manual-note">Sera EA Swing Intelligent v1.80 est configuré pour l’exécution automatique sur le compte MT5 réel connecté. Sans EA actif, aucun ordre n’est envoyé.</p>
       </aside>
           </section>
         </div>

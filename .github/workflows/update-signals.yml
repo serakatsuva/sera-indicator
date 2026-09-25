@@ -1,4 +1,4 @@
-name: Sera Autonomous Engine — Deriv + optional Luna
+name: Sera Autonomous Engine — Deriv + Forex
 
 on:
   workflow_dispatch:
@@ -9,6 +9,7 @@ on:
       - 'scripts/update-signals.mjs'
       - 'scripts/open_source_ensemble.py'
       - 'scripts/adaptive_evidence.py'
+      - 'scripts/send_gmail_alerts.py'
       - 'requirements-ml.txt'
       - 'requirements-foundation.txt'
   schedule:
@@ -88,7 +89,7 @@ jobs:
             echo "OpenAI advisor configured: autonomous engine remains the primary decision maker."
           fi
 
-      - name: Test Deriv signal engine
+      - name: Test multi-market signal engine
         run: node scripts/update-signals.mjs --self-test
 
       - name: Test open-source ensemble
@@ -100,7 +101,7 @@ jobs:
       - name: Validate Gmail alert script
         run: python -m py_compile scripts/send_gmail_alerts.py
 
-      - name: Analyze Deriv with autonomous engine and optional Luna
+      - name: Analyze Deriv and Forex with autonomous engine
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SCREENING_MODEL: gpt-5.6-luna
@@ -154,7 +155,7 @@ jobs:
               exit 0
             fi
 
-            git commit -m "Update Sera Indicator Deriv signals"
+            git commit -m "Update Sera Indicator multi-market signals"
             if git push origin main; then
               exit 0
             fi

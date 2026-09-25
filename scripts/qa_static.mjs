@@ -26,6 +26,16 @@ for (const required of [
   if (!html.includes(`id="${required}"`)) errors.push('missing required id: ' + required);
 }
 
+for (const required of [
+  'LIVE_SWING_MIN_SCORE=84',
+  'LIVE_CONFIRMATION_CYCLES=2',
+  'consolidateLiveConfirmations',
+  '["D1",86400]',
+  'setInterval(runMinuteValidationCycle,60000)'
+]) {
+  if (!app.includes(required)) errors.push('missing dynamic live guard: ' + required);
+}
+
 if (errors.length) {
   console.error(errors.join('\n'));
   process.exit(1);

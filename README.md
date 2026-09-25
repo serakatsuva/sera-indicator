@@ -1,30 +1,35 @@
 # Sera Indicator
 
-Sera Indicator est un système d’aide à la décision et d’exécution Deriv pour le Day trading M15/H1 et le Swing H1/H4.
+Sera Indicator est un système d’aide à la décision pour les indices synthétiques Deriv et 27 paires Forex. Le Day trading utilise M15/H1. Le Swing haute conviction utilise H1/H4 avec un filtre macro D1 et deux cycles de confirmation.
 
 ## Fonctionnement
 
-- Les bougies Deriv M15, H1 et H4 sont récupérées depuis le WebSocket public Deriv.
-- Sera Autonomous Engine v3.4 analyse tendance, régime de marché, momentum, structure, liquidité, retest, ATR, mémoire de tendance et risque de spike.
+- Les bougies Deriv M15, H1 et D1 sont récupérées depuis le WebSocket public Deriv; H4 est consolidé à partir de H1.
+- Les 27 paires Forex cochées sont analysées en H1, H4 et D1 à partir de bougies publiques Yahoo Finance. Ces prix sont indicatifs et doivent être confirmés sur le symbole `-STD` du broker avant exécution.
+- Sera Autonomous Engine v4.0 analyse tendance, régime de marché, momentum, structure, liquidité, retest, ATR, ADX/DMI, mémoire de tendance, épuisement et risque de spike.
 - OpenAI Luna intervient uniquement comme conseiller/auditeur facultatif lorsqu’il est disponible.
-- Sans Luna, le moteur peut confirmer seul BUY/SELL lorsque au moins 80 % des conditions applicables sont validées, tout en exigeant les garde-fous critiques.
+- Sans Luna, le moteur peut confirmer seul BUY/SELL. En Swing, il exige notamment H1/H4/D1 alignés, un score minimal de 84/100, 72 % de consensus, 80 % des conditions et deux cycles cohérents.
 - Le résultat final reste BUY, SELL ou ATTENDRE. Aucun score ne garantit un gain.
+
+### Paires Forex suivies
+
+`USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
 ## Exécution Deriv MT5 — mode réel
 
 Le dossier `mt5/` contient `Sera_Swing_Executor.mq5`.
 
-La version **v1.40** est configurée pour fonctionner directement sur le compte MT5 connecté :
+La version publiée **v1.80** est configurée pour fonctionner directement sur le compte MT5 connecté :
 
 - `EnableAutomaticTrading = true`
 - `AllowRealAccount = true`
 - `AllowSmartLocalExecution = true`
 - risque par trade : **0,50 %**
 - perte maximale calculée par trade : **1 USD**
-- lot maximum : **0,02**
+- lot maximum : **0,05**
 - confiance minimale : **75 %**
 - conditions autonomes minimales : **80 %**
-- score d’exécution minimal : **78 %**
+- score d’exécution EA minimal : **78 %**; le serveur impose **84 %** aux signaux Swing haute conviction
 - état requis pour l’ordre réel : **EXECUTE_NOW**
 - maximum : **1 position Sera ouverte**
 - maximum : **2 entrées Sera par jour**
@@ -48,8 +53,8 @@ La clé `OPENAI_API_KEY`, si elle est configurée, reste exclusivement dans GitH
 
 Sera ajoute maintenant un ensemble quantitatif open source au moteur autonome :
 
-- **XGBoost** : classification directionnelle entraînée sur les bougies Deriv à chaque cycle.
-- **LightGBM** : second classifieur indépendant, également entraîné sur les données Deriv.
+- **XGBoost** : classification directionnelle entraînée sur les bougies de chaque instrument à chaque cycle.
+- **LightGBM** : second classifieur indépendant, entraîné sur les mêmes séries multi-marchés.
 - **Chronos-2 small** : modèle de prévision de séries temporelles utilisé périodiquement sur les candidats les plus forts.
 - **TimesFM 2.5 200M** : second modèle de prévision temporelle. La version 2.5 est utilisée afin de rester sur les poids Apache-2.0.
 - **Qwen3-0.6B via WebLLM** : conseiller facultatif exécuté localement dans le navigateur lorsque WebGPU est disponible.
@@ -63,7 +68,7 @@ Les classifieurs dont la qualité de validation est insuffisante sont exclus du 
 
 ## Setup directionnel et TP1–TP5
 
-Sera Autonomous Engine v3.4 distingue désormais le **setup détecté** du **signal final exécutable**.
+Sera Autonomous Engine v4.0 distingue le **setup détecté** du **signal final exécutable**.
 
 - Un setup précoce est affiché comme **SETUP BUY** (bleu) ou **SETUP SELL** (rouge).
 - Lorsque la structure le permet, Sera calcule immédiatement une **Entrée projetée**, un **Stop Loss** et **TP1 à TP5**.
@@ -84,9 +89,19 @@ L’EA v1.50 ajoute :
 Cette gestion progressive réduit l’exposition d’un trade déjà favorable mais ne garantit ni l’atteinte des objectifs ni l’absence de perte.
 
 
-## Intelligence v3.7
+## Intelligence v4.0 — Swing haute conviction
 
-Le moteur v3.7 ajoute des confirmations indépendantes supplémentaires aux familles déjà présentes :
+Le moteur v4.0 conserve les confirmations indépendantes et durcit le Swing :
+
+- alignement obligatoire H1/H4/D1 ;
+- score minimal 84/100 et consensus pondéré minimal 72 % ;
+- au moins 80 % des conditions applicables ;
+- confirmation du même biais sur deux cycles successifs (`1/2`, puis `2/2`) ;
+- qualité minimale H1/H4/D1 et force ADX/DMI sur les trois horizons ;
+- rejet des zones d’épuisement RSI H4/D1, des flips récents et des régimes à risque ;
+- uniquement des continuations de cassure ou de pullback pour un BUY/SELL Swing final.
+
+Les confirmations techniques comprennent aussi :
 
 - ADX / DMI pour la force et la direction de tendance ;
 - MACD histogram pour l’alignement du momentum ;
@@ -96,7 +111,7 @@ Le moteur v3.7 ajoute des confirmations indépendantes supplémentaires aux fami
 - structure HH/HL ou LH/LL ;
 - pattern Engulfing dans les contextes de reversal/pullback.
 
-Ces signaux sont sélectionnés selon le régime de marché. Ils ne sont pas tous exigés simultanément, afin d’éviter qu’un empilement d’indicateurs corrélés bloque ou survalide artificiellement un trade.
+Ces règles réduisent fortement le nombre de signaux et visent des mouvements plus longs, mais elles ne peuvent garantir l’absence de retournement ni un résultat positif.
 
 ## EA réel v1.60
 
@@ -119,7 +134,7 @@ Ces valeurs sont des garde-fous de départ et ne constituent pas une garantie de
 
 Le workflow de cinq minutes peut envoyer automatiquement un email lorsqu’un **nouveau setup Swing** apparaît ou change de statut important.
 
-Le message contient : indice, BUY/SELL, entrée proposée, zone d’entrée, prix de référence, SL, TP1–TP5, amplitude pips/points, durée estimée, confiance, conditions, consensus stratégies, consensus des modèles open source et score d’exécution.
+Le message contient : instrument, BUY/SELL, entrée proposée, zone d’entrée, prix de référence, SL, TP1–TP5, amplitude pips/points, durée estimée, confiance, conditions, consensus stratégies, consensus des modèles open source et score d’exécution.
 
 Pour activer l’envoi, configurer les trois Repository Secrets suivants dans GitHub :
 

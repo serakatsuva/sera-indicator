@@ -134,7 +134,24 @@ test('chart uses strategy timeframe mapping for Day and Swing', async ({ page })
   expect(mapping.day.granularity).toBe(900);
   expect(mapping.swing.entry).toBe('H1');
   expect(mapping.swing.confirmation).toBe('H4');
+  expect(mapping.swing.macro).toBe('D1');
   expect(mapping.swing.granularity).toBe(3600);
+});
+
+test('Forex scanner exposes all 27 checked STD symbols', async ({ page }) => {
+  const forex = await page.evaluate(() => ({markets:[...forexMarkets],symbols:{...forexSymbols}}));
+  expect(forex.markets).toHaveLength(27);
+  expect(forex.symbols['USD/BRL']).toBe('USDBRL-STD');
+  expect(forex.symbols['USD/ILS']).toBe('USDILS-STD');
+  expect(forex.symbols['EUR/USD']).toBe('EURUSD-STD');
+  expect(forex.symbols['NZD/USD']).toBe('NZDUSD-STD');
+});
+
+test('Forex tab renders the 27 instruments as Swing H1 H4 D1', async ({ page }) => {
+  await page.locator('#forexFilter').click();
+  await expect(page.locator('#results .result-card')).toHaveCount(27);
+  await expect(page.locator('#selectedTimeframe')).toContainText(/H1/);
+  await expect(page.locator('.mode-filter[data-mode="swing"]')).toHaveClass(/active/);
 });
 
 
@@ -209,7 +226,7 @@ test('detected setup detail can show visual risk reward plan with timeframe', as
     await card.click();
     await expect(page.locator('#signalModal')).toBeVisible();
     await expect(page.locator('#visualTradePlan')).toBeVisible();
-    await expect(page.locator('#visualPlanTf')).toHaveText(/M15 \/ H1|H1 \/ H4/);
+    await expect(page.locator('#visualPlanTf')).toHaveText(/M15 \/ H1|H1 \/ H4 \/ D1/);
     await expect(page.locator('#visualPlanSide')).toHaveText(/BUY|SELL/);
     await expect(page.locator('#visualPlanRR')).toHaveText(/1 : /);
   }
@@ -357,6 +374,10 @@ test('persistent Deriv live connection includes heartbeat watchdog and auto reco
 test('formal live validation consolidates every 60 seconds', async ({ page }) => {
   const source = await (await page.request.get('/app.js')).text();
   expect(source).toContain('setInterval(runMinuteValidationCycle,60000)');
+  expect(source).toContain('consolidateLiveConfirmations');
+  expect(source).toContain('LIVE_CONFIRMATION_CYCLES=2');
+  expect(source).toContain('LIVE_SWING_MIN_SCORE=84');
+  expect(source).toContain('["D1",86400]');
   expect(source).toContain('Validation LIVE active');
   expect(source).toContain('consolidation chaque minute');
 });

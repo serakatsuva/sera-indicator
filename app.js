@@ -4,6 +4,7 @@ let derivMarkets=[
   "Volatility 10 Index","Volatility 25 Index","Volatility 50 Index",
   "Volatility 75 Index","Volatility 100 Index"
 ];
+const DERIV_WS_URL="wss://api.derivws.com/trading/v1/options/ws/public?app_id=1089";
 const symbols={
   "Boom 300 Index":"BOOM300N","Boom 500 Index":"BOOM500","Boom 1000 Index":"BOOM1000",
   "Crash 300 Index":"CRASH300N","Crash 500 Index":"CRASH500","Crash 1000 Index":"CRASH1000",
@@ -35,7 +36,7 @@ function appLooksSynthetic(item){
 
 function discoverAppDerivMarkets(){
   return new Promise(resolve=>{
-    const ws=new WebSocket("wss://api.derivws.com/trading/v1/options/ws/public");
+    const ws=new WebSocket(DERIV_WS_URL);
     let settled=false;
     const done=()=>{if(settled)return;settled=true;clearTimeout(timer);try{ws.close();}catch{}resolve(derivMarkets);};
     const timer=setTimeout(done,10000);
@@ -59,8 +60,12 @@ function discoverAppDerivMarkets(){
   });
 }
 
-const forexMarkets=["EUR/USD","GBP/USD","USD/JPY","USD/CHF","USD/CAD","AUD/USD","NZD/USD"];
-const forexSymbols={"EUR/USD":"EURUSD","GBP/USD":"GBPUSD","USD/JPY":"USDJPY","USD/CHF":"USDCHF","USD/CAD":"USDCAD","AUD/USD":"AUDUSD","NZD/USD":"NZDUSD"};
+const forexMarkets=[
+  "USD/BRL","USD/CAD","USD/CHF","USD/CLP","USD/CNH","USD/COP","USD/CZK","USD/DKK","USD/HUF",
+  "USD/IDR","USD/INR","USD/JPY","USD/KRW","USD/MXN","USD/NOK","USD/PLN","USD/SEK","USD/SGD",
+  "USD/THB","USD/TRY","USD/TWD","USD/ZAR","USD/ILS","AUD/USD","EUR/USD","GBP/USD","NZD/USD"
+];
+const forexSymbols=Object.fromEntries(forexMarkets.map(name=>[name,`${name.replace("/","")}-STD`]));
 const $=id=>document.getElementById(id);
 let payload=null;
 let selected=derivMarkets[0];
@@ -74,6 +79,9 @@ const chartHistoryLoadedAt=new Map();
 const chartHistoryLoading=new Map();
 const liveIntelligenceState=new Map();
 const liveIntelligenceLastRun=new Map();
+const liveConfirmationMemory=new Map();
+const LIVE_SWING_MIN_SCORE=84;
+const LIVE_CONFIRMATION_CYCLES=2;
 let liveHistoryBootstrapped=false;
 let liveUiFrame=0;
 let liveReconnectTimer=null;
@@ -148,7 +156,8 @@ const simpleActionState=row=>{
       const side=(live.state==="BUY"||live.state==="SELL")?live.state:"WAIT";
       const family=live.family;
       const familyText=family?(" · FAMILLE "+family.dominant_side+" "+family.consensus_percent+"%"):"";
-      return{code:side,label:side,detail:"VALIDATION LIVE · "+live.score+"%"+familyText,side:side.toLowerCase(),blink:false,live:true};
+      const progress=live.confirmation_progress||"0/2";
+      return{code:side,label:side,detail:"VALIDATION LIVE · "+live.score+"% · "+progress+familyText,side:side.toLowerCase(),blink:false,live:true};
     }
     return{code:"WAIT",label:"WAIT",detail:"VALIDATION LIVE EN SYNCHRONISATION",side:"wait",blink:false};
   }
@@ -173,16 +182,19 @@ const setupSide=row=>{
   const explicit=row?.setup_direction||row?.decision_engine?.detected_side;
   if(explicit==="BUY"||explicit==="SELL")return explicit;
   const e=row?.entry_tf?.side,c=row?.confirmation_tf?.side;
-  return e&&e===c&&(e==="BUY"||e==="SELL")?e:"NEUTRE";
+  const macroOk=row?.mode!=="swing"||row?.macro_tf?.side===e;
+  return e&&e===c&&macroOk&&(e==="BUY"||e==="SELL")?e:"NEUTRE";
 };
 const hasDetectedSetup=row=>Boolean(row?.setup_detected||row?.decision_engine?.setup_detected)&&setupSide(row)!=="NEUTRE";
 const modelDirectionLabel=value=>value==="BUY"?"BUY":value==="SELL"?"SELL":"NEUTRE";
-const fmtEntry=n=>Number.isFinite(Number(n))?Number(n).toLocaleString("en-US",{minimumFractionDigits:3,maximumFractionDigits:3}):"—";
+const priceDecimals=n=>{const value=Math.abs(Number(n));if(value>=1000)return 2;if(value>=100)return 3;if(value>=10)return 4;return 5;};
+const fmtEntry=n=>Number.isFinite(Number(n))?Number(n).toLocaleString("en-US",{minimumFractionDigits:priceDecimals(n),maximumFractionDigits:priceDecimals(n)}):"—";
 const signedDistance=(value,side)=>{
   const n=Number(value);
   if(!Number.isFinite(n))return"—";
   const sign=side==="SELL"?"−":"+";
-  return `${sign}${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})} pts`;
+  const digits=Math.abs(n)<1?5:2;
+  return `${sign}${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:digits,maximumFractionDigits:digits})} pts`;
 };
 const pipsLabel=value=>Number.isFinite(Number(value))?`≈ ${Math.round(Number(value)).toLocaleString("en-US")} pips/points`:"—";
 const modelStatusText=result=>{
@@ -203,8 +215,8 @@ const swingBadgeText=row=>{
   const prefix=timing?.is_confirmed?"SWING":"PROJECTION SWING";
   return `${prefix} ${kind} · ${swingDurationLabel(timing)}`;
 };
-const hasDerivResults=()=>payload?.ok===true&&["ai_analyzed","autonomous_analyzed","smart_local","technical_only"].includes(payload?.status)&&payload?.source_broker==="Deriv"&&Array.isArray(payload?.markets);
-const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<20;
+const hasDerivResults=()=>payload?.ok===true&&["ai_analyzed","autonomous_analyzed","smart_local","technical_only"].includes(payload?.status)&&Array.isArray(payload?.markets);
+const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<10;
 
 $("refreshButton").addEventListener("click",()=>loadSignals(true));
 $("marketSelect").addEventListener("change",event=>{
@@ -296,10 +308,11 @@ function closeSignalModal(){
 }
 
 function setTradingMode(mode){
+  if(marketFamily==="forex"&&mode==="day")mode="swing";
   tradingMode=mode;
   if(mode!=="all")selectedMode=mode;
   document.querySelectorAll(".mode-filter").forEach(button=>{const active=button.dataset.mode===mode;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active));});
-  $("updateFrequency").textContent="Ticks live · IA ~5 min";
+  $("updateFrequency").textContent="Ticks live · consolidation 1 min · serveur ~5 min";
   render();
 }
 
@@ -324,7 +337,7 @@ function familyLabel(key){
 
 function availableSyntheticMarkets(){
   const fromPayload=hasDerivResults()
-    ?payload.markets.map(row=>row.market).filter(Boolean)
+    ?payload.markets.filter(row=>row.asset_class!=="forex").map(row=>row.market).filter(Boolean)
     :[];
   return [...new Set([...derivMarkets,...fromPayload])].sort((a,b)=>a.localeCompare(b));
 }
@@ -383,7 +396,16 @@ function setMarketFamily(family){
   if(family==="synthetic"){
     const markets=marketsForIndexFamily();
     selected=markets[0]||derivMarkets[0];
-  }else selected=forexMarkets[0];
+  }else{
+    selected=forexMarkets[0];
+    tradingMode="swing";
+    selectedMode="swing";
+    document.querySelectorAll(".mode-filter").forEach(button=>{
+      const active=button.dataset.mode==="swing";
+      button.classList.toggle("active",active);
+      button.setAttribute("aria-selected",String(active));
+    });
+  }
   liveQuote=null;
   renderIndexFamilyFilter();
   fillMarketSelect();
@@ -497,7 +519,7 @@ function renderReadyAlerts(){
     const entry=Number.isFinite(Number(item.entry))?fmtEntry(item.entry):"—";
     return `<button class="signal-notification-item ${side}${unreadClass}" type="button" data-ready-fingerprint="${escapeHtml(item.fingerprint)}">
       <span class="signal-notification-dot"></span>
-      <span class="signal-notification-copy"><strong>${escapeHtml(item.market)} · ${item.verdict}</strong><small>${item.mode==="swing"?"Swing H1/H4":"Day M15/H1"} · ${Math.round(item.confidence)}% · Entrée ${entry}</small></span>
+      <span class="signal-notification-copy"><strong>${escapeHtml(item.market)} · ${item.verdict}</strong><small>${item.mode==="swing"?"Swing H1/H4/D1":"Day M15/H1"} · ${Math.round(item.confidence)}% · Entrée ${entry}</small></span>
       <time>${escapeHtml(when)}</time>
     </button>`;
   }).join("");
@@ -538,6 +560,7 @@ async function loadSignals(manual=false){
 function runMinuteValidationCycle(){
   if(marketFamily!=="synthetic")return;
   for(const market of availableSyntheticMarkets())refreshLiveIntelligence(market,true);
+  consolidateLiveConfirmations();
   lastMinuteValidationAt=Date.now();
   if(payload)render();
 }
@@ -553,17 +576,23 @@ function render(){
   renderTrendWatchUi();
 
   if(marketFamily==="forex"){
-    setMarketStatus("Forex MT5 : connexion requise","error"); setAiStatus("OpenAI Forex : en attente","error");
-    $("sourceName").textContent="Deriv MT5"; notice.className="notice warning";
-    notice.textContent="Les marchés Forex sont prêts. Connectez le flux Deriv MT5 pour activer les analyses IA sans utiliser de prix fictifs.";
-    renderForexCards(results); renderSelected(); return;
+    const forexRows=hasDerivResults()?payload.markets.filter(row=>row.asset_class==="forex"&&row.mode==="swing"):[];
+    const forexReady=forexRows.length>0;
+    setMarketStatus(forexReady?"Forex : H1/H4/D1 analysés":"Forex : données en attente",forexReady?"live":"error");
+    setAiStatus(forexReady&&fresh?"Swing haute conviction actif":"Analyse Forex en attente",forexReady&&fresh?"live":"error");
+    $("sourceName").textContent="Yahoo Finance indicatif · confirmer sur MT5";
+    notice.className=`notice ${forexReady&&fresh?"success":"warning"}`;
+    notice.textContent=forexReady
+      ?`${forexRows.length}/${forexMarkets.length} paires Forex analysées en Swing H1/H4/D1. Un signal exige 84/100, 72% de consensus et une confirmation 2/2; le prix doit être confirmé sur votre broker.`
+      :"Les 27 paires Forex sont configurées. Leur première analyse H1/H4/D1 est en cours de génération.";
+    renderForexCards(results,fresh); renderSelected(); return;
   }
 
   if(!hasDerivResults()){
     setMarketStatus("Deriv : connexion en cours","error");
     setAiStatus("OpenAI : analyse en attente","error");
     notice.className="notice warning";
-    notice.textContent=payload?.note||"ATTENDRE — la première analyse Deriv H1/H4 n’est pas encore disponible.";
+    notice.textContent=payload?.note||"ATTENDRE — la première analyse Deriv H1/H4/D1 n’est pas encore disponible.";
     renderWaitingCards(results);
     renderSelected();
     return;
@@ -665,11 +694,13 @@ function compareSignalPriority(a,b){
     ||String(a.market||"").localeCompare(String(b.market||""),"fr");
 }
 
-function renderForexCards(container){
+function renderForexCards(container,fresh=resultsAreFresh()){
   forexMarkets.forEach(name=>{
+    const row=hasDerivResults()?payload.markets.find(item=>item.asset_class==="forex"&&item.market===name&&item.mode==="swing"):null;
+    if(row){container.appendChild(resultCard(row,fresh));return;}
     const card=document.createElement("button");
     card.className=`result-card forex-pending${name===selected?" selected":""}`;
-    card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${forexSymbols[name]} · H1/H4</p></div><span class="signal wait">EN ATTENTE</span></div><div class="forex-lock">Connexion MT5 requise</div><div class="result-score"><strong>—</strong><small>Analyse IA non lancée</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
+    card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${forexSymbols[name]} · H1/H4/D1</p></div><span class="signal wait">EN ATTENTE</span></div><div class="forex-lock">Première analyse en cours</div><div class="result-score"><strong>—</strong><small>Confirmation haute conviction requise</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
     card.onclick=()=>{selected=name;$("marketSelect").value=name;renderSelected();highlightSelected();openSignalModal(name);};
     container.appendChild(card);
   });
@@ -679,13 +710,14 @@ function renderWaitingCards(container){
   marketsForIndexFamily().forEach(name=>{
     const card=document.createElement("button");
     card.className=`result-card${name===selected?" selected":""}`;
-    card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${symbols[name]} · H1/H4</p></div><span class="signal wait">ATTENDRE</span></div><div class="result-timing"><span>Biais en analyse</span><b>Horizon —</b></div><div class="result-score"><strong>—</strong><small>Préparation du setup</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
+    card.innerHTML=`<div class="result-top"><div><h3>${name}</h3><p class="symbol">${symbols[name]} · H1/H4/D1</p></div><span class="signal wait">ATTENDRE</span></div><div class="result-timing"><span>Biais en analyse</span><b>Horizon —</b></div><div class="result-score"><strong>—</strong><small>Préparation du setup</small></div><div class="result-bar"><i style="width:0%"></i></div>`;
     card.onclick=()=>{selected=name;liveQuote=null;$("marketSelect").value=name;renderSelected();highlightSelected();connectLivePrice();openSignalModal(name);};
     container.appendChild(card);
   });
 }
 
 function resultCard(row,fresh){
+  const isForex=row?.asset_class==="forex";
   const state=effectiveSignalState(row);
   const liveValidation=liveValidationFor(row);
   const verdict=state.verdict,confidence=fresh?Number(row.final_confidence)||0:Number(liveValidation?.score)||0;
@@ -709,38 +741,21 @@ function resultCard(row,fresh){
   const pipsMini=row.mode==="swing"&&swingDistance?`<div class="swing-pips-mini">${signedDistance(swingDistance.estimated_swing_price_distance,detectedSide||verdict)} · ${pipsLabel(swingDistance.estimated_swing_pips_points)}</div>`:"";
   const action=simpleActionState(row);
   const actionChip=`<div class="trade-action-chip ${action.side} ${action.blink?"blink":""}"><i></i><strong>${escapeHtml(action.label)}</strong><span>${escapeHtml(action.detail)}</span></div>`;
-  const live=liveScannerState(row);
+  const live=isForex?null:liveScannerState(row);
+  const liveStrip=isForex
+    ?`<div class="live-scan-row wait" data-live-scan><div class="live-scan-top"><span><i></i> SERVEUR</span><b data-live-price>${fmtEntry(row.price)}</b></div><div class="live-scan-motion" data-live-motion>INDICATIF · CONFIRMER MT5</div></div>`
+    :`<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div>`;
   card.dataset.liveMarket=row.market;
   card.dataset.liveMode=row.mode;
-  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${state.stale?"":setupMarker}${state.stale?"":pipsMini}</div><span class="signal ${signalClass(state.verdict)}">${state.verdict}</span></div>${actionChip}${swingBadge}<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div><div class="live-intelligence-mini wait" data-live-intelligence>Live IA: synchronisation…</div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${state.stale?"wait":detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${state.live?"VALIDATION LIVE":state.stale?"VALIDATION LIVE EN SYNCHRONISATION":status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
-  card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=liveQuotes.get(row.market)?{symbol:symbols[row.market],price:liveQuotes.get(row.market).price}:null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();openSignalModal(row.market);loadChartHistory(row.market,row);};
+  card.innerHTML=`<div class="result-top"><div><h3>${escapeHtml(row.market)}</h3><p class="symbol">${escapeHtml(row.symbol||row.market)}</p>${state.stale?"":setupMarker}${state.stale?"":pipsMini}</div><span class="signal ${signalClass(state.verdict)}">${state.verdict}</span></div>${actionChip}${swingBadge}${liveStrip}<div class="live-intelligence-mini wait" data-live-intelligence>${isForex?"Analyse serveur H1/H4/D1":"Live IA: synchronisation…"}</div><div class="compact-signal-row"><span>${row.mode==="day"?"DAY · M15/H1":"SWING · H1/H4/D1"}</span><b>${direction}</b><strong>${confidence}%</strong></div><div class="result-timing ${state.stale?"wait":detected?detectedSide.toLowerCase():signalClass(verdict)}"><span>${state.live?"VALIDATION LIVE":state.stale?"ANALYSE SERVEUR À ACTUALISER":status}</span><b>${escapeHtml(oss)} · ${conditions}%</b></div><div class="result-bar"><i style="width:${Math.max(confidence,conditions)}%"></i></div>`;
+  card.onclick=()=>{selected=row.market;selectedMode=row.mode||"swing";liveQuote=!isForex&&liveQuotes.get(row.market)?{symbol:symbols[row.market],price:liveQuotes.get(row.market).price}:null;ensureMarketOption(row.market);$("marketSelect").value=selected;renderSelected();openSignalModal(row.market);if(!isForex)loadChartHistory(row.market,row);};
   return card;
 }
 
 function renderSelected(){
   $("selectedMarket").textContent=selected;
-  if(marketFamily==="forex"){
-    $("verdictBadge").className="verdict-badge wait";$("verdictBadge").textContent="EN ATTENTE";
-    $("decisionOrb").className="decision-orb wait";$("decisionOrb").querySelector("strong").textContent="ATTENDRE";
-    $("decisionConfidence").textContent="Connexion MT5 requise";
-    $("decisionSummary").textContent=`${selected} est ajouté au scanner. Son analyse H1/H4 par Sera Autonomous Engine démarrera uniquement après connexion des vraies bougies Deriv MT5.`;
-    const setupBadge=$("setupDirectionBadge");
-    if(setupBadge){setupBadge.className="setup-direction wait";setupBadge.innerHTML="<i></i> SETUP EN ATTENTE";}
-    $("livePrice").textContent="—";$("liveChange").textContent="Deriv MT5 · attente";
-    $("levels").querySelectorAll("strong").forEach(element=>element.textContent="—");
-    $("timingPanel").querySelectorAll("strong").forEach(element=>element.textContent="—");
-    $("timingNote").textContent="Durée, expiration et objectifs seront calculés après réception des vraies bougies MT5.";
-    renderSwingPips(null);
-    $("technicalGrid").innerHTML=[["Sessions","Londres / New York"],["Tendance","H1 + H4"],["Volatilité","ATR Forex"],["Actualités","Contrôle requis"]].map(([label,value])=>`<div class="metric"><small>${label}</small><strong class="no">${value}</strong></div>`).join("");
-    $("checks").innerHTML='<div class="check no"><i></i><span>Flux de bougies Deriv MT5 non connecté</span></div><div class="check no"><i></i><span>Aucun signal ni pourcentage ne sera fabriqué</span></div>';
-    renderOpenSourceModels(null);
-    renderLiveEntry(null);
-    renderTradeAction(null);
-    renderPredictionPanel(null);
-    renderVisualTradePlan(null);
-    renderRealtimeCandles(null);
-    $("signalActions").hidden=true;drawChart("wait");highlightSelected();return;
-  }
+  const selectedIsForex=marketFamily==="forex";
+  if($("selectedMarketType"))$("selectedMarketType").textContent=selectedIsForex?"FOREX · SWING INDICATIF":"DERIV · SYNTHETIC INDICES";
   const candidates=hasDerivResults()?payload.markets.filter(item=>item.market===selected):[];
   const row=candidates.find(item=>item.mode===selectedMode)||candidates[0]||null;
   if(row?.mode)selectedMode=row.mode;
@@ -761,11 +776,15 @@ function renderSelected(){
   $("decisionOrb").querySelector("strong").textContent=verdict;
   $("decisionConfidence").textContent=fresh
     ?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`)
-    :liveValidation?`${liveValidation.score}% · VALIDATION LIVE`:"Synchronisation live";
+    :selectedIsForex?(row?"Analyse serveur à actualiser":"Première analyse en cours"):liveValidation?`${liveValidation.score}% · LIVE ${liveValidation.confirmation_progress}`:"Synchronisation live";
   $("decisionSummary").textContent=fresh&&row?.ai_summary
     ?row.ai_summary
+    :selectedIsForex
+      ?row
+        ?`L’analyse de ${selected} doit être actualisée. Les anciennes décisions restent neutralisées sur WAIT.`
+        :`${selected} est configuré pour l’analyse Swing H1/H4/D1 haute conviction. La première analyse est en cours.`
     :liveValidation
-      ?`Validation temps réel Deriv active pour ${selected}. Le calcul serveur est ancien; ses anciens niveaux entrée/SL/TP restent neutralisés.`
+      ?`Validation temps réel Deriv active pour ${selected} en H1/H4/D1 · consolidation ${liveValidation.confirmation_progress}. Le calcul serveur est ancien; ses anciens niveaux entrée/SL/TP restent neutralisés.`
       :`Sera synchronise la validation live pour ${selected}.`;
   renderOpenSourceModels(row);
   renderLiveEntry(row);
@@ -774,7 +793,7 @@ function renderSelected(){
   renderLiveIntelligencePanel(row);
   renderVisualTradePlan(row);
   renderRealtimeCandles(row);
-  $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||"H1 + H4";
+  $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||(selectedIsForex||row?.mode==="swing"?"H1 + H4 + D1":"M15 + H1");
   const swingBadge=$("swingDurationBadge");
   if(swingBadge){
     if(row?.mode==="swing"&&row?.timing){
@@ -786,28 +805,49 @@ function renderSelected(){
       swingBadge.textContent="";
     }
   }
-  const currentPrice=liveQuote?.symbol===symbols[selected]?liveQuote.price:row?.price;
-  $("livePrice").textContent=fmt(currentPrice);
-  $("liveChange").textContent=liveQuote?.symbol===symbols[selected]?"Prix Deriv live":detected?`SETUP ${detectedSide} détecté`:row?`${row.technical_verdict} technique`:"Deriv · attente";
+  const currentPrice=!selectedIsForex&&liveQuote?.symbol===symbols[selected]?liveQuote.price:row?.price;
+  $("livePrice").textContent=fmtEntry(currentPrice);
+  $("liveChange").textContent=selectedIsForex
+    ?(row?"Yahoo Finance indicatif · confirmer sur MT5":"Première analyse Forex en cours")
+    :liveQuote?.symbol===symbols[selected]?"Prix Deriv live":detected?`SETUP ${detectedSide} détecté`:row?`${row.technical_verdict} technique`:"Deriv · attente";
   const displayedLevels=fresh?(verdict!=="ATTENDRE"&&row?.levels?row.levels:(detected?row?.projected_levels:null)):null;
   const levelValues=displayedLevels
     ?[displayedLevels.entry,displayedLevels.sl,displayedLevels.tp1,displayedLevels.tp2,displayedLevels.tp3,displayedLevels.tp4,displayedLevels.tp5]
     :[null,null,null,null,null,null,null];
-  $("levels").querySelectorAll("strong").forEach((element,index)=>element.textContent=fmt(levelValues[index]));
+  $("levels").querySelectorAll("strong").forEach((element,index)=>element.textContent=fmtEntry(levelValues[index]));
   renderSwingPips(row);
   const technical=row?.entry_tf||row?.h1;
   const confirmation=row?.confirmation_tf||row?.h4;
+  const macro=row?.macro_tf||row?.d1;
   const familyContext=row?.family_context||{};
-  const familyLabelText=familyContext.status==="INSUFFICIENT"
+  const familyLabelText=selectedIsForex
+    ?"Source indicative · confirmation broker requise"
+    :familyContext.status==="INSUFFICIENT"
     ?`Famille ${row?.family||"—"} · données insuffisantes`
     :`Famille ${row?.family||"—"} · ${familyContext.dominant_side||"NEUTRE"} ${Number(familyContext.consensus_percent)||0}% (${Number(familyContext.directional_members)||0}/${Number(familyContext.members)||0})`;
-  const familyOk=familyContext.status==="INSUFFICIENT"?false:Boolean(familyContext.agrees&&!familyContext.contradicts);
-  const metrics=[[`Entrée: ${executionLabel(row)}`,row?.execution_state==="EXECUTE_NOW"],[`Score exécution ${Number(row?.execution_score)||0}% / 78%`,Number(row?.execution_score)>=78],[`Conditions ${Number(row?.decision_engine?.condition_pass_percent)||0}% / 80%`,Number(row?.decision_engine?.condition_pass_percent)>=80],["Consensus stratégies",Number(row?.decision_engine?.consensus)>=62],[familyLabelText,familyOk],[`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],["Alignement TF",technical?.side&&technical?.side===confirmation?.side],["Régime directionnel",row?.intelligence?.regime==="TRENDING"],["Mémoire tendance",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],["BOS / CHoCH",technical&&(technical.bos||technical.choch)],["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]];
+  const familyOk=selectedIsForex?false:familyContext.status==="INSUFFICIENT"?false:Boolean(familyContext.agrees&&!familyContext.contradicts);
+  const swing=row?.mode==="swing",scoreThreshold=swing?84:78,consensusThreshold=swing?72:66;
+  const horizonsAligned=Boolean(technical?.side&&technical.side===confirmation?.side&&(!swing||technical.side===macro?.side));
+  const metrics=[
+    [`Entrée: ${executionLabel(row)}`,row?.execution_state==="EXECUTE_NOW"],
+    [`Score exécution ${Number(row?.execution_score)||0}% / ${scoreThreshold}%`,Number(row?.execution_score)>=scoreThreshold],
+    [`Conditions ${Number(row?.decision_engine?.condition_pass_percent)||0}% / 80%`,Number(row?.decision_engine?.condition_pass_percent)>=80],
+    [`Consensus stratégies ${Number(row?.decision_engine?.consensus)||0}% / ${consensusThreshold}%`,Number(row?.decision_engine?.consensus)>=consensusThreshold],
+    [familyLabelText,familyOk],
+    [`Tendance ${row?.timeframes?.[1]||"H4"}`,confirmation?.trendStrong],
+    ...(swing?[[`Filtre macro ${row?.timeframes?.[2]||"D1"}`,macro?.trendStrong&&macro?.side===technical?.side]]:[]),
+    ["Alignement TF",horizonsAligned],
+    ["Confirmation 2 cycles",!swing||Number(row?.trend_memory?.bias_cycles)>=2],
+    ["Régime directionnel",row?.intelligence?.regime==="TRENDING"],
+    ["Mémoire sans flip",row?.trend_memory?.persistence&&!row?.trend_memory?.flip],
+    ["BOS / CHoCH",technical&&(technical.bos||technical.choch)],
+    ["Liquidité",technical?.sweep],["Break & Retest",technical?.retest],["Momentum RSI",technical?.momentum]
+  ];
   $("technicalGrid").innerHTML=metrics.map(([label,ok])=>`<div class="metric"><small>${label}</small><strong class="${ok?"ok":"no"}">${ok?"Confirmé":"Non confirmé"}</strong></div>`).join("");
   const profile=[row?.mode==="day"?"Day trading":"Swing",row?.duration?.range||"—",row?.duration?.validity||"—",row?.duration?.reanalysis||"—"];
   $("positionProfile").querySelectorAll("strong").forEach((element,index)=>element.textContent=profile[index]);
   const confirmations=fresh?(row?.ai_confirmations||[]):[],contradictions=fresh?(row?.ai_contradictions||[]):[];
-  $("checks").innerHTML=[...confirmations.map(text=>`<div class="check"><i></i><span>${escapeHtml(text)}</span></div>`),...contradictions.map(text=>`<div class="check no"><i></i><span>${escapeHtml(text)}</span></div>`)].join("")||'<div class="check no"><i></i><span>Données Deriv et analyse OpenAI récente requises</span></div>';
+  $("checks").innerHTML=[...confirmations.map(text=>`<div class="check"><i></i><span>${escapeHtml(text)}</span></div>`),...contradictions.map(text=>`<div class="check no"><i></i><span>${escapeHtml(text)}</span></div>`)].join("")||'<div class="check no"><i></i><span>Analyse serveur récente et confirmations complètes requises</span></div>';
   const timing=row?.timing;
   const timingValues=timing?[
     timing.is_confirmed?timing.side:`Biais ${timing.bias}`,
@@ -825,7 +865,7 @@ function renderSelected(){
   $("timingPanel").className=`timing-panel ${cls}`;
   $("timingNote").textContent=timing?.is_confirmed
     ?row?.mode==="swing"
-      ?`${swingBadgeText(row)} · ${executionLabel(row)}. ${row?.execution?.reason||"Estimation basée sur l’ATR, la persistance de tendance H1/H4 et la distance vers les objectifs."}`
+      ?`${swingBadgeText(row)} · ${executionLabel(row)}. ${row?.execution?.reason||"Estimation basée sur l’ATR, deux cycles cohérents et l’alignement H1/H4/D1."}`
       :`${executionLabel(row)}. ${row?.execution?.reason||`Le signal expire après ${timing.expires_in_hours} h sans déclenchement.`}`
     :row?.mode==="swing"
       ?`${swingBadgeText(row)} selon le biais ${timing?.bias||"actuel"}. Projection réévaluée chaque heure tant que le signal n’est pas confirmé.`
@@ -858,7 +898,7 @@ function liveEntryProposal(row){
   }else{
     liveState="WAIT_CONFIRMATION";
   }
-  return {...plan,live_price:live,proposed_entry:Number(proposed.toFixed(3)),live_state:liveState,in_zone:inZone};
+  return {...plan,live_price:live,proposed_entry:Number(proposed.toFixed(priceDecimals(proposed))),live_state:liveState,in_zone:inZone};
 }
 
 function renderLiveEntry(row){
@@ -886,7 +926,7 @@ function renderTradeAction(row){
 }
 
 function renderSwingPips(row){
-  const panel=$("swingPipsPanel"),total=$("swingPipsTotal"),grid=$("swingPipsGrid");
+  const panel=$("swingPipsPanel"),total=$("swingPipsTotal"),grid=$("swingPipsGrid"),note=$("swingPipsNote");
   if(!panel||!total||!grid)return;
   if(!row||row.mode!=="swing"){
     panel.hidden=true;
@@ -904,6 +944,9 @@ function renderSwingPips(row){
     return;
   }
   panel.hidden=false;
+  if(note)note.textContent=row?.asset_class==="forex"
+    ?"Forex : estimation en pips selon la paire. Les niveaux indicatifs doivent être confirmés sur le symbole MT5 du broker."
+    :"Indices synthétiques : estimation en distance de prix et points normalisés (unité 0.001), différente du pip Forex standard.";
   total.textContent=`${signedDistance(distance.estimated_swing_price_distance,side)} · ${pipsLabel(distance.estimated_swing_pips_points)}`;
   const targets=["tp1","tp2","tp3","tp4","tp5"];
   grid.innerHTML=targets.map(key=>{
@@ -1035,7 +1078,6 @@ function trendWatchRows(){
   if(!hasDerivResults()||!resultsAreFresh())return[];
   const swings=payload.markets.filter(row=>row.mode==="swing");
   if(trendWatchScope==="all")return swings;
-  if(marketFamily!=="synthetic")return[];
   return swings.filter(row=>row.market===selected);
 }
 
@@ -1058,10 +1100,12 @@ function renderTrendWatchUi(){
   const row=hasDerivResults()?payload.markets.find(item=>item.market===selected&&item.mode==="swing"):null;
   $("watchTrendH1").textContent=trendLabel(row?.entry_tf);
   $("watchTrendH4").textContent=trendLabel(row?.confirmation_tf);
-  const aligned=Boolean(row?.entry_tf?.side&&row?.entry_tf?.side===row?.confirmation_tf?.side);
+  if($("watchTrendD1"))$("watchTrendD1").textContent=trendLabel(row?.macro_tf);
+  const aligned=Boolean(row?.entry_tf?.side&&row?.entry_tf?.side===row?.confirmation_tf?.side&&row?.entry_tf?.side===row?.macro_tf?.side);
+  const progress=row?.decision_engine?.confirmation_progress||row?.trend_memory?.confirmation_progress||"0/2";
   $("watchSetupState").textContent=row?.final_verdict&&row.final_verdict!=="ATTENDRE"
     ?`${row.final_verdict} · ${executionLabel(row)} · ${row.final_confidence}%`
-    :aligned?`Biais ${row.entry_tf.side} · validation en attente`:"H1/H4 non alignés";
+    :aligned?`Biais ${row.entry_tf.side} · confirmation ${progress}`:"H1/H4/D1 non alignés";
   $("watchLastAlert").textContent=trendWatchLastAlert||"Aucune";
 
   const notificationButton=$("enableBrowserAlerts");
@@ -1086,7 +1130,8 @@ function signalSnapshot(row){
     confidence:Number(row?.final_confidence)||0,
     execution:row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION",
     h1:row?.entry_tf?.side||"NEUTRE",
-    h4:row?.confirmation_tf?.side||"NEUTRE"
+    h4:row?.confirmation_tf?.side||"NEUTRE",
+    d1:row?.macro_tf?.side||"NEUTRE"
   };
 }
 
@@ -1110,7 +1155,7 @@ function evaluateTrendWatch(){
 }
 
 function notifyTrendSignal(row,previousVerdict){
-  const text=`${row.market}: ${row.final_verdict} Swing H1/H4 à ${row.final_confidence}% · ${executionLabel(row)} (avant: ${previousVerdict||"ATTENDRE"}).`;
+  const text=`${row.market}: ${row.final_verdict} Swing H1/H4/D1 à ${row.final_confidence}% · confirmation ${row?.decision_engine?.confirmation_progress||"2/2"} · ${executionLabel(row)} (avant: ${previousVerdict||"ATTENDRE"}).`;
   const now=new Date().toLocaleString("fr-FR",{dateStyle:"short",timeStyle:"short"});
   trendWatchLastAlert=`${now} · ${row.market} ${row.final_verdict}`;
   localStorage.setItem("seraTrendWatchLastAlert",trendWatchLastAlert);
@@ -1183,6 +1228,7 @@ function updateLiveCandle(market,price,epoch=Date.now()/1000){
   updateSeriesCandle(market,"M15",900,price,ts);
   updateSeriesCandle(market,"H1",3600,price,ts);
   updateSeriesCandle(market,"H4",14400,price,ts);
+  updateSeriesCandle(market,"D1",86400,price,ts);
 }
 
 function recordLiveTick(market,price,epoch){
@@ -1302,14 +1348,20 @@ function computeLiveIntelligence(market,mode){
   const confirmTf=mode==="swing"?"H4":"H1";
   const entry=analyzeLiveCandles(liveCandleSeries.get(`${market}:${entryTf}`)||[]);
   const confirmation=analyzeLiveCandles(liveCandleSeries.get(`${market}:${confirmTf}`)||[]);
-  if(!entry||!confirmation)return null;
-  const aligned=entry.side!=="NEUTRE"&&entry.side===confirmation.side;
+  const macro=mode==="swing"?analyzeLiveCandles(liveCandleSeries.get(`${market}:D1`)||[]):null;
+  if(!entry||!confirmation||(mode==="swing"&&!macro))return null;
+  const macroAligned=mode!=="swing"||macro.side===entry.side;
+  const aligned=entry.side!=="NEUTRE"&&entry.side===confirmation.side&&macroAligned;
   const side=aligned?entry.side:"NEUTRE";
-  const score=Math.round(entry.score*.58+confirmation.score*.42-(aligned?0:12));
+  const score=Math.round(
+    mode==="swing"
+      ?entry.score*.45+confirmation.score*.35+macro.score*.20-(aligned?0:14)
+      :entry.score*.58+confirmation.score*.42-(aligned?0:12)
+  );
   return{
-    market,mode,entry_tf:entryTf,confirmation_tf:confirmTf,
+    market,mode,entry_tf:entryTf,confirmation_tf:confirmTf,macro_tf:mode==="swing"?"D1":null,
     side,score:Math.max(0,Math.min(95,score)),aligned,
-    entry,confirmation,updated_at:Date.now()
+    entry,confirmation,macro,updated_at:Date.now()
   };
 }
 
@@ -1357,7 +1409,7 @@ function liveFamilyContextFor(row){
   };
 }
 
-function liveValidationFor(row){
+function liveValidationCandidate(row){
   const intel=liveIntelligenceFor(row);
   if(!intel)return null;
   const family=liveFamilyContextFor(row);
@@ -1365,9 +1417,65 @@ function liveValidationFor(row){
   if(family?.agrees&&family.consensus_percent>=70)score+=4;
   if(family?.contradicts)score-=8;
   score=Math.max(0,Math.min(95,Math.round(score)));
-  let state="WAIT";
-  if(intel.aligned&&!family?.contradicts&&score>=78&&(intel.side==="BUY"||intel.side==="SELL"))state=intel.side;
-  return {state,score,intel,family,updated_at:Date.now()};
+  const isSwing=(row?.mode||selectedMode)==="swing";
+  const side=intel.side;
+  const directionalStructure=side==="BUY"?"HH/HL":side==="SELL"?"LH/LL":"";
+  const continuation=!isSwing||(
+    intel.entry?.structure===directionalStructure&&
+    intel.confirmation?.structure!==((side==="BUY")?"LH/LL":"HH/HL")
+  );
+  const momentumAligned=side==="BUY"
+    ?Number(intel.entry?.macd_histogram)>0&&Number(intel.confirmation?.macd_histogram)>=0
+    :side==="SELL"
+      ?Number(intel.entry?.macd_histogram)<0&&Number(intel.confirmation?.macd_histogram)<=0
+      :false;
+  const macroRsi=Number(intel.macro?.rsi);
+  const notExhausted=!isSwing||(
+    side==="BUY"?(macroRsi>=42&&macroRsi<=70):(side==="SELL"?(macroRsi>=30&&macroRsi<=58):false)
+  );
+  const threshold=isSwing?LIVE_SWING_MIN_SCORE:78;
+  const eligible=Boolean(
+    intel.aligned&&!family?.contradicts&&score>=threshold&&
+    (side==="BUY"||side==="SELL")&&continuation&&momentumAligned&&notExhausted
+  );
+  return {eligible,side,score,intel,family,threshold,continuation,momentumAligned,notExhausted};
+}
+
+function consolidateLiveConfirmations(){
+  const now=Date.now();
+  for(const market of availableSyntheticMarkets()){
+    for(const mode of ["day","swing"]){
+      const row=payload?.markets?.find(item=>item.market===market&&item.mode===mode)||{market,mode,family:appMarketFamily(market)};
+      const candidate=liveValidationCandidate(row);
+      const key=`${market}:${mode}`;
+      const previous=liveConfirmationMemory.get(key);
+      if(!candidate?.eligible){
+        liveConfirmationMemory.set(key,{side:"WAIT",count:0,lastCycleAt:now});
+        continue;
+      }
+      if(previous?.side===candidate.side&&now-Number(previous.lastCycleAt||0)<45000)continue;
+      const count=previous?.side===candidate.side?Math.min(LIVE_CONFIRMATION_CYCLES,Number(previous.count||0)+1):1;
+      liveConfirmationMemory.set(key,{side:candidate.side,count,lastCycleAt:now});
+    }
+  }
+}
+
+function liveValidationFor(row){
+  const candidate=liveValidationCandidate(row);
+  if(!candidate)return null;
+  const key=`${row.market}:${row.mode||selectedMode}`;
+  const memory=liveConfirmationMemory.get(key);
+  const isSwing=(row?.mode||selectedMode)==="swing";
+  const requiredCycles=isSwing?LIVE_CONFIRMATION_CYCLES:1;
+  const coherent=Boolean(candidate.eligible&&memory?.side===candidate.side);
+  const confirmationCount=coherent?Math.min(requiredCycles,Number(memory?.count)||0):0;
+  const state=coherent&&confirmationCount>=requiredCycles?candidate.side:"WAIT";
+  return {
+    state,score:candidate.score,intel:candidate.intel,family:candidate.family,
+    confirmation_count:confirmationCount,confirmation_required:requiredCycles,
+    confirmation_progress:`${confirmationCount}/${requiredCycles}`,
+    updated_at:Number(memory?.lastCycleAt)||Date.now()
+  };
 }
 function updateLiveIntelligenceDom(market){
   document.querySelectorAll(`.result-card[data-live-market="${CSS.escape(market)}"]`).forEach(card=>{
@@ -1379,8 +1487,10 @@ function updateLiveIntelligenceDom(market){
     const validation=liveValidationFor(row);
     const family=validation?.family;
     const familyText=family?` · Famille ${family.dominant_side} ${family.consensus_percent}%`:"";
-    el.textContent=`Live IA ${state.side} · ${state.score}% · ${state.entry_tf}/${state.confirmation_tf}${familyText}`;
-    el.className=`live-intelligence-mini ${state.side.toLowerCase()}`;
+    const progress=validation?.confirmation_progress||"0/2";
+    const timeframes=state.mode==="swing"?`${state.entry_tf}/${state.confirmation_tf}/${state.macro_tf}`:`${state.entry_tf}/${state.confirmation_tf}`;
+    el.textContent=`Live IA ${state.side} · ${validation?.score??state.score}% · ${timeframes} · confirmation ${progress}${familyText}`;
+    el.className=`live-intelligence-mini ${(validation?.state||"WAIT").toLowerCase()}`;
   });
 
   if(market===selected)renderLiveIntelligencePanel(selectedSignalRow());
@@ -1389,16 +1499,32 @@ function updateLiveIntelligenceDom(market){
 function renderLiveIntelligencePanel(row){
   const panel=$("liveIntelligencePanel");
   if(!panel)return;
+  if(row?.asset_class==="forex"){
+    const side=row?.entry_tf?.side||"NEUTRE";
+    panel.className=`live-intelligence-panel ${side.toLowerCase()}`;
+    $("liveIntelligenceBias").textContent=side;
+    $("liveIntelligenceScore").textContent=`${Number(row?.decision_engine?.score)||0}%`;
+    $("liveIntelligenceTf").textContent="H1 + H4 + D1";
+    $("liveIntelligenceDetail").textContent=`Analyse serveur sur bougies clôturées · confirmation ${row?.decision_engine?.confirmation_progress||row?.trend_memory?.confirmation_progress||"0/2"} · prix indicatif à confirmer sur MT5.`;
+    if($("liveValidationState")){
+      $("liveValidationState").textContent=row?.final_verdict&&row.final_verdict!=="ATTENDRE"?row.final_verdict:"WAIT";
+      $("liveValidationScore").textContent=`${Number(row?.decision_engine?.score)||0}%`;
+      $("liveFamilyConsensus").textContent=`2 cycles ${row?.decision_engine?.confirmation_progress||"0/2"}`;
+      $("liveValidationBox").className=`live-validation-box ${signalClass(row?.final_verdict)}`;
+    }
+    return;
+  }
   const state=liveIntelligenceFor(row);
   if(!state){panel.className="live-intelligence-panel wait";$("liveIntelligenceBias").textContent="SYNC…";$("liveIntelligenceScore").textContent="—";$("liveIntelligenceTf").textContent="—";$("liveIntelligenceDetail").textContent="Chargement des bougies live…";return;}
   panel.className=`live-intelligence-panel ${state.side.toLowerCase()}`;
   $("liveIntelligenceBias").textContent=state.side;
   $("liveIntelligenceScore").textContent=`${state.score}%`;
-  $("liveIntelligenceTf").textContent=`${state.entry_tf} + ${state.confirmation_tf}`;
+  $("liveIntelligenceTf").textContent=state.mode==="swing"?`${state.entry_tf} + ${state.confirmation_tf} + ${state.macro_tf}`:`${state.entry_tf} + ${state.confirmation_tf}`;
   const validation=liveValidationFor(row);
   const family=validation?.family;
   const familyText=family?` · Famille ${family.dominant_side} ${family.consensus_percent}% (${family.members})`:" · Famille en synchronisation";
-  $("liveIntelligenceDetail").textContent=`RSI ${state.entry.rsi.toFixed(1)} · MACD ${state.entry.macd_histogram>=0?"↑":"↓"} · Structure ${state.entry.structure} · ${state.aligned?"aligné":"confirmation divergente"}${familyText}`;
+  const progress=validation?.confirmation_progress||"0/2";
+  $("liveIntelligenceDetail").textContent=`RSI ${state.entry.rsi.toFixed(1)} · MACD ${state.entry.macd_histogram>=0?"↑":"↓"} · Structure ${state.entry.structure} · ${state.aligned?"aligné":"confirmation divergente"} · cycle ${progress}${familyText}`;
   if($("liveValidationState")){
     $("liveValidationState").textContent=validation?.state||"WAIT";
     $("liveValidationScore").textContent=validation?`${validation.score}%`:"—";
@@ -1411,19 +1537,26 @@ function bootstrapLiveIntelligenceHistory(){
   if(liveHistoryBootstrapped||marketFamily!=="synthetic")return;
   liveHistoryBootstrapped=true;
   const requests=new Map();
-  let req=3100,received=0;
-  const total=availableSyntheticMarkets().length*3;
-  const ws=new WebSocket("wss://api.derivws.com/trading/v1/options/ws/public");
-  const timer=setTimeout(()=>{try{ws.close();}catch{}},20000);
+  let req=3100,received=0,sendTimer=null;
+  const jobs=[];
+  for(const market of availableSyntheticMarkets()){
+    const symbol=symbols[market];
+    if(!symbol)continue;
+    for(const [tf,granularity] of [["M15",900],["H1",3600],["H4",14400],["D1",86400]])jobs.push({market,symbol,tf,granularity});
+  }
+  const total=jobs.length;
+  const ws=new WebSocket(DERIV_WS_URL);
+  const timer=setTimeout(()=>{if(sendTimer)clearInterval(sendTimer);try{ws.close();}catch{}},35000);
   ws.addEventListener("open",()=>{
-    for(const market of availableSyntheticMarkets()){
-      const symbol=symbols[market];
-      if(!symbol)continue;
-      for(const [tf,granularity] of [["M15",900],["H1",3600],["H4",14400]]){
-        const id=++req;requests.set(id,{market,tf});
-        ws.send(JSON.stringify({ticks_history:symbol,style:"candles",granularity,count:90,end:"latest",adjust_start_time:1,req_id:id}));
-      }
-    }
+    let cursor=0;
+    const sendNext=()=>{
+      const job=jobs[cursor++];
+      if(!job){if(sendTimer)clearInterval(sendTimer);sendTimer=null;return;}
+      const id=++req;requests.set(id,{market:job.market,tf:job.tf});
+      ws.send(JSON.stringify({ticks_history:job.symbol,style:"candles",granularity:job.granularity,count:90,end:"latest",adjust_start_time:1,req_id:id}));
+    };
+    sendNext();
+    sendTimer=setInterval(sendNext,45);
   });
   ws.addEventListener("message",event=>{
     let message;try{message=JSON.parse(event.data);}catch{return;}
@@ -1433,15 +1566,19 @@ function bootstrapLiveIntelligenceHistory(){
     mergeChartHistory(meta.market,meta.tf,message.candles);
     received+=1;
     refreshLiveIntelligence(meta.market,true);
-    if(received>=total){clearTimeout(timer);try{ws.close();}catch{}}
+    if(received>=total){
+      clearTimeout(timer);if(sendTimer)clearInterval(sendTimer);
+      runMinuteValidationCycle();
+      try{ws.close();}catch{}
+    }
   });
-  ws.addEventListener("error",()=>{clearTimeout(timer);try{ws.close();}catch{}});
+  ws.addEventListener("error",()=>{clearTimeout(timer);if(sendTimer)clearInterval(sendTimer);try{ws.close();}catch{}});
 }
 
 function chartSpecForRow(row){
   const mode=row?.mode||selectedMode;
   return mode==="swing"
-    ?{entry:"H1",confirmation:"H4",seconds:3600,granularity:3600}
+    ?{entry:"H1",confirmation:"H4",macro:"D1",seconds:3600,granularity:3600}
     :{entry:"M15",confirmation:"H1",seconds:900,granularity:900};
 }
 
@@ -1478,7 +1615,7 @@ function loadChartHistory(market,row,force=false){
 
   const promise=new Promise(resolve=>{
     let settled=false;
-    const ws=new WebSocket("wss://api.derivws.com/trading/v1/options/ws/public");
+    const ws=new WebSocket(DERIV_WS_URL);
     const done=ok=>{
       if(settled)return;settled=true;
       clearTimeout(timer);
@@ -1518,7 +1655,16 @@ function loadChartHistory(market,row,force=false){
 
 function predictionState(row){
   if(!row)return{prediction:"NEUTRE",status:"WAIT",action:"WAIT",side:"wait"};
-  if(!resultsAreFresh())return{prediction:"NEUTRE",status:"ANALYSE IA EN ATTENTE",action:"WAIT",side:"wait"};
+  if(!resultsAreFresh()){
+    const live=liveValidationFor(row);
+    const prediction=live?.state==="BUY"||live?.state==="SELL"?live.state:"NEUTRE";
+    return{
+      prediction,
+      status:live?`VALIDATION LIVE ${live.confirmation_progress}`:"SYNCHRONISATION LIVE",
+      action:prediction==="BUY"?"BUY LIVE CONFIRMÉ":prediction==="SELL"?"SELL LIVE CONFIRMÉ":"WAIT",
+      side:prediction==="BUY"?"buy":prediction==="SELL"?"sell":"wait"
+    };
+  }
   const final=row.final_verdict==="BUY"||row.final_verdict==="SELL"?row.final_verdict:null;
   const setup=hasDetectedSetup(row)?setupSide(row):null;
   const prediction=final||setup||"NEUTRE";
@@ -1576,7 +1722,7 @@ function visualTradePlan(row){
   return{
     side,entry,sl,target,tp1,tp2,tp3,tp4,tp5,
     rr,
-    timeframe:`${spec.entry} / ${spec.confirmation}`,
+    timeframe:`${spec.entry} / ${spec.confirmation}${spec.macro?` / ${spec.macro}`:""}`,
     state:executionLabel(row),
     isProjected:row.final_verdict!=="BUY"&&row.final_verdict!=="SELL"
   };
@@ -1616,8 +1762,9 @@ function renderRealtimeCandles(row){
   ctx.clearRect(0,0,width,height);
 
   const spec=chartSpecForRow(row);
-  const series=(liveCandleSeries.get(`${selected}:${spec.entry}`)||[]).slice(-42);
-  const quote=liveQuotes.get(selected);
+  const browserSeries=liveCandleSeries.get(`${selected}:${spec.entry}`)||[];
+  const series=(browserSeries.length?browserSeries:(row?.chart_candles||[])).slice(-42);
+  const quote=row?.asset_class==="forex"?{price:row?.price}:liveQuotes.get(selected);
   const levels=chartLevels(row);
   const values=[];
   for(const c of series)values.push(c.low,c.high);
@@ -1674,7 +1821,7 @@ function renderRealtimeCandles(row){
 
   ctx.font="700 9px JetBrains Mono";
   ctx.fillStyle="rgba(180,200,220,.72)";
-  ctx.fillText(`${spec.entry} LIVE · ${spec.confirmation} confirmation`,8,height-10);
+  ctx.fillText(row?.asset_class==="forex"?`${spec.entry} clôturé · ${spec.confirmation}/${spec.macro||"D1"} confirmation`:`${spec.entry} LIVE · ${spec.confirmation} confirmation`,8,height-10);
 
   // Entry zone
   if(Number.isFinite(levels.zoneMin)&&Number.isFinite(levels.zoneMax)){
@@ -1802,7 +1949,7 @@ function connectLivePrice(){
   if(marketFamily!=="synthetic")return;
 
   try{
-    const socket=new WebSocket("wss://api.derivws.com/trading/v1/options/ws/public");
+    const socket=new WebSocket(DERIV_WS_URL);
     liveSocket=socket;
     liveConnectionStartedAt=Date.now();
     liveLastMessageAt=0;
@@ -1881,30 +2028,32 @@ function setAiStatus(text,state){$("aiStatus").textContent="";$("aiStatus").appe
 function currentSignalText(){
   const row=hasDerivResults()?payload.markets.find(item=>item.market===selected&&item.mode===selectedMode):null;
   if(!row||!resultsAreFresh()||row.final_verdict==="ATTENDRE")return"";
+  const forex=row.asset_class==="forex";
   return [
-    "SERA INDICATOR — SIGNAL DERIV CONFIRMÉ",
-    `Indice : ${row.market}`,
+    `SERA INDICATOR — SIGNAL ${forex?"FOREX":"DERIV"} CONFIRMÉ`,
+    `Instrument : ${row.market} (${row.symbol})`,
     `Signal : ${row.final_verdict}`,
     `Confiance : ${row.final_confidence}%`,
     `État entrée : ${executionLabel(row)}`,
     `Score exécution : ${row.execution_score??0}%`,
-    `Entrée : ${fmt(row.levels?.entry)}`,
-    `Stop Loss : ${fmt(row.levels?.sl)}`,
-    `TP1 : ${fmt(row.levels?.tp1)}`,
-    `TP2 : ${fmt(row.levels?.tp2)}`,
-    `TP3 : ${fmt(row.levels?.tp3)}`,
-    `TP4 : ${fmt(row.levels?.tp4)}`,
-    `TP5 : ${fmt(row.levels?.tp5)}`,
+    `Confirmation : ${row.decision_engine?.confirmation_progress||"2/2"} · H1/H4/D1`,
+    `Entrée : ${fmtEntry(row.levels?.entry)}`,
+    `Stop Loss : ${fmtEntry(row.levels?.sl)}`,
+    `TP1 : ${fmtEntry(row.levels?.tp1)}`,
+    `TP2 : ${fmtEntry(row.levels?.tp2)}`,
+    `TP3 : ${fmtEntry(row.levels?.tp3)}`,
+    `TP4 : ${fmtEntry(row.levels?.tp4)}`,
+    `TP5 : ${fmtEntry(row.levels?.tp5)}`,
     `Analyse : ${new Date(payload.updated_at).toLocaleString("fr-FR")}`,
     `Consensus OSS : ${Number.isFinite(Number(row.model_ensemble_consensus))&&Number(row.model_models_available)>0?`${row.model_ensemble_direction||"NEUTRAL"} ${Math.round(Number(row.model_ensemble_consensus))}%`:"aucun vote fiable"} · ${Number(row.model_models_available)||0} vote(s) fiable(s)`,
     `Modèle : ${row.ai_tier}`,
     "",
-    "Signal autonome — ≥80% des conditions pertinentes sont requises. L’EA Sera EA Swing Intelligent v1.71 n’exécute que si l’état est EXECUTE_NOW, applique le garde-fou open source et gère progressivement la protection des objectifs. Aucun gain garanti.",
+    `${forex?"Prix Yahoo Finance indicatif : confirmer les niveaux sur MT5. ":""}Signal autonome — le Swing exige 84/100, 72% de consensus, ≥80% des conditions et 2 cycles cohérents. Aucun gain ni absence de retournement n’est garanti.`,
     location.href
   ].join("\n");
 }
 async function copySignal(){const text=currentSignalText();if(!text)return;await navigator.clipboard.writeText(text);$("copySignal").textContent="Copié ✓";setTimeout(()=>$("copySignal").textContent="Copier le signal",1500);}
-async function shareSignal(){const text=currentSignalText();if(!text)return;if(navigator.share)await navigator.share({title:"Signal Deriv — Sera Indicator",text,url:location.href});else await navigator.clipboard.writeText(text);}
+async function shareSignal(){const text=currentSignalText();if(!text)return;if(navigator.share)await navigator.share({title:"Signal Sera Indicator",text,url:location.href});else await navigator.clipboard.writeText(text);}
 function escapeHtml(value){return String(value).replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));}
 
 renderIndexFamilyFilter();
@@ -1917,7 +2066,9 @@ discoverAppDerivMarkets().then(()=>{
   bootstrapLiveIntelligenceHistory();
   setTimeout(runMinuteValidationCycle,5000);
 });
-setInterval(()=>loadSignals(false),20000);
+// The heavier server payload is refreshed on its own five-minute cadence;
+// Deriv ticks and the browser-side validation remain continuous between pulls.
+setInterval(()=>loadSignals(false),300000);
 setInterval(updateMetaClocks,1000);
 setInterval(()=>{
   if(marketFamily!=="synthetic")return;

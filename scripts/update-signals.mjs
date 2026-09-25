@@ -5,8 +5,8 @@ const OPENAI_API_KEY=process.env.OPENAI_API_KEY||'';
 const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
-const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public';
-const ENGINE_VERSION='Sera Autonomous Engine v3.7';
+const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public?app_id=1089';
+const ENGINE_VERSION='Sera Autonomous Engine v4.0 · High Conviction Swing';
 
 let MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -21,6 +21,22 @@ let MARKETS=[
   {market:'Volatility 75 Index',symbol:'R_75',family:'volatility',spikeBias:'NONE'},
   {market:'Volatility 100 Index',symbol:'R_100',family:'volatility',spikeBias:'NONE'}
 ];
+
+const FOREX_MARKETS=[
+  ['USD/BRL','USDBRL-STD','USDBRL=X'],['USD/CAD','USDCAD-STD','USDCAD=X'],['USD/CHF','USDCHF-STD','USDCHF=X'],
+  ['USD/CLP','USDCLP-STD','USDCLP=X'],['USD/CNH','USDCNH-STD','USDCNH=X'],['USD/COP','USDCOP-STD','USDCOP=X'],
+  ['USD/CZK','USDCZK-STD','USDCZK=X'],['USD/DKK','USDDKK-STD','USDDKK=X'],['USD/HUF','USDHUF-STD','USDHUF=X'],
+  ['USD/IDR','USDIDR-STD','USDIDR=X'],['USD/INR','USDINR-STD','USDINR=X'],['USD/JPY','USDJPY-STD','USDJPY=X'],
+  ['USD/KRW','USDKRW-STD','USDKRW=X'],['USD/MXN','USDMXN-STD','USDMXN=X'],['USD/NOK','USDNOK-STD','USDNOK=X'],
+  ['USD/PLN','USDPLN-STD','USDPLN=X'],['USD/SEK','USDSEK-STD','USDSEK=X'],['USD/SGD','USDSGD-STD','USDSGD=X'],
+  ['USD/THB','USDTHB-STD','USDTHB=X'],['USD/TRY','USDTRY-STD','USDTRY=X'],['USD/TWD','USDTWD-STD','USDTWD=X'],
+  ['USD/ZAR','USDZAR-STD','USDZAR=X'],['USD/ILS','USDILS-STD','USDILS=X'],['AUD/USD','AUDUSD-STD','AUDUSD=X'],
+  ['EUR/USD','EURUSD-STD','EURUSD=X'],['GBP/USD','GBPUSD-STD','GBPUSD=X'],['NZD/USD','NZDUSD-STD','NZDUSD=X']
+].map(([market,symbol,dataSymbol])=>({
+  market,symbol,dataSymbol,family:'forex',asset_class:'forex',provider:'Yahoo Finance',spikeBias:'NONE',
+  context_group:market.startsWith('USD/')?'usd-base':'usd-quote',
+  source_label:'Yahoo Finance public chart data (indicative)'
+}));
 
 function marketFamilyFromName(name){
   const n=String(name||'').toLowerCase();
@@ -93,7 +109,7 @@ async function discoverDerivMarkets(){
 
 const MODES=[
   {id:'day',label:'Day trading',entry:'M15',confirmation:'H1',duration:{range:'1–12 h',validity:'3 bougies M15',reanalysis:'5 min'}},
-  {id:'swing',label:'Swing',entry:'H1',confirmation:'H4',duration:{range:'12 h–4 jours',validity:'3 bougies H1',reanalysis:'5 min'}}
+  {id:'swing',label:'Swing haute conviction',entry:'H1',confirmation:'H4',macro:'D1',duration:{range:'1–10 jours',validity:'2 cycles H1/H4/D1 cohérents',reanalysis:'5 min'}}
 ];
 
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
@@ -256,17 +272,27 @@ function inspectCandles(candles){
   };
 }
 
-function technicalSetup(meta,entryTf,confirmationTf,mode){
-  const aligned=entryTf.side===confirmationTf.side;
+function technicalSetup(meta,entryTf,confirmationTf,mode,macroTf=null){
+  const swing=mode.id==='swing';
+  const macroAligned=!swing||Boolean(macroTf&&entryTf.side===macroTf.side);
+  const aligned=entryTf.side===confirmationTf.side&&macroAligned;
   const adverseSpikeDirection=(meta.family==='boom'&&entryTf.side==='SELL')||(meta.family==='crash'&&entryTf.side==='BUY');
   const specificGuard=!adverseSpikeDirection||(entryTf.sweep&&(entryTf.bos||entryTf.choch)&&confirmationTf.trendStrong&&entryTf.passed>=7);
-  const regimeOk=entryTf.regime==='TRENDING'||(entryTf.regime==='TRANSITION'&&(entryTf.bos||entryTf.choch)&&entryTf.impulse);
-  const minimumChecks=(mode.id==='day'?6:5)+(adverseSpikeDirection?1:0);
-  const stability=entryTf.trendQuality>=52&&confirmationTf.trendQuality>=60;
-  const confirmed=aligned&&confirmationTf.trendStrong&&entryTf.passed>=minimumChecks&&!entryTf.spikeRisk&&specificGuard&&regimeOk&&stability;
-  const localScore=Math.round(clamp(entryTf.trendQuality*.47+confirmationTf.trendQuality*.38+entryTf.passed*1.5+(aligned?7:-10)-(adverseSpikeDirection?3:0),0,97));
+  const regimeOk=swing
+    ?entryTf.regime==='TRENDING'&&confirmationTf.regime==='TRENDING'&&macroTf?.regime!=='RANGE'
+    :entryTf.regime==='TRENDING'||(entryTf.regime==='TRANSITION'&&(entryTf.bos||entryTf.choch)&&entryTf.impulse);
+  const minimumChecks=(swing?7:6)+(adverseSpikeDirection?1:0);
+  const stability=swing
+    ?entryTf.trendQuality>=72&&confirmationTf.trendQuality>=75&&Number(macroTf?.trendQuality)>=65
+    :entryTf.trendQuality>=52&&confirmationTf.trendQuality>=60;
+  const macroRisk=Boolean(swing&&(!macroTf||macroTf.spikeRisk));
+  const confirmed=aligned&&confirmationTf.trendStrong&&(!swing||macroTf?.trendStrong)&&entryTf.passed>=minimumChecks&&!entryTf.spikeRisk&&!macroRisk&&specificGuard&&regimeOk&&stability;
+  const quality=swing
+    ?entryTf.trendQuality*.34+confirmationTf.trendQuality*.34+Number(macroTf?.trendQuality||0)*.20+entryTf.passed*1.2
+    :entryTf.trendQuality*.47+confirmationTf.trendQuality*.38+entryTf.passed*1.5;
+  const localScore=Math.round(clamp(quality+(aligned?7:-12)-(adverseSpikeDirection?3:0),0,97));
   const verdict=confirmed?entryTf.side:'ATTENDRE';
-  const confidence=confirmed?Math.max(72,localScore):Math.min(74,localScore);
+  const confidence=confirmed?Math.max(swing?80:72,localScore):Math.min(swing?83:74,localScore);
 
   let levels=null;
   if(verdict!=='ATTENDRE'){
@@ -284,8 +310,9 @@ function technicalSetup(meta,entryTf,confirmationTf,mode){
   }
 
   const reasons=[
-    aligned?'Unités de temps alignées':'Désaccord entre unités de temps',
+    aligned?(swing?'H1, H4 et D1 alignés':'Unités de temps alignées'):'Désaccord entre unités de temps',
     confirmationTf.trendStrong?'Tendance de confirmation forte':'Tendance de confirmation faible',
+    ...(!swing?[]:[macroTf?.trendStrong?'Filtre macro D1 fort':'Filtre macro D1 faible']),
     entryTf.bos||entryTf.choch?'Structure cassée/retournée':'Structure non confirmée',
     entryTf.sweep?'Liquidité balayée':'Pas de sweep de liquidité',
     entryTf.retest?'Retest présent':'Retest absent',
@@ -293,45 +320,134 @@ function technicalSetup(meta,entryTf,confirmationTf,mode){
   ];
 
   return {
-    ...meta,mode:mode.id,mode_label:mode.label,timeframes:[mode.entry,mode.confirmation],duration:mode.duration,price:entryTf.price,
-    technical_verdict:verdict,technical_confidence:confidence,levels,entry_tf:entryTf,confirmation_tf:confirmationTf,
-    intelligence:{engine:ENGINE_VERSION,local_score:localScore,regime:entryTf.regime,confirmation_regime:confirmationTf.regime,aligned,stability,adverse_spike_direction:adverseSpikeDirection,reasons},
-    risk:{risk_reward:3.6,spike_risk:entryTf.spikeRisk,specific_guard:specificGuard,source:'Deriv public WebSocket'}
+    ...meta,asset_class:meta.asset_class||'synthetic',provider:meta.provider||'Deriv',
+    mode:mode.id,mode_label:mode.label,timeframes:[mode.entry,mode.confirmation,...(mode.macro?[mode.macro]:[])],duration:mode.duration,price:entryTf.price,
+    technical_verdict:verdict,technical_confidence:confidence,levels,entry_tf:entryTf,confirmation_tf:confirmationTf,macro_tf:macroTf,
+    intelligence:{engine:ENGINE_VERSION,local_score:localScore,regime:entryTf.regime,confirmation_regime:confirmationTf.regime,macro_regime:macroTf?.regime||null,aligned,macro_aligned:macroAligned,stability,adverse_spike_direction:adverseSpikeDirection,reasons},
+    risk:{risk_reward:3.6,spike_risk:entryTf.spikeRisk||macroRisk,specific_guard:specificGuard,source:meta.source_label||'Deriv public WebSocket'}
   };
 }
 
-async function fetchAllCandles(){
+function onlyClosedCandles(rows,seconds){
+  const now=Math.floor(Date.now()/1000);
+  const closed=rows.filter(row=>Number(row.epoch)+seconds<=now);
+  return closed.length>=80?closed:rows.slice(0,-1);
+}
+
+async function fetchDerivCandles(){
   return new Promise((resolve,reject)=>{
     const ws=new WebSocket(DERIV_WS),requests=new Map(),received=new Map(),completed=new Set();
-    let settled=false,reqId=100,totalRequests=0;
+    const tasks=MARKETS.flatMap(market=>[
+      {...market,timeframe:'M15',granularity:900,count:240,attempt:0},
+      {...market,timeframe:'H1',granularity:3600,count:960,attempt:0},
+      {...market,timeframe:'D1',granularity:86400,count:240,attempt:0}
+    ]);
+    const queue=[...tasks];
+    let settled=false,reqId=100,inFlight=0,pumpTimer=null;
     const finish=error=>{
-      if(settled)return; settled=true; clearTimeout(timer);
+      if(settled)return; settled=true; clearTimeout(timer);clearTimeout(pumpTimer);
       try{ws.close();}catch{}
       if(error&&received.size===0)reject(error);else resolve(received);
     };
-    const timer=setTimeout(()=>finish(new Error(`Deriv candle timeout: ${completed.size}/${totalRequests} requests completed`)),60000);
-    ws.addEventListener('open',()=>{
-      for(const market of MARKETS){
-        for(const [timeframe,granularity] of [['M15',900],['H1',3600],['H4',14400]]){
-          reqId+=1;totalRequests+=1;requests.set(reqId,{...market,timeframe});
-          ws.send(JSON.stringify({ticks_history:market.symbol,style:'candles',granularity,count:240,end:'latest',adjust_start_time:1,req_id:reqId}));
-        }
-      }
-    });
+    const timer=setTimeout(()=>finish(new Error(`Deriv candle timeout: ${completed.size}/${tasks.length} tasks completed`)),180000);
+    const pump=()=>{
+      if(settled)return;
+      if(completed.size>=tasks.length&&inFlight===0)return finish();
+      if(inFlight>0||!queue.length)return;
+      const task=queue.shift(),id=++reqId;
+      inFlight+=1;requests.set(id,task);
+      ws.send(JSON.stringify({ticks_history:task.symbol,style:'candles',granularity:task.granularity,count:task.count,end:'latest',adjust_start_time:1,req_id:id}));
+    };
+    const schedulePump=(delay=90)=>{clearTimeout(pumpTimer);pumpTimer=setTimeout(pump,delay);};
+    ws.addEventListener('open',pump);
     ws.addEventListener('message',event=>{
       let message; try{message=JSON.parse(String(event.data));}catch{return;}
       const key=Number(message.req_id??message.echo_req?.req_id),request=requests.get(key);
       if(!request)return;
-      completed.add(key);
+      requests.delete(key);inFlight=Math.max(0,inFlight-1);
+      const taskKey=`${request.symbol}:${request.timeframe}`;
       if(Array.isArray(message.candles)){
-        received.set(`${request.symbol}:${request.timeframe}`,message.candles.map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close,epoch:+c.epoch})));
+        const seconds={M15:900,H1:3600,H4:14400,D1:86400}[request.timeframe]||3600;
+        const rows=message.candles.map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close,epoch:+c.epoch}));
+        const closed=onlyClosedCandles(rows,seconds);
+        received.set(taskKey,closed);
+        if(request.timeframe==='H1')received.set(`${request.symbol}:H4`,aggregateCandles(closed,14400));
+        completed.add(taskKey);
       }else if(message.error){
-        console.warn(`Skipping ${request.market} ${request.timeframe}: ${message.error?.message||'Deriv request rejected'}`);
+        const reason=message.error?.message||'Deriv request rejected';
+        if(request.attempt<3&&/rate limit|temporar|try again/i.test(reason)){
+          queue.push({...request,attempt:request.attempt+1});
+          return schedulePump(1200*(request.attempt+1));
+        }
+        console.warn(`Skipping ${request.market} ${request.timeframe}: ${reason}`);
+        completed.add(taskKey);
       }
-      if(totalRequests>0&&completed.size>=totalRequests)finish();
+      schedulePump();
     });
     ws.addEventListener('error',()=>finish(new Error('Deriv WebSocket connection failed')));
   });
+}
+
+function aggregateCandles(rows,seconds){
+  const groups=new Map();
+  for(const row of rows){
+    const epoch=Math.floor(Number(row.epoch)/seconds)*seconds;
+    const current=groups.get(epoch);
+    if(!current){groups.set(epoch,{...row,epoch});continue;}
+    current.high=Math.max(current.high,row.high);
+    current.low=Math.min(current.low,row.low);
+    current.close=row.close;
+  }
+  return onlyClosedCandles([...groups.values()].sort((a,b)=>a.epoch-b.epoch),seconds);
+}
+
+async function mapLimit(items,limit,worker){
+  const results=new Array(items.length);
+  let cursor=0;
+  async function run(){
+    while(cursor<items.length){
+      const index=cursor++;
+      results[index]=await worker(items[index],index);
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(limit,items.length)},run));
+  return results;
+}
+
+async function fetchYahooHourly(meta){
+  const query=`/v8/finance/chart/${encodeURIComponent(meta.dataSymbol)}?interval=1h&range=6mo&includePrePost=false&events=div%2Csplits`;
+  let lastError=null;
+  for(const host of ['https://query1.finance.yahoo.com','https://query2.finance.yahoo.com']){
+    try{
+      const response=await fetch(host+query,{headers:{'User-Agent':'Mozilla/5.0 SeraIndicator/4.0'},signal:AbortSignal.timeout(20000)});
+      if(!response.ok)throw new Error(`HTTP ${response.status}`);
+      const payload=await response.json();
+      const result=payload?.chart?.result?.[0];
+      const quote=result?.indicators?.quote?.[0],timestamps=result?.timestamp||[];
+      if(!quote||timestamps.length<80)throw new Error('insufficient Yahoo candles');
+      const rows=timestamps.map((epoch,index)=>({
+        epoch:+epoch,open:+quote.open?.[index],high:+quote.high?.[index],low:+quote.low?.[index],close:+quote.close?.[index]
+      })).filter(row=>[row.epoch,row.open,row.high,row.low,row.close].every(Number.isFinite));
+      if(rows.length<80)throw new Error('insufficient valid Yahoo OHLC candles');
+      return onlyClosedCandles(rows,3600);
+    }catch(error){lastError=error;}
+  }
+  throw lastError||new Error('Yahoo Finance unavailable');
+}
+
+async function fetchForexCandles(){
+  const received=new Map();
+  await mapLimit(FOREX_MARKETS,4,async meta=>{
+    try{
+      const h1=await fetchYahooHourly(meta);
+      received.set(`${meta.symbol}:H1`,h1);
+      received.set(`${meta.symbol}:H4`,aggregateCandles(h1,14400));
+      received.set(`${meta.symbol}:D1`,aggregateCandles(h1,86400));
+    }catch(error){
+      console.warn(`Skipping ${meta.market} Forex data: ${error instanceof Error?error.message:error}`);
+    }
+  });
+  return received;
 }
 
 const auditItem={type:'object',additionalProperties:false,properties:{
@@ -357,7 +473,7 @@ async function callOpenAI(body){
 }
 
 function publicSetup(setup){
-  const clean=value=>({
+  const clean=value=>value?({
     side:value.side,confidence:value.confidence,passed:value.passed,bos:value.bos,choch:value.choch,sweep:value.sweep,impulse:value.impulse,
     fvg:value.fvg,retest:value.retest,orderBlock:value.orderBlock,momentum:value.momentum,rejection:value.rejection,trendStrong:value.trendStrong,
     spikeRisk:value.spikeRisk,regime:value.regime,trendQuality:value.trendQuality,emaSpreadAtr:value.emaSpreadAtr,emaSlopeAtr:value.emaSlopeAtr,
@@ -369,29 +485,31 @@ function publicSetup(setup){
     donchianBreakout:value.donchianBreakout,efficiencyRatio:value.efficiencyRatio,autocorrelationLag1:value.autocorrelationLag1,
     hhhl:value.hhhl,lhll:value.lhll,marketStructureAligned:value.marketStructureAligned,engulfing:value.engulfing,
     closedAt:value.closedAt,price:value.price,change:value.change
-  });
+  }):null;
   return {
-    id:`${setup.symbol}:${setup.mode}`,market:setup.market,symbol:setup.symbol,family:setup.family,spikeBias:setup.spikeBias,mode:setup.mode,
+    id:`${setup.symbol}:${setup.mode}`,market:setup.market,symbol:setup.symbol,family:setup.family,context_group:setup.context_group||null,
+    asset_class:setup.asset_class||'synthetic',provider:setup.provider||'Deriv',spikeBias:setup.spikeBias,mode:setup.mode,
     mode_label:setup.mode_label,timeframes:setup.timeframes,duration:setup.duration,price:setup.price,technical_verdict:setup.technical_verdict,
-    technical_confidence:setup.technical_confidence,levels:setup.levels,entry_tf:clean(setup.entry_tf),confirmation_tf:clean(setup.confirmation_tf),
+    technical_confidence:setup.technical_confidence,levels:setup.levels,entry_tf:clean(setup.entry_tf),confirmation_tf:clean(setup.confirmation_tf),macro_tf:clean(setup.macro_tf),
+    chart_candles:setup.chart_candles||null,
     intelligence:setup.intelligence,trend_memory:setup.trend_memory,family_context:setup.family_context||null,decision_engine:setup.autonomous||null,risk:setup.risk
   };
 }
 
 async function auditMarkets(model,setups){
-  const instructions=`Tu es Luna, auditeur final de Sera Smart Engine pour les indices synthétiques Deriv.
-Le moteur local a déjà analysé tendance, régime de marché, structure, liquidité, retest, momentum, ATR, risque de spike, mémoire de tendance et particularités Boom/Crash/Volatility.
+  const instructions=`Tu es Luna, auditeur final de Sera Smart Engine pour les indices synthétiques Deriv et les paires Forex suivies.
+Le moteur local a déjà analysé tendance, régime de marché, structure, liquidité, retest, momentum, ATR, risque de spike, mémoire de tendance et contexte multi-horizon.
 Ton rôle est d'auditer une décision déjà prise par le moteur autonome. Tu aides à identifier des contradictions ou confirmer la qualité; tu ne pilotes pas le moteur local.
 Règles strictes:
 1. Ne transforme jamais ATTENDRE en BUY/SELL.
 2. N'inverse jamais le sens technique proposé.
-3. Confirme BUY/SELL seulement si H1/H4 (ou M15/H1) restent cohérents, le régime n'est pas RANGE/SPIKE_RISK, le risque de spike est acceptable, et la mémoire de tendance ne montre pas un flip fragile.
+3. Pour un swing, confirme BUY/SELL seulement si H1, H4 et D1 sont cohérents, le score atteint 84, les deux cycles requis sont validés, le régime n'est pas RANGE/SPIKE_RISK et la mémoire ne montre aucun flip fragile.
 4. Pour Boom, sois plus exigeant sur un SELL; pour Crash, sois plus exigeant sur un BUY.
-5. Si structure, liquidité, momentum, régime ou mémoire se contredisent, retourne ATTENDRE.
+5. Si structure, momentum, régime, filtre D1, risque d'épuisement ou mémoire se contredisent, retourne ATTENDRE.
 6. La confiance doit refléter la qualité du setup, jamais une garantie de gain.`;
   const response=await callOpenAI({
     model,reasoning:{effort:'medium'},store:false,instructions,
-    input:JSON.stringify({broker:'Deriv',market_family:'Synthetic Indices',engine:ENGINE_VERSION,generated_at:new Date().toISOString(),execution:'decision_support',markets:setups.map(publicSetup)}),
+    input:JSON.stringify({sources:['Deriv','Yahoo Finance indicative'],market_family:'Synthetic Indices + Forex',engine:ENGINE_VERSION,generated_at:new Date().toISOString(),execution:'decision_support',markets:setups.map(publicSetup)}),
     text:{format:{type:'json_schema',name:'sera_smart_engine_luna_audit',strict:true,schema:auditSchema}}
   });
   const parsed=JSON.parse(extractOutputText(response));
@@ -401,7 +519,8 @@ Règles strictes:
 function attachTrendMemory(setup,previous){
   const id=`${setup.symbol}:${setup.mode}`;
   const old=previous?.markets?.find(item=>item.id===id);
-  const currentBias=setup.entry_tf.side===setup.confirmation_tf.side?setup.entry_tf.side:'NEUTRE';
+  const horizonsAligned=setup.entry_tf.side===setup.confirmation_tf.side&&(setup.mode!=='swing'||setup.macro_tf?.side===setup.entry_tf.side);
+  const currentBias=horizonsAligned?setup.entry_tf.side:'NEUTRE';
   const previousBias=old?.timing?.bias||old?.trend_memory?.current_bias||'NEUTRE';
   const persistence=Boolean(old&&currentBias!=='NEUTRE'&&currentBias===previousBias);
   const flip=Boolean(old&&previousBias!=='NEUTRE'&&currentBias!=='NEUTRE'&&currentBias!==previousBias);
@@ -416,16 +535,17 @@ function attachTrendMemory(setup,previous){
   const candidateScore=Math.round(clamp(setup.technical_confidence+maturityBonus+(setup.entry_tf.regime==='TRENDING'?4:0)-flipPenalty,0,100));
   return {...setup,trend_memory:{
     previous_bias:previousBias,current_bias:currentBias,previous_final:previousFinal,persistence,flip,bias_cycles:biasCycles,
-    previous_conditions:previousConditions,previous_score:previousScore,previous_execution_state:previousExecution,candidate_score:candidateScore
+    previous_conditions:previousConditions,previous_score:previousScore,previous_execution_state:previousExecution,candidate_score:candidateScore,
+    confirmation_progress:setup.mode==='swing'?`${Math.min(biasCycles,2)}/2`:'1/1',confirmation_cycles_required:setup.mode==='swing'?2:1
   }};
 }
 
 function dynamicReadiness(setup,audit,agreed){
-  const entry=setup.entry_tf,confirmation=setup.confirmation_tf,mem=setup.trend_memory||{};
+  const entry=setup.entry_tf,confirmation=setup.confirmation_tf,macro=setup.macro_tf,mem=setup.trend_memory||{};
   const aiConfidence=clamp(Number(audit.confidence)||0,0,100);
   const alignment=entry.side===confirmation.side?8:-12;
   const structure=(entry.bos||entry.choch?6:0)+(entry.retest?5:0)+(entry.sweep?4:0)+(entry.rejection?3:0);
-  const trend=(entry.trendStrong?5:-4)+(confirmation.trendStrong?8:-7);
+  const trend=(entry.trendStrong?5:-4)+(confirmation.trendStrong?8:-7)+(setup.mode==='swing'?(macro?.trendStrong?7:-9):0);
   const regime=entry.regime==='TRENDING'?7:entry.regime==='TRANSITION'?1:-8;
   const memory=(mem.persistence?5:0)-(mem.flip?10:0);
   const contradictionPenalty=(audit.contradictions?.length||0)*4+(audit.needs_expert_review?8:0)+(entry.spikeRisk?12:0);
@@ -435,8 +555,8 @@ function dynamicReadiness(setup,audit,agreed){
 }
 
 function estimateTiming(setup,finalVerdict,finalConfidence){
-  const entry=setup.entry_tf,confirmation=setup.confirmation_tf,mem=setup.trend_memory||{};
-  const aligned=entry.side===confirmation.side,bias=aligned?entry.side:'NEUTRE';
+  const entry=setup.entry_tf,confirmation=setup.confirmation_tf,macro=setup.macro_tf,mem=setup.trend_memory||{};
+  const aligned=entry.side===confirmation.side&&(setup.mode!=='swing'||macro?.side===entry.side),bias=aligned?entry.side:'NEUTRE';
   const activeSide=finalVerdict!=='ATTENDRE'?finalVerdict:bias;
   const regimeFactor=entry.regime==='TRENDING'?1.12:entry.regime==='COMPRESSION'?.78:.92;
   const rate=Math.max(entry.atr*.30,entry.atr*(.45+entry.passed*.04+(confirmation.trendStrong?.12:0))*regimeFactor);
@@ -449,14 +569,14 @@ function estimateTiming(setup,finalVerdict,finalConfidence){
     tp5Hours=setup.levels.tp5?eta(setup.levels.tp5):null;
     minHours=Math.max(1,Math.floor(tp1Hours*.7));
     const farHours=tp5Hours||tp4Hours||tp3Hours;
-    maxHours=Math.min(setup.mode==='swing'?168:48,Math.max(minHours+1,Math.ceil(farHours*1.20)));
+    maxHours=Math.min(setup.mode==='swing'?240:48,Math.max(minHours+1,Math.ceil(farHours*1.20)));
   }else if(setup.mode==='swing'){
-    const strongSwing=aligned&&entry.trendStrong&&confirmation.trendStrong&&entry.regime==='TRENDING'&&confirmation.regime==='TRENDING';
+    const strongSwing=aligned&&entry.trendStrong&&confirmation.trendStrong&&macro?.trendStrong&&entry.regime==='TRENDING'&&confirmation.regime==='TRENDING'&&macro?.regime!=='RANGE';
     const persistent=strongSwing&&mem.persistence&&!mem.flip;
-    const quality=(Number(entry.trendQuality)||0)*.45+(Number(confirmation.trendQuality)||0)*.55;
-    if(persistent&&quality>=72){minHours=36;maxHours=96;}
-    else if(strongSwing&&quality>=62){minHours=24;maxHours=72;}
-    else if(aligned){minHours=12;maxHours=48;}
+    const quality=(Number(entry.trendQuality)||0)*.32+(Number(confirmation.trendQuality)||0)*.38+(Number(macro?.trendQuality)||0)*.30;
+    if(persistent&&quality>=78){minHours=72;maxHours=240;}
+    else if(strongSwing&&quality>=68){minHours=48;maxHours=168;}
+    else if(aligned){minHours=24;maxHours=96;}
     else{minHours=6;maxHours=24;}
   }else if(finalConfidence>=65){minHours=3;maxHours=12;}
   else if(finalConfidence>=45){minHours=6;maxHours=24;}
@@ -478,26 +598,30 @@ function estimateTiming(setup,finalVerdict,finalConfidence){
     swing_class:swingClass,swing_days_min:minDays,swing_days_max:maxDays,swing_days_label:dayRange,
     duration_min_hours:minHours,duration_max_hours:maxHours,tp1_hours:tp1Hours,tp2_hours:tp2Hours,tp3_hours:tp3Hours,tp4_hours:tp4Hours,tp5_hours:tp5Hours,
     expires_in_hours:expiresInHours,recheck_hours:setup.mode==='swing'?1:.25,is_confirmed:finalVerdict!=='ATTENDRE',
-    basis:'ATR, régime, mémoire de tendance, structure, force H1/H4 et distance vers les objectifs'
+    basis:setup.mode==='swing'
+      ?'ATR, régime, mémoire sur 2 cycles, structure, force H1/H4, filtre macro D1 et distance vers les objectifs'
+      :'ATR, régime, mémoire de tendance, structure, force M15/H1 et distance vers les objectifs'
   };
 }
 
 
-function swingDistanceEstimate(levels,verdict){
+function swingDistanceEstimate(levels,verdict,setup){
   if(!levels||!['BUY','SELL'].includes(verdict))return null;
-  const pipSize=.001;
+  const isForex=setup?.asset_class==='forex';
+  const pipSize=isForex?(String(setup?.market||'').includes('/JPY')?.01:.0001):.001;
+  const decimals=isForex?6:3;
   const direction=verdict==='BUY'?1:-1;
   const calc=target=>{
     const priceDistance=(target-levels.entry)*direction;
-    return {price_distance:Number(priceDistance.toFixed(3)),pips_points:Math.max(0,Math.round(priceDistance/pipSize))};
+    return {price_distance:Number(priceDistance.toFixed(decimals)),pips_points:Math.max(0,Math.round(priceDistance/pipSize))};
   };
   return {
-    unit:'Deriv synthetic normalized point',
+    unit:isForex?'Forex pip indicative':'Deriv synthetic normalized point',
     pip_size:pipSize,
     direction:verdict,
     tp1:calc(levels.tp1),tp2:calc(levels.tp2),tp3:calc(levels.tp3),tp4:calc(levels.tp4),tp5:calc(levels.tp5),
-    sl:{price_distance:Number(Math.abs(levels.entry-levels.sl).toFixed(3)),pips_points:Math.round(Math.abs(levels.entry-levels.sl)/pipSize)},
-    estimated_swing_price_distance:Number(Math.abs(levels.tp5-levels.entry).toFixed(3)),
+    sl:{price_distance:Number(Math.abs(levels.entry-levels.sl).toFixed(decimals)),pips_points:Math.round(Math.abs(levels.entry-levels.sl)/pipSize)},
+    estimated_swing_price_distance:Number(Math.abs(levels.tp5-levels.entry).toFixed(decimals)),
     estimated_swing_pips_points:Math.round(Math.abs(levels.tp5-levels.entry)/pipSize)
   };
 }
@@ -519,24 +643,35 @@ function buildLevels(setup,verdict){
   };
 }
 
+function pricePrecision(setup){
+  if(setup?.asset_class!=='forex')return 3;
+  const price=Math.abs(Number(setup?.entry_tf?.price)||0);
+  if(price>=1000)return 2;
+  if(price>=100)return 3;
+  if(price>=10)return 4;
+  return 5;
+}
+
 function buildFamilyContexts(setups){
   const groups=new Map();
   for(const setup of setups){
-    const key=`${setup.family}:${setup.mode}`;
+    const key=`${setup.context_group||setup.family}:${setup.mode}`;
     const list=groups.get(key)||[];
     list.push(setup);
     groups.set(key,list);
   }
   const contexts=new Map();
   for(const [key,list] of groups){
-    const directional=list.filter(s=>s.entry_tf?.side===s.confirmation_tf?.side&&['BUY','SELL'].includes(s.entry_tf?.side));
+    const directional=list.filter(s=>s.entry_tf?.side===s.confirmation_tf?.side&&(s.mode!=='swing'||s.macro_tf?.side===s.entry_tf?.side)&&['BUY','SELL'].includes(s.entry_tf?.side));
     const buy=directional.filter(s=>s.entry_tf.side==='BUY');
     const sell=directional.filter(s=>s.entry_tf.side==='SELL');
     const dominant=buy.length===sell.length?'NEUTRE':buy.length>sell.length?'BUY':'SELL';
     const dominantCount=Math.max(buy.length,sell.length);
     const consensus=directional.length?dominantCount/directional.length:0;
     const avgQuality=directional.length
-      ?Math.round(average(directional.map(s=>((Number(s.entry_tf?.trendQuality)||0)+(Number(s.confirmation_tf?.trendQuality)||0))/2)))
+      ?Math.round(average(directional.map(s=>s.mode==='swing'
+        ?((Number(s.entry_tf?.trendQuality)||0)+(Number(s.confirmation_tf?.trendQuality)||0)+(Number(s.macro_tf?.trendQuality)||0))/3
+        :((Number(s.entry_tf?.trendQuality)||0)+(Number(s.confirmation_tf?.trendQuality)||0))/2)))
       :0;
     contexts.set(key,{
       family:list[0]?.family||'other',mode:list[0]?.mode||'day',
@@ -551,7 +686,7 @@ function buildFamilyContexts(setups){
 }
 
 function attachFamilyContext(setup,contexts){
-  const key=`${setup.family}:${setup.mode}`;
+  const key=`${setup.context_group||setup.family}:${setup.mode}`;
   const base=contexts.get(key)||{
     family:setup.family,mode:setup.mode,members:1,directional_members:0,
     buy_members:0,sell_members:0,dominant_side:'NEUTRE',
@@ -565,19 +700,24 @@ function attachFamilyContext(setup,contexts){
 }
 
 function autonomousDecision(setup){
-  const e=setup.entry_tf,c=setup.confirmation_tf,m=setup.trend_memory||{},f=setup.family_context||{},side=e.side;
-  const aligned=side===c.side;
+  const e=setup.entry_tf,c=setup.confirmation_tf,d=setup.macro_tf,m=setup.trend_memory||{},f=setup.family_context||{},side=e.side;
+  const swing=setup.mode==='swing';
+  const macroAligned=!swing||Boolean(d&&side===d.side);
+  const aligned=side===c.side&&macroAligned;
   const adverse=(setup.family==='boom'&&side==='SELL')||(setup.family==='crash'&&side==='BUY');
   const trending=e.regime==='TRENDING'||c.regime==='TRENDING';
   const rangeLike=e.regime==='RANGE'||e.regime==='TRANSITION';
+  const macroExhaustion=Boolean(swing&&d&&(side==='BUY'?(Number(c.rsi)>68||Number(d.rsi)>70):(Number(c.rsi)<32||Number(d.rsi)<30)));
 
-  const breakoutContinuation=trending&&aligned&&e.trendStrong&&c.trendStrong&&(e.bos||e.choch)&&e.impulse;
-  const pullbackContinuation=trending&&aligned&&e.trendStrong&&c.trendStrong&&e.retest;
-  const reversalSetup=rangeLike&&e.sweep&&e.rejection&&(e.choch||e.bos);
+  const macroTrendOk=!swing||Boolean(d?.trendStrong&&d?.regime!=='RANGE'&&d?.regime!=='SPIKE_RISK');
+  const breakoutContinuation=trending&&aligned&&macroTrendOk&&e.trendStrong&&c.trendStrong&&(e.bos||e.choch)&&e.impulse;
+  const pullbackContinuation=trending&&aligned&&macroTrendOk&&e.trendStrong&&c.trendStrong&&e.retest;
+  const reversalSetup=!swing&&rangeLike&&e.sweep&&e.rejection&&(e.choch||e.bos);
   const setupType=breakoutContinuation?'BREAKOUT_CONTINUATION':pullbackContinuation?'PULLBACK_CONTINUATION':reversalSetup?'REVERSAL':'GENERIC';
 
   const strategies=[
-    {id:'trend',name:'Trend following',weight:18,applicable:trending,support:aligned&&e.trendStrong&&c.trendStrong},
+    {id:'trend',name:'Trend following',weight:18,applicable:trending,support:aligned&&e.trendStrong&&c.trendStrong&&macroTrendOk},
+    {id:'macro',name:'Macro D1 alignment',weight:18,applicable:swing,support:Boolean(macroAligned&&d?.trendStrong&&Number(d?.trendQuality)>=65&&Number(d?.adx)>=18&&d?.dmiAligned)},
     {id:'structure',name:'SMC structure',weight:15,applicable:true,support:Boolean(e.bos||e.choch)},
     {id:'liquidity',name:'Liquidity sweep',weight:10,applicable:setupType==='REVERSAL'||setupType==='PULLBACK_CONTINUATION',support:Boolean(e.sweep)},
     {id:'breakout',name:'Breakout + impulse',weight:11,applicable:setupType==='BREAKOUT_CONTINUATION'||(trending&&setupType==='GENERIC'),support:Boolean((e.bos||e.choch)&&e.impulse)},
@@ -585,17 +725,18 @@ function autonomousDecision(setup){
     {id:'momentum',name:'Momentum',weight:10,applicable:true,support:Boolean(e.momentum&&e.impulse)},
     {id:'imbalance',name:'FVG / Order Block',weight:8,applicable:true,support:Boolean(e.fvg||e.orderBlock)},
     {id:'rejection',name:'Price rejection',weight:6,applicable:setupType==='REVERSAL'||setupType==='PULLBACK_CONTINUATION',support:Boolean(e.rejection)},
-    {id:'range',name:'Range reversal',weight:12,applicable:setupType==='REVERSAL',support:Boolean(e.sweep&&e.rejection&&(e.choch||e.bos)&&e.momentum)},
-    {id:'memory',name:'Trend memory',weight:8,applicable:true,support:Boolean(m.persistence&&!m.flip)},
-    {id:'volatility',name:'Volatility control',weight:8,applicable:true,support:Boolean(!e.spikeRisk&&e.volatilityExpansion>.55&&e.volatilityExpansion<2.6)},
+    {id:'range',name:'Range reversal',weight:12,applicable:!swing&&setupType==='REVERSAL',support:Boolean(e.sweep&&e.rejection&&(e.choch||e.bos)&&e.momentum)},
+    {id:'memory',name:swing?'Confirmation 2 cycles':'Trend memory',weight:12,applicable:true,support:Boolean(swing?Number(m.bias_cycles)>=2:m.persistence&&!m.flip)},
+    {id:'volatility',name:'Volatility control',weight:8,applicable:true,support:Boolean(!e.spikeRisk&&!c.spikeRisk&&(!swing||!d?.spikeRisk)&&e.volatilityExpansion>.55&&e.volatilityExpansion<2.6)},
+    {id:'exhaustion',name:'No H4/D1 exhaustion',weight:12,applicable:swing,support:!macroExhaustion},
     {id:'family',name:'Boom/Crash guard',weight:8,applicable:true,support:Boolean(!adverse||(e.sweep&&(e.bos||e.choch)))},
-    {id:'familycontext',name:'Family context confirmation',weight:7,applicable:Number(f.directional_members)>=2,support:Boolean(f.agrees)},
-    {id:'adx',name:'ADX / DMI trend strength',weight:9,applicable:trending,support:Boolean(e.adx>=20&&e.dmiAligned)},
-    {id:'macd',name:'MACD momentum alignment',weight:8,applicable:trending||setupType==='BREAKOUT_CONTINUATION',support:Boolean(e.macdAligned)},
+    {id:'familycontext',name:'Family context confirmation',weight:7,applicable:setup.asset_class!=='forex'&&Number(f.directional_members)>=2,support:Boolean(f.agrees)},
+    {id:'adx',name:'ADX / DMI trend strength',weight:10,applicable:trending,support:Boolean(e.adx>=20&&e.dmiAligned&&(!swing||(c.adx>=22&&c.dmiAligned&&d?.adx>=18&&d?.dmiAligned)))},
+    {id:'macd',name:'MACD momentum alignment',weight:8,applicable:trending||setupType==='BREAKOUT_CONTINUATION',support:Boolean(e.macdAligned&&(!swing||c.macdAligned))},
     {id:'donchian',name:'Donchian breakout',weight:8,applicable:setupType==='BREAKOUT_CONTINUATION'||(trending&&setupType==='GENERIC'),support:Boolean(e.donchianBreakout)},
     {id:'bollinger',name:'Bollinger squeeze release',weight:7,applicable:e.compression||setupType==='BREAKOUT_CONTINUATION',support:Boolean(e.squeezeRelease)},
-    {id:'efficiency',name:'Trend efficiency ratio',weight:7,applicable:trending,support:Boolean(e.efficiencyRatio>=.30)},
-    {id:'marketstructure',name:'HH/HL or LH/LL structure',weight:9,applicable:true,support:Boolean(e.marketStructureAligned)},
+    {id:'efficiency',name:'Trend efficiency ratio',weight:7,applicable:trending,support:Boolean(e.efficiencyRatio>=.30&&(!swing||c.efficiencyRatio>=.25))},
+    {id:'marketstructure',name:'HH/HL or LH/LL structure',weight:10,applicable:true,support:Boolean(e.marketStructureAligned&&(!swing||c.marketStructureAligned))},
     {id:'candles',name:'Engulfing confirmation',weight:5,applicable:setupType==='REVERSAL'||setupType==='PULLBACK_CONTINUATION',support:Boolean(e.engulfing)}
   ];
 
@@ -608,12 +749,16 @@ function autonomousDecision(setup){
   const conditionsTotal=applicable.length||1;
   const conditionPassPercent=Math.round((conditionsPassed/conditionsTotal)*100);
 
-  const quality=(Number(e.trendQuality)||0)*.42+(Number(c.trendQuality)||0)*.38+(Number(setup.intelligence?.local_score)||0)*.20;
-  let score=consensus*72+quality*.28;
+  const quality=swing
+    ?(Number(e.trendQuality)||0)*.30+(Number(c.trendQuality)||0)*.30+(Number(d?.trendQuality)||0)*.24+(Number(setup.intelligence?.local_score)||0)*.16
+    :(Number(e.trendQuality)||0)*.42+(Number(c.trendQuality)||0)*.38+(Number(setup.intelligence?.local_score)||0)*.20;
+  let score=consensus*(swing?68:72)+quality*(swing?.32:.28);
   if(aligned)score+=4;else score-=14;
   if(m.persistence)score+=3;
   if(m.flip)score-=14;
   if(e.spikeRisk)score-=24;
+  if(swing&&(c.spikeRisk||d?.spikeRisk))score-=20;
+  if(macroExhaustion)score-=16;
   if(e.regime==='RANGE'&&!strategies.find(s=>s.id==='range')?.support)score-=10;
   if(adverse)score-=5;
   if(f.agrees&&Number(f.consensus_percent)>=70)score+=4;
@@ -621,37 +766,48 @@ function autonomousDecision(setup){
   score=Math.round(clamp(score,0,97));
 
   const minimumConditions=80;
-  const minimumConsensus=setup.mode==='swing'?.62:.66;
-  const minimumScore=setup.mode==='swing'?74:76;
-  const confirmationGate=setup.mode==='swing'?c.trendQuality>=58:c.trendQuality>=54;
+  const minimumConsensus=swing?.72:.66;
+  const minimumScore=swing?84:76;
+  const qualityGate=!swing||Boolean(e.trendQuality>=72&&c.trendQuality>=75&&Number(d?.trendQuality)>=65);
+  const confirmationGate=swing
+    ?Boolean(c.trendStrong&&d?.trendStrong&&c.adx>=22&&c.dmiAligned&&d?.adx>=18&&d?.dmiAligned)
+    :c.trendQuality>=54;
   const adverseGate=!adverse||(score>=84&&e.sweep&&(e.bos||e.choch));
-  const riskGate=!e.spikeRisk&&!m.flip&&setup.risk?.specific_guard!==false;
-  const familyGate=!f.contradicts;
+  const riskGate=!e.spikeRisk&&!c.spikeRisk&&(!swing||!d?.spikeRisk)&&!macroExhaustion&&!m.flip&&setup.risk?.specific_guard!==false;
+  const familyGate=setup.asset_class==='forex'||!f.contradicts;
   const conditionGate=conditionPassPercent>=minimumConditions;
-  const signal=aligned&&confirmationGate&&adverseGate&&riskGate&&familyGate&&conditionGate&&consensus>=minimumConsensus&&score>=minimumScore;
+  const continuationGate=!swing||setupType==='BREAKOUT_CONTINUATION'||setupType==='PULLBACK_CONTINUATION';
+  const structureGate=!swing||Boolean((e.bos||e.choch||e.retest)&&e.marketStructureAligned&&c.marketStructureAligned);
+  const momentumGate=!swing||Boolean(e.momentum&&c.dmiAligned&&d?.dmiAligned);
+  const persistenceGate=!swing||Number(m.bias_cycles)>=2;
+  const signal=aligned&&qualityGate&&confirmationGate&&adverseGate&&riskGate&&familyGate&&conditionGate&&continuationGate&&structureGate&&momentumGate&&persistenceGate&&consensus>=minimumConsensus&&score>=minimumScore;
   const verdict=signal?side:'ATTENDRE';
-  const setupDetected=aligned&&!e.spikeRisk&&!m.flip&&score>=60&&conditionPassPercent>=50;
+  const setupDetected=aligned&&qualityGate&&!e.spikeRisk&&!m.flip&&!macroExhaustion&&continuationGate&&score>=(swing?70:60)&&conditionPassPercent>=(swing?65:50);
   const detectedSide=setupDetected?side:'NEUTRE';
 
   const active=strategies.filter(s=>s.applicable&&s.support).map(s=>s.name);
   const missing=strategies.filter(s=>s.applicable&&!s.support).map(s=>s.name);
-  const confidence=signal?Math.round(clamp(score,75,95)):Math.round(clamp(score,18,74));
+  const confidence=signal?Math.round(clamp(score,swing?84:75,96)):Math.round(clamp(score,18,swing?83:74));
+  const confirmationProgress=swing?`${Math.min(Number(m.bias_cycles)||0,2)}/2`:'1/1';
   const summary=signal
-    ?`${verdict} autonome · ${setupType}: ${conditionsPassed}/${conditionsTotal} conditions pertinentes validées (${conditionPassPercent}%), consensus pondéré ${Math.round(consensus*100)}%, régime ${e.regime}, horizons ${aligned?'alignés':'non alignés'}.`
-    :`ATTENDRE autonome · ${setupType}: ${conditionsPassed}/${conditionsTotal} conditions pertinentes validées (${conditionPassPercent}%), consensus ${Math.round(consensus*100)}%, score ${score}/100. Seuil requis: au moins 80% des conditions pertinentes + garde-fous critiques.`;
+    ?`${verdict} haute conviction · ${setupType}: H1/H4/D1 alignés, confirmation ${confirmationProgress}, score ${score}/100, ${conditionPassPercent}% des conditions et consensus ${Math.round(consensus*100)}%.`
+    :`ATTENDRE autonome · ${setupType}: ${conditionsPassed}/${conditionsTotal} conditions (${conditionPassPercent}%), consensus ${Math.round(consensus*100)}%, score ${score}/100${swing?`, confirmation ${confirmationProgress}`:''}. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles.`;
 
   return {
     verdict,confidence,score,consensus:Math.round(consensus*100),setup_type:setupType,condition_pass_percent:conditionPassPercent,
     conditions_passed:conditionsPassed,conditions_total:conditionsTotal,minimum_conditions_percent:minimumConditions,
-    condition_gate:conditionGate,side,aligned,setup_detected:setupDetected,detected_side:detectedSide,
+    condition_gate:conditionGate,side,aligned,macro_aligned:macroAligned,setup_detected:setupDetected,detected_side:detectedSide,
+    minimum_score:minimumScore,minimum_consensus_percent:Math.round(minimumConsensus*100),quality_gate:qualityGate,
+    continuation_gate:continuationGate,structure_gate:structureGate,momentum_gate:momentumGate,persistence_gate:persistenceGate,
+    confirmation_progress:confirmationProgress,confirmation_cycles_required:swing?2:1,macro_exhaustion:macroExhaustion,
     active_strategies:active,missing_strategies:missing,
     strategies:strategies.map(s=>({id:s.id,name:s.name,weight:s.weight,applicable:s.applicable,support:s.support})),
-    risk_gate:riskGate,adverse_gate:adverseGate,confirmation_gate:confirmationGate,summary
+    risk_gate:riskGate,adverse_gate:adverseGate,confirmation_gate:confirmationGate,family_gate:familyGate,summary
   };
 }
 
 function executionAssessment(setup,engine,verdict,levels){
-  const e=setup.entry_tf,c=setup.confirmation_tf,m=setup.trend_memory||{};
+  const e=setup.entry_tf,m=setup.trend_memory||{},swing=setup.mode==='swing';
   const direction=verdict==='BUY'?1:verdict==='SELL'?-1:0;
   const atr=Math.max(Number(e.atr)||0,.0000001);
   const extensionAtr=Math.abs((Number(e.price)||0)-(Number(e.ema20)||0))/atr;
@@ -659,7 +815,7 @@ function executionAssessment(setup,engine,verdict,levels){
   const stretched=verdict==='BUY'?rsi>=66:verdict==='SELL'?rsi<=34:false;
   const extreme=verdict==='BUY'?rsi>=72:verdict==='SELL'?rsi<=28:false;
 
-  const baseLimit=setup.mode==='swing'?1.25:1.05;
+  const baseLimit=swing?1.15:1.05;
   const familyAdjustment=setup.family==='volatility'?0:((setup.family==='boom'||setup.family==='crash')?.10:.05);
   const adverse=Boolean(setup.intelligence?.adverse_spike_direction);
   const maxExtensionAtr=Math.max(.85,baseLimit+familyAdjustment-(adverse?.18:0));
@@ -676,10 +832,15 @@ function executionAssessment(setup,engine,verdict,levels){
   const overextended=extensionAtr>maxExtensionAtr||extreme||breakoutChase;
   if(overextended&&phase!=='SPIKE_RISK')phase='EXHAUSTION_RISK';
 
-  const persistenceGate=setup.mode!=='swing'||Number(m.bias_cycles)>=2||Number(engine.score)>=92||engine.setup_type==='PULLBACK_CONTINUATION'||engine.setup_type==='REVERSAL';
+  const persistenceGate=!swing||Number(m.bias_cycles)>=2;
+  const highConvictionGate=!swing||Boolean(
+    Number(engine.score)>=84&&Number(engine.consensus)>=72&&Number(engine.condition_pass_percent)>=80&&
+    engine.quality_gate&&engine.confirmation_gate&&engine.continuation_gate&&engine.structure_gate&&engine.momentum_gate&&!engine.macro_exhaustion
+  );
   const structuralEntry=Boolean(e.retest||e.rejection||engine.setup_type==='REVERSAL'||(engine.setup_type==='BREAKOUT_CONTINUATION'&&extensionAtr<=.90));
   let executionScore=Number(engine.score)||0;
-  executionScore+=persistenceGate?4:-8;
+  executionScore+=persistenceGate?4:-12;
+  executionScore+=highConvictionGate?4:-12;
   executionScore+=structuralEntry?5:-2;
   executionScore-=overextended?18:0;
   executionScore-=e.spikeRisk?28:0;
@@ -688,10 +849,10 @@ function executionAssessment(setup,engine,verdict,levels){
 
   let state='WAIT_CONFIRMATION';
   if(verdict==='ATTENDRE')state='WAIT_CONFIRMATION';
-  else if(!engine.risk_gate||e.spikeRisk||m.flip)state='BLOCKED_RISK';
+  else if(!engine.risk_gate||e.spikeRisk||m.flip||!highConvictionGate)state='BLOCKED_RISK';
   else if(overextended)state='WAIT_RETRACE';
   else if(!persistenceGate)state='WAIT_CONFIRMATION';
-  else if(executionScore>=78&&engine.condition_pass_percent>=80)state='EXECUTE_NOW';
+  else if(executionScore>=(swing?84:78)&&engine.condition_pass_percent>=80)state='EXECUTE_NOW';
 
   const center=Number(e.ema20)||Number(e.price)||0;
   const zoneLow=verdict==='BUY'?center-atr*.15:center-atr*.35;
@@ -699,17 +860,20 @@ function executionAssessment(setup,engine,verdict,levels){
   const preferredEntryZone=direction===0?null:{min:Math.min(zoneLow,zoneHigh),max:Math.max(zoneLow,zoneHigh)};
 
   const reason=state==='EXECUTE_NOW'
-    ?'Signal confirmé et entrée jugée exploitable maintenant: structure, persistance, extension et risque sont compatibles.'
+    ?(swing?'Signal haute conviction confirmé 2/2: H1/H4/D1, structure, momentum, extension et risque sont compatibles.':'Signal confirmé et entrée jugée exploitable maintenant: structure, persistance, extension et risque sont compatibles.')
     :state==='WAIT_RETRACE'
       ?`Signal directionnel confirmé mais prix étendu de ${extensionAtr.toFixed(2)} ATR par rapport à EMA20; attendre un retracement ou une nouvelle structure d’entrée.`
       :state==='BLOCKED_RISK'
         ?'Exécution bloquée par un garde-fou de risque, un spike ou un retournement récent.'
-        :'Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.';
+        :swing&&Number(m.bias_cycles)<2
+          ?`Biais intéressant, mais confirmation ${Math.min(Number(m.bias_cycles)||0,2)}/2: attendre le prochain cycle cohérent.`
+          :'Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.';
 
   return {
     state,ready:state==='EXECUTE_NOW',score:executionScore,phase,extension_atr:Number(extensionAtr.toFixed(2)),
     max_extension_atr:Number(maxExtensionAtr.toFixed(2)),rsi,stretched,extreme,overextended,breakout_chase:breakoutChase,
-    persistence_gate:persistenceGate,bias_cycles:Number(m.bias_cycles)||0,structural_entry:structuralEntry,
+    persistence_gate:persistenceGate,high_conviction_gate:highConvictionGate,bias_cycles:Number(m.bias_cycles)||0,
+    confirmation_progress:swing?`${Math.min(Number(m.bias_cycles)||0,2)}/2`:'1/1',required_execution_score:swing?84:78,structural_entry:structuralEntry,
     preferred_entry_zone:preferredEntryZone,current_price:Number(e.price)||0,ema20:Number(e.ema20)||0,
     stop_reference:levels?.sl??null,reason
   };
@@ -722,7 +886,8 @@ function setupEntryPlan(setup,engine,projectedLevels){
   const current=Number(e.price)||projectedLevels.entry;
   const ema20=Number(e.ema20)||current;
   const extension=Math.abs(current-ema20)/atr;
-  const maxExtension=setup.mode==='swing'?1.25:1.05;
+  const maxExtension=setup.mode==='swing'?1.15:1.05;
+  const digits=pricePrecision(setup);
   const overextended=extension>maxExtension;
   let zoneMin,zoneMax,suggested,status;
 
@@ -747,12 +912,12 @@ function setupEntryPlan(setup,engine,projectedLevels){
 
   return {
     side,status,
-    suggested_entry:Number(suggested.toFixed(3)),
-    reference_entry:Number(projectedLevels.entry.toFixed(3)),
-    zone_min:Number(Math.min(zoneMin,zoneMax).toFixed(3)),
-    zone_max:Number(Math.max(zoneMin,zoneMax).toFixed(3)),
-    live_reference_price:Number(current.toFixed(3)),
-    atr:Number(atr.toFixed(3)),
+    suggested_entry:Number(suggested.toFixed(digits)),
+    reference_entry:Number(projectedLevels.entry.toFixed(digits)),
+    zone_min:Number(Math.min(zoneMin,zoneMax).toFixed(digits)),
+    zone_max:Number(Math.max(zoneMin,zoneMax).toFixed(digits)),
+    live_reference_price:Number(current.toFixed(digits)),
+    atr:Number(atr.toFixed(digits)),
     extension_atr:Number(extension.toFixed(2)),
     max_extension_atr:maxExtension,
     reason:overextended
@@ -795,14 +960,15 @@ function finalize(setup,luna,previous){
   const aiMatches=Boolean(audit)&&localConfirmed&&audit.verdict===engine.verdict&&!audit.needs_expert_review;
   const aiCaution=Boolean(audit)&&localConfirmed&&(audit.verdict==='ATTENDRE'||audit.needs_expert_review||((audit.contradictions||[]).length>=2));
 
+  const minimumConfidence=setup.mode==='swing'?84:75;
   let finalConfidence=engine.confidence+(aiMatches?Math.min(3,Math.max(1,Math.round((aiConfidence-70)/10))):0)-(aiCaution?4:0);
-  finalConfidence=Math.round(clamp(finalConfidence,localConfirmed?75:18,localConfirmed?96:74));
-  const finalVerdict=localConfirmed&&finalConfidence>=75?engine.verdict:'ATTENDRE';
+  finalConfidence=Math.round(clamp(finalConfidence,localConfirmed?minimumConfidence:18,localConfirmed?96:minimumConfidence-1));
+  const finalVerdict=localConfirmed&&finalConfidence>=minimumConfidence?engine.verdict:'ATTENDRE';
   const levels=finalVerdict==='ATTENDRE'?null:buildLevels(setup,finalVerdict);
   const projectedLevels=engine.setup_detected?buildLevels(setup,engine.detected_side):null;
   const entryPlan=setupEntryPlan(setup,engine,projectedLevels);
-  const swingDistance=levels?swingDistanceEstimate(levels,finalVerdict):null;
-  const projectedSwingDistance=projectedLevels?swingDistanceEstimate(projectedLevels,engine.detected_side):null;
+  const swingDistance=levels?swingDistanceEstimate(levels,finalVerdict,setup):null;
+  const projectedSwingDistance=projectedLevels?swingDistanceEstimate(projectedLevels,engine.detected_side,setup):null;
   const execution=executionAssessment(setup,engine,finalVerdict,levels);
   const timing=estimateTiming({...setup,levels},finalVerdict,finalConfidence);
 
@@ -847,6 +1013,20 @@ async function selfTest(){
   const engine=autonomousDecision(memorySetup);
   const execution=executionAssessment(memorySetup,engine,engine.verdict,engine.verdict==='ATTENDRE'?null:buildLevels(memorySetup,engine.verdict));
   if(!execution||!['EXECUTE_NOW','WAIT_RETRACE','WAIT_CONFIRMATION','BLOCKED_RISK'].includes(execution.state))throw new Error('Execution intelligence self-test failed');
+  const strong={...result,side:'BUY',trendStrong:true,trendQuality:94,regime:'TRENDING',adx:35,dmiAligned:true,rsi:58,
+    bos:true,choch:true,impulse:true,fvg:true,retest:false,orderBlock:true,momentum:true,rejection:true,spikeRisk:false,
+    volatilityExpansion:1.2,macdAligned:true,donchianBreakout:true,squeezeRelease:true,efficiencyRatio:.55,marketStructureAligned:true,passed:13};
+  const swingSetup=technicalSetup(MARKETS[0],strong,{...strong,trendQuality:92},{...MODES[1]},null);
+  // A swing without D1 is invalid by construction.
+  if(swingSetup.technical_verdict!=='ATTENDRE')throw new Error('Swing macro guard self-test failed');
+  const completeSwing=technicalSetup(MARKETS[0],strong,{...strong,trendQuality:92},MODES[1],{...strong,trendQuality:88,adx:28});
+  const firstCycle=attachTrendMemory(completeSwing,null);
+  const firstDecision=autonomousDecision(attachFamilyContext(firstCycle,new Map()));
+  if(firstDecision.verdict!=='ATTENDRE'||firstDecision.confirmation_progress!=='1/2')throw new Error('Swing first-cycle guard self-test failed');
+  const previous={markets:[{id:`${completeSwing.symbol}:swing`,timing:{bias:'BUY'},trend_memory:{current_bias:'BUY',bias_cycles:1}}]};
+  const secondCycle=attachTrendMemory(completeSwing,previous);
+  const secondDecision=autonomousDecision(attachFamilyContext(secondCycle,new Map()));
+  if(secondDecision.verdict!=='BUY'||secondDecision.score<84||secondDecision.confirmation_progress!=='2/2')throw new Error('High-conviction Swing self-test failed');
   console.log(ENGINE_VERSION+' self-test passed.');
 }
 
@@ -857,6 +1037,7 @@ async function readPreviousPayload(){
 function reusableAudit(previous,setup){
   const id=`${setup.symbol}:${setup.mode}`,row=previous?.markets?.find(item=>item.id===id);
   if(!row||row.entry_tf?.closedAt!==setup.entry_tf.closedAt||row.confirmation_tf?.closedAt!==setup.confirmation_tf.closedAt)return null;
+  if(setup.mode==='swing'&&row.macro_tf?.closedAt!==setup.macro_tf?.closedAt)return null;
   if(!row.ai_verdict||String(row.ai_tier||'').includes('Luna non appelée'))return null;
   return {id,verdict:row.ai_verdict,confidence:row.ai_confidence,summary:row.ai_summary,confirmations:row.ai_confirmations||[],contradictions:row.ai_contradictions||[],risk:row.ai_risk||'',needs_expert_review:Boolean(row.needs_expert_review)};
 }
@@ -866,13 +1047,22 @@ async function main(){
   const previous=await readPreviousPayload();
   MARKETS=await discoverDerivMarkets();
   console.log(`Deriv discovery found ${MARKETS.length} synthetic/derived markets.`);
-  const candles=await fetchAllCandles();
-
-  const rawSetups=MARKETS.flatMap(meta=>MODES.map(mode=>{
-    const entry=inspectCandles(candles.get(`${meta.symbol}:${mode.entry}`)),confirmation=inspectCandles(candles.get(`${meta.symbol}:${mode.confirmation}`));
-    if(!entry||!confirmation){console.warn(`Skipping ${meta.market} ${mode.id}: insufficient candles`);return null;}
-    return technicalSetup(meta,entry,confirmation,mode);
+  const [derivCandles,forexCandles]=await Promise.all([fetchDerivCandles(),fetchForexCandles()]);
+  const candles=new Map([...derivCandles,...forexCandles]);
+  const swingMode=MODES.find(mode=>mode.id==='swing');
+  const buildSetups=(metas,modes)=>metas.flatMap(meta=>modes.map(mode=>{
+    const entry=inspectCandles(candles.get(`${meta.symbol}:${mode.entry}`));
+    const confirmation=inspectCandles(candles.get(`${meta.symbol}:${mode.confirmation}`));
+    const macro=mode.macro?inspectCandles(candles.get(`${meta.symbol}:${mode.macro}`)):null;
+    if(!entry||!confirmation||(mode.macro&&!macro)){
+      console.warn(`Skipping ${meta.market} ${mode.id}: insufficient candles`);
+      return null;
+    }
+    const setup=technicalSetup(meta,entry,confirmation,mode,macro);
+    if(meta.asset_class==='forex')setup.chart_candles=(candles.get(`${meta.symbol}:${mode.entry}`)||[]).slice(-60);
+    return setup;
   }).filter(Boolean));
+  const rawSetups=[...buildSetups(MARKETS,MODES),...buildSetups(FOREX_MARKETS,[swingMode])];
   const memorySetups=rawSetups.map(setup=>attachTrendMemory(setup,previous));
   const familyContexts=buildFamilyContexts(memorySetups);
   const setups=memorySetups
@@ -881,7 +1071,7 @@ async function main(){
   const setupId=setup=>`${setup.symbol}:${setup.mode}`;
 
   const technicalCandidates=setups
-    .filter(setup=>setup.autonomous.verdict!=='ATTENDRE'&&setup.autonomous.confidence>=75)
+    .filter(setup=>setup.autonomous.verdict!=='ATTENDRE'&&setup.autonomous.confidence>=(setup.mode==='swing'?84:75))
     .sort((a,b)=>b.autonomous.confidence-a.autonomous.confidence)
     .slice(0,5);
 
@@ -900,22 +1090,26 @@ async function main(){
   const trendChanges=markets.filter(m=>m.trend_change?.changed).length;
 
   const payload={
-    ok:true,status:aiCalls?'ai_analyzed':'autonomous_analyzed',source_broker:'Deriv',source:'Deriv WebSocket · M15/H1/H4',
+    ok:true,status:aiCalls?'ai_analyzed':'autonomous_analyzed',source_broker:'Multi-source',
+    source:'Deriv WebSocket M15/H1/H4/D1 · Yahoo Finance Forex H1 agrégé H4/D1 (indicatif)',
     updated_at:new Date().toISOString(),engine_version:ENGINE_VERSION,
     model:aiCalls?`${ENGINE_VERSION} + ${SCREENING_MODEL} fresh 5m audit`:`${ENGINE_VERSION} · local 5m`,
-    screening_model:SCREENING_MODEL,deep_model:null,discovered_markets:MARKETS.length,markets_count:markets.length,technical_candidates:technicalCandidates.length,
+    screening_model:SCREENING_MODEL,deep_model:null,discovered_markets:MARKETS.length,synthetic_markets:MARKETS.length,
+    requested_forex_markets:FOREX_MARKETS.length,available_forex_markets:new Set(markets.filter(row=>row.asset_class==='forex').map(row=>row.market)).size,
+    markets_count:markets.length,technical_candidates:technicalCandidates.length,
     ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
     cached_ai_validations:0,analysis_interval_minutes:5,trend_changes:trendChanges,trend_flips:trendFlips,
     family_context_groups:familyContexts.size,
     confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
     openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
-    safety:"Sera Autonomous Engine v3.4 peut afficher tôt un SETUP BUY/SELL avec Entry, SL et TP1–TP5 projetés, tout en réservant l’exécution réelle aux signaux EXECUTE_NOW qui passent les garde-fous critiques."
+    high_conviction_swing:{timeframes:['H1','H4','D1'],minimum_score:84,minimum_consensus_percent:72,minimum_conditions_percent:80,confirmation_cycles:2},
+    safety:"Le mode swing haute conviction réduit les signaux avec H1/H4/D1, score 84/100 et confirmation 2/2. Il vise à filtrer les retournements, sans pouvoir les éliminer ni garantir un gain. Les cotations Forex Yahoo sont indicatives et doivent être confirmées sur le broker avant exécution."
   };
 
   if(CANDLES_OUTPUT){
     const series={};
     for(const [key,rows] of candles.entries())series[key]=rows;
-    const candlePayload={updated_at:payload.updated_at,source:'Deriv WebSocket',series};
+    const candlePayload={updated_at:payload.updated_at,source:'Deriv WebSocket + Yahoo Finance indicative',series};
     await fs.mkdir(path.dirname(CANDLES_OUTPUT),{recursive:true});
     await fs.writeFile(CANDLES_OUTPUT,JSON.stringify(candlePayload));
   }
