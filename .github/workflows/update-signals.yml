@@ -79,16 +79,6 @@ jobs:
         if: steps.foundation.outputs.run == 'true'
         run: python -m pip install -r requirements-foundation.txt
 
-      - name: Check optional OpenAI advisor
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "OpenAI advisor unavailable: autonomous engine will run alone."
-          else
-            echo "OpenAI advisor configured: autonomous engine remains the primary decision maker."
-          fi
-
       - name: Test multi-market signal engine
         run: node scripts/update-signals.mjs --self-test
 
@@ -103,8 +93,6 @@ jobs:
 
       - name: Analyze Deriv and Forex with autonomous engine
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SCREENING_MODEL: gpt-5.6-luna
           CANDLES_OUTPUT: /tmp/sera-candles.json
         run: node scripts/update-signals.mjs
 
