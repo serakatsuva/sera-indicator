@@ -57,6 +57,8 @@ Sera ajoute maintenant un ensemble quantitatif open source au moteur autonome :
 - **LightGBM** : second classifieur indépendant, entraîné sur les mêmes séries multi-marchés.
 - **Chronos-2 small** : modèle de prévision de séries temporelles utilisé périodiquement sur les candidats les plus forts.
 - **TimesFM 2.5 200M** : second modèle de prévision temporelle. La version 2.5 est utilisée afin de rester sur les poids Apache-2.0.
+
+Le pipeline planifie XGBoost et LightGBM toutes les cinq minutes. Chronos-2 et TimesFM recalculent les huit meilleurs candidats toutes les quinze minutes; les prévisions conservées ne votent que si la bougie de référence est identique et si elles ont moins de vingt minutes. GitHub Actions peut retarder une exécution planifiée; l’interface indique alors le retard et neutralise les anciens signaux.
 - **Qwen3-0.6B via WebLLM** : conseiller facultatif exécuté localement dans le navigateur lorsque WebGPU est disponible.
 
 Les modèles open source ne peuvent pas transformer un `ATTENDRE` local en ordre réel ni contourner les garde-fous. Ils peuvent confirmer une direction ou mettre l’exécution en attente en cas de désaccord important.
