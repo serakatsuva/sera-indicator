@@ -150,17 +150,7 @@ const executionLabel=row=>{
 };
 const simpleActionState=row=>{
   if(!row)return{code:"WAIT",label:"WAIT",detail:"Aucun setup exploitable",side:"wait",blink:false};
-  if(!resultsAreFresh()){
-    const live=liveValidationFor(row);
-    if(live){
-      const side=(live.state==="BUY"||live.state==="SELL")?live.state:"WAIT";
-      const family=live.family;
-      const familyText=family?(" · FAMILLE "+family.dominant_side+" "+family.consensus_percent+"%"):"";
-      const progress=live.confirmation_progress||"0/2";
-      return{code:side,label:side,detail:"VALIDATION LIVE · "+live.score+"% · "+progress+familyText,side:side.toLowerCase(),blink:false,live:true};
-    }
-    return{code:"WAIT",label:"WAIT",detail:"VALIDATION LIVE EN SYNCHRONISATION",side:"wait",blink:false};
-  }
+  if(!resultsAreFresh())return{code:"WAIT",label:"WAIT",detail:"ANALYSE SERVEUR EN RETARD · NOUVELLE CONFIRMATION REQUISE",side:"wait",blink:false};
   const side=setupSide(row);
   const proposal=liveEntryProposal(row);
   const execution=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
@@ -609,7 +599,7 @@ function render(){
   setAiStatus(
     aiActive?(ossActive?"Autonome + OSS + Luna":"Autonome + Luna"):
     autonomousActive?(ossActive?"Autonome + OSS":"Moteur autonome actif"):
-    liveFresh?"Validation LIVE active":"Analyse serveur ancienne",
+    liveFresh?"Prix en direct · serveur en retard":"Analyse serveur en retard",
     aiActive||autonomousActive||liveFresh?"live":"error"
   );
   notice.className=`notice ${aiActive||autonomousActive||liveFresh?"success":"warning"}`;
@@ -620,7 +610,7 @@ function render(){
       :fresh
         ?`${payload.markets_count} analyses locales actualisées. Le moteur reste sur ATTENDRE quand le consensus des stratégies est insuffisant.`
         :liveFresh
-          ?`Validation LIVE active · recalcul continu + consolidation chaque minute (dernier cycle ${minuteValidationLabel()}). L’analyse serveur date de ${ageLabel(payload.updated_at)}; ses anciens BUY/SELL restent neutralisés jusqu’au prochain cycle serveur.`
+          ?`Prix en direct · analyse serveur en retard depuis ${ageLabel(payload.updated_at)}. Validation locale à ${minuteValidationLabel()} (indicative). Signaux sur ATTENDRE jusqu’à une nouvelle analyse serveur.`
           :`Analyse serveur ancienne depuis ${ageLabel(payload.updated_at)} et flux live non validé. Les anciens BUY/SELL sont neutralisés sur ATTENDRE.`;
   const allowedMarkets=new Set(marketsForIndexFamily());
   let rows=payload.markets.filter(row=>allowedMarkets.has(row.market)&&(tradingMode==="all"||row.mode===tradingMode));
@@ -663,14 +653,6 @@ function effectiveSignalState(row){
     setupSide:setupSide(row),
     execution:row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION",
     stale:false,live:false
-  };
-  const live=liveValidationFor(row);
-  if(live)return{
-    verdict:(live.state==="BUY"||live.state==="SELL")?live.state:"ATTENDRE",
-    setupDetected:live.state==="BUY"||live.state==="SELL",
-    setupSide:(live.state==="BUY"||live.state==="SELL")?live.state:"NEUTRE",
-    execution:"LIVE_VALIDATION",
-    stale:false,live:true,liveScore:live.score
   };
   return{
     verdict:"ATTENDRE",
@@ -720,15 +702,15 @@ function resultCard(row,fresh){
   const isForex=row?.asset_class==="forex";
   const state=effectiveSignalState(row);
   const liveValidation=liveValidationFor(row);
-  const verdict=state.verdict,confidence=fresh?Number(row.final_confidence)||0:Number(liveValidation?.score)||0;
+  const verdict=state.verdict,confidence=fresh?Number(row.final_confidence)||0:0;
   const card=document.createElement("button");
   card.className=`result-card${row.market===selected&&row.mode===selectedMode?" selected":""}`;
   const conditions=Number(row?.decision_engine?.condition_pass_percent)||0;
   const setupType=String(row?.decision_engine?.setup_type||"GENERIC").replaceAll("_"," ");
-  const detected=hasDetectedSetup(row),detectedSide=setupSide(row);
+  const detected=!state.stale&&hasDetectedSetup(row),detectedSide=setupSide(row);
   const execState=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
   const status=verdict!=="ATTENDRE"?executionLabel(row):detected?`SETUP ${detectedSide} DÉTECTÉ`:conditions>=80?"80% atteint · garde-fou en attente":"En attente";
-  const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=verdict!=="ATTENDRE"?verdict:detected?`Setup ${detectedSide}`:`Biais ${bias}`;
+  const timing=row.timing,bias=timing?.bias||"NEUTRE",direction=state.stale?"En attente":verdict!=="ATTENDRE"?verdict:detected?`Setup ${detectedSide}`:`Biais ${bias}`;
   const ensemble=row?.open_source_ai?.ensemble;
   const oss=Number(ensemble?.reliable_models??ensemble?.available_models)>0 && Number.isFinite(Number(ensemble?.consensus))
     ?`OSS ${modelDirectionLabel(ensemble.direction)} ${Math.round(Number(ensemble.consensus))}%`
@@ -776,16 +758,16 @@ function renderSelected(){
   $("decisionOrb").querySelector("strong").textContent=verdict;
   $("decisionConfidence").textContent=fresh
     ?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`)
-    :selectedIsForex?(row?"Analyse serveur à actualiser":"Première analyse en cours"):liveValidation?`${liveValidation.score}% · LIVE ${liveValidation.confirmation_progress}`:"Synchronisation live";
+    :row?"Analyse serveur à actualiser":"Première analyse en cours";
   $("decisionSummary").textContent=fresh&&row?.ai_summary
     ?row.ai_summary
     :selectedIsForex
       ?row
         ?`L’analyse de ${selected} doit être actualisée. Les anciennes décisions restent neutralisées sur WAIT.`
         :`${selected} est configuré pour l’analyse Swing H1/H4/D1 haute conviction. La première analyse est en cours.`
-    :liveValidation
-      ?`Validation temps réel Deriv active pour ${selected} en H1/H4/D1 · consolidation ${liveValidation.confirmation_progress}. Le calcul serveur est ancien; ses anciens niveaux entrée/SL/TP restent neutralisés.`
-      :`Sera synchronise la validation live pour ${selected}.`;
+    :row
+      ?`Prix Deriv en direct pour ${selected}; analyse serveur en retard. Les observations locales sont indicatives et aucun ancien signal n’est exécutable.`
+      :`Sera attend la première analyse serveur pour ${selected}.`;
   renderOpenSourceModels(row);
   renderLiveEntry(row);
   renderTradeAction(row);
@@ -2068,7 +2050,7 @@ discoverAppDerivMarkets().then(()=>{
 });
 // The heavier server payload is refreshed on its own five-minute cadence;
 // Deriv ticks and the browser-side validation remain continuous between pulls.
-setInterval(()=>loadSignals(false),300000);
+setInterval(()=>loadSignals(false),60000);
 setInterval(updateMetaClocks,1000);
 setInterval(()=>{
   if(marketFamily!=="synthetic")return;
