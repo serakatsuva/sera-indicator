@@ -7,8 +7,8 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 - Les bougies Deriv M15, H1 et D1 sont récupérées depuis le WebSocket public Deriv; H4 est consolidé à partir de H1.
 - Les 27 paires Forex cochées sont analysées en H1, H4 et D1 à partir de bougies publiques Yahoo Finance. Ces prix sont indicatifs et doivent être confirmés sur le symbole `-STD` du broker avant exécution.
 - Sera Autonomous Engine v4.0 analyse tendance, régime de marché, momentum, structure, liquidité, retest, ATR, ADX/DMI, mémoire de tendance, épuisement et risque de spike.
-- OpenAI Luna intervient uniquement comme conseiller/auditeur facultatif lorsqu’il est disponible.
-- Sans Luna, le moteur peut confirmer seul BUY/SELL. En Swing, il exige notamment H1/H4/D1 alignés, un score minimal de 84/100, 72 % de consensus, 80 % des conditions et deux cycles cohérents.
+- Les modèles ouverts XGBoost, LightGBM, Chronos-2 et TimesFM fournissent des confirmations complémentaires.
+- Le moteur autonome peut confirmer seul BUY/SELL. En Swing, il exige notamment H1/H4/D1 alignés, un score minimal de 84/100, 72 % de consensus, 80 % des conditions et deux cycles cohérents.
 - Le résultat final reste BUY, SELL ou ATTENDRE. Aucun score ne garantit un gain.
 
 ### Paires Forex suivies
@@ -46,7 +46,7 @@ Le projet est désormais conçu pour fournir des décisions destinées à un usa
 
 Les limites de risque sont conservées dans l’EA et ne doivent pas être interprétées comme une garantie de protection totale.
 
-La clé `OPENAI_API_KEY`, si elle est configurée, reste exclusivement dans GitHub Actions Secrets et n’est jamais envoyée au navigateur. Elle n’est pas nécessaire au fonctionnement autonome du moteur.
+Aucune clé OpenAI n’est utilisée par le pipeline de génération des signaux.
 
 
 ## Ensemble IA open source
