@@ -1,8 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const OPENAI_API_KEY=process.env.OPENAI_API_KEY||'';
-const SCREENING_MODEL=process.env.SCREENING_MODEL||'gpt-5.6-luna';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public?app_id=1089';
@@ -450,28 +448,6 @@ async function fetchForexCandles(){
   return received;
 }
 
-const auditItem={type:'object',additionalProperties:false,properties:{
-  id:{type:'string'},verdict:{type:'string',enum:['BUY','SELL','ATTENDRE']},confidence:{type:'number',minimum:0,maximum:100},
-  summary:{type:'string'},confirmations:{type:'array',items:{type:'string'}},contradictions:{type:'array',items:{type:'string'}},
-  risk:{type:'string'},needs_expert_review:{type:'boolean'}
-},required:['id','verdict','confidence','summary','confirmations','contradictions','risk','needs_expert_review']};
-const auditSchema={type:'object',additionalProperties:false,properties:{markets:{type:'array',items:auditItem}},required:['markets']};
-
-function extractOutputText(response){
-  if(response?.output_text)return response.output_text;
-  for(const item of response?.output||[])if(item?.type==='message')for(const content of item?.content||[])if(content?.type==='output_text'&&content.text)return content.text;
-  throw new Error('OpenAI returned no output_text');
-}
-
-async function callOpenAI(body){
-  const res=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const raw=await res.text(); let response={};
-  try{response=raw?JSON.parse(raw):{};}catch{throw new Error(`OpenAI returned unreadable JSON (${res.status})`);}
-  if(!res.ok)throw new Error(`OpenAI API ${res.status}: ${response?.error?.code||response?.error?.type||'request_failed'}`);
-  if(response.status==='incomplete')throw new Error(`OpenAI incomplete response: ${response.incomplete_details?.reason||'unknown'}`);
-  return response;
-}
-
 function publicSetup(setup){
   const clean=value=>value?({
     side:value.side,confidence:value.confidence,passed:value.passed,bos:value.bos,choch:value.choch,sweep:value.sweep,impulse:value.impulse,
@@ -494,26 +470,6 @@ function publicSetup(setup){
     chart_candles:setup.chart_candles||null,
     intelligence:setup.intelligence,trend_memory:setup.trend_memory,family_context:setup.family_context||null,decision_engine:setup.autonomous||null,risk:setup.risk
   };
-}
-
-async function auditMarkets(model,setups){
-  const instructions=`Tu es Luna, auditeur final de Sera Smart Engine pour les indices synthétiques Deriv et les paires Forex suivies.
-Le moteur local a déjà analysé tendance, régime de marché, structure, liquidité, retest, momentum, ATR, risque de spike, mémoire de tendance et contexte multi-horizon.
-Ton rôle est d'auditer une décision déjà prise par le moteur autonome. Tu aides à identifier des contradictions ou confirmer la qualité; tu ne pilotes pas le moteur local.
-Règles strictes:
-1. Ne transforme jamais ATTENDRE en BUY/SELL.
-2. N'inverse jamais le sens technique proposé.
-3. Pour un swing, confirme BUY/SELL seulement si H1, H4 et D1 sont cohérents, le score atteint 84, les deux cycles requis sont validés, le régime n'est pas RANGE/SPIKE_RISK et la mémoire ne montre aucun flip fragile.
-4. Pour Boom, sois plus exigeant sur un SELL; pour Crash, sois plus exigeant sur un BUY.
-5. Si structure, momentum, régime, filtre D1, risque d'épuisement ou mémoire se contredisent, retourne ATTENDRE.
-6. La confiance doit refléter la qualité du setup, jamais une garantie de gain.`;
-  const response=await callOpenAI({
-    model,reasoning:{effort:'medium'},store:false,instructions,
-    input:JSON.stringify({sources:['Deriv','Yahoo Finance indicative'],market_family:'Synthetic Indices + Forex',engine:ENGINE_VERSION,generated_at:new Date().toISOString(),execution:'decision_support',markets:setups.map(publicSetup)}),
-    text:{format:{type:'json_schema',name:'sera_smart_engine_luna_audit',strict:true,schema:auditSchema}}
-  });
-  const parsed=JSON.parse(extractOutputText(response));
-  return {results:parsed.markets||[],response_id:response.id||null,usage:response.usage||null};
 }
 
 function attachTrendMemory(setup,previous){
@@ -952,10 +908,10 @@ function trendChange(setup,previous){
   };
 }
 
-function finalize(setup,luna,previous){
+function finalize(setup,previous){
   const engine=setup.autonomous||autonomousDecision(setup);
   const localConfirmed=engine.verdict!=='ATTENDRE';
-  const audit=luna||null;
+  const audit=null;
   const aiConfidence=Number(audit?.confidence)||0;
   const aiMatches=Boolean(audit)&&localConfirmed&&audit.verdict===engine.verdict&&!audit.needs_expert_review;
   const aiCaution=Boolean(audit)&&localConfirmed&&(audit.verdict==='ATTENDRE'||audit.needs_expert_review||((audit.contradictions||[]).length>=2));
@@ -973,11 +929,11 @@ function finalize(setup,luna,previous){
   const timing=estimateTiming({...setup,levels},finalVerdict,finalConfidence);
 
   const trend_change=trendChange(setup,previous);
-  const advisorStatus=!audit?'offline':aiMatches?'confirmed':aiCaution?'caution':'neutral';
-  const confirmationSource=finalVerdict==='ATTENDRE'?'none':audit?'autonomous_plus_ai':'autonomous_engine';
-  const aiTier=audit?`${ENGINE_VERSION} + ${SCREENING_MODEL} advisor`:`${ENGINE_VERSION} · autonome`;
+  const advisorStatus='open_models';
+  const confirmationSource=finalVerdict==='ATTENDRE'?'none':'autonomous_engine';
+  const aiTier=`${ENGINE_VERSION} · modèles ouverts`;
   const summaryBase=`${engine.summary} Exécution: ${execution.state}. ${execution.reason}`;
-  const summary=audit?`${summaryBase} Luna: ${audit.summary}`:summaryBase;
+  const summary=audit?`${summaryBase} Audit: ${audit.summary}`:summaryBase;
 
   const localConfirmations=engine.active_strategies.slice(0,6).map(name=>`Stratégie locale: ${name}`);
   const aiConfirmations=audit?.confirmations||[];
@@ -996,7 +952,7 @@ function finalize(setup,luna,previous){
     confirmation_source:confirmationSource,score_type:finalVerdict!=='ATTENDRE'?'signal_confidence':'setup_readiness',
     ai_verdict:audit?.verdict||'INDISPONIBLE',ai_confidence:aiConfidence,ai_summary:summary,
     ai_confirmations:[...localConfirmations,...aiConfirmations].slice(0,8),ai_contradictions:contradictions.slice(0,8),
-    ai_risk:audit?.risk||'Audit IA non disponible; décision locale autonome.',needs_expert_review:Boolean(audit?.needs_expert_review),
+    ai_risk:audit?.risk||'Moteur autonome; modèles ouverts évalués séparément.',needs_expert_review:Boolean(audit?.needs_expert_review),
     ai_tier:aiTier,ai_advisor_status:advisorStatus
   };
 }
@@ -1034,14 +990,6 @@ async function readPreviousPayload(){
   try{return JSON.parse(await fs.readFile(OUTPUT,'utf8'));}catch{return null;}
 }
 
-function reusableAudit(previous,setup){
-  const id=`${setup.symbol}:${setup.mode}`,row=previous?.markets?.find(item=>item.id===id);
-  if(!row||row.entry_tf?.closedAt!==setup.entry_tf.closedAt||row.confirmation_tf?.closedAt!==setup.confirmation_tf.closedAt)return null;
-  if(setup.mode==='swing'&&row.macro_tf?.closedAt!==setup.macro_tf?.closedAt)return null;
-  if(!row.ai_verdict||String(row.ai_tier||'').includes('Luna non appelée'))return null;
-  return {id,verdict:row.ai_verdict,confidence:row.ai_confidence,summary:row.ai_summary,confirmations:row.ai_confirmations||[],contradictions:row.ai_contradictions||[],risk:row.ai_risk||'',needs_expert_review:Boolean(row.needs_expert_review)};
-}
-
 async function main(){
   if(process.argv.includes('--self-test'))return selfTest();
   const previous=await readPreviousPayload();
@@ -1068,40 +1016,20 @@ async function main(){
   const setups=memorySetups
     .map(setup=>attachFamilyContext(setup,familyContexts))
     .map(setup=>({...setup,autonomous:autonomousDecision(setup)}));
-  const setupId=setup=>`${setup.symbol}:${setup.mode}`;
-
-  const technicalCandidates=setups
-    .filter(setup=>setup.autonomous.verdict!=='ATTENDRE'&&setup.autonomous.confidence>=(setup.mode==='swing'?84:75))
-    .sort((a,b)=>b.autonomous.confidence-a.autonomous.confidence)
-    .slice(0,5);
-
-  // Fresh AI audit every cycle: no cached Luna decision is reused.
-  const newCandidates=[...technicalCandidates];
-  let luna={results:[],response_id:null,usage:null,error:null};
-  if(newCandidates.length&&OPENAI_API_KEY){
-    try{luna=await auditMarkets(SCREENING_MODEL,newCandidates);}
-    catch(error){luna.error=error instanceof Error?error.message:String(error);console.warn(`OpenAI Luna audit skipped: ${luna.error}`);}
-  }else if(newCandidates.length){luna.error='OPENAI_API_KEY unavailable';}
-
-  const lunaMap=new Map(luna.results.map(row=>[String(row.id),row]));
-  const markets=setups.map(setup=>finalize(setup,lunaMap.get(setupId(setup)),previous));
-  const aiCalls=luna.response_id?1:0;
+  const markets=setups.map(setup=>finalize(setup,previous));
   const trendFlips=markets.filter(m=>m.trend_change?.state==='FLIP').length;
   const trendChanges=markets.filter(m=>m.trend_change?.changed).length;
 
   const payload={
-    ok:true,status:aiCalls?'ai_analyzed':'autonomous_analyzed',source_broker:'Multi-source',
+    ok:true,status:'autonomous_analyzed',source_broker:'Multi-source',
     source:'Deriv WebSocket M15/H1/H4/D1 · Yahoo Finance Forex H1 agrégé H4/D1 (indicatif)',
     updated_at:new Date().toISOString(),engine_version:ENGINE_VERSION,
-    model:aiCalls?`${ENGINE_VERSION} + ${SCREENING_MODEL} fresh 5m audit`:`${ENGINE_VERSION} · local 5m`,
-    screening_model:SCREENING_MODEL,deep_model:null,discovered_markets:MARKETS.length,synthetic_markets:MARKETS.length,
+    model:`${ENGINE_VERSION} · modèles ouverts`,
+    discovered_markets:MARKETS.length,synthetic_markets:MARKETS.length,
     requested_forex_markets:FOREX_MARKETS.length,available_forex_markets:new Set(markets.filter(row=>row.asset_class==='forex').map(row=>row.market)).size,
-    markets_count:markets.length,technical_candidates:technicalCandidates.length,
-    ai_candidates:newCandidates.length,ai_calls:aiCalls,ai_attempted:newCandidates.length?1:0,ai_error:luna.error||null,
-    cached_ai_validations:0,analysis_interval_minutes:5,trend_changes:trendChanges,trend_flips:trendFlips,
+    markets_count:markets.length,analysis_interval_minutes:5,trend_changes:trendChanges,trend_flips:trendFlips,
     family_context_groups:familyContexts.size,
     confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
-    openai_response_ids:{screening:luna.response_id},usage:{screening:luna.usage},
     high_conviction_swing:{timeframes:['H1','H4','D1'],minimum_score:84,minimum_consensus_percent:72,minimum_conditions_percent:80,confirmation_cycles:2},
     safety:"Le mode swing haute conviction réduit les signaux avec H1/H4/D1, score 84/100 et confirmation 2/2. Il vise à filtrer les retournements, sans pouvoir les éliminer ni garantir un gain. Les cotations Forex Yahoo sont indicatives et doivent être confirmées sur le broker avant exécution."
   };
@@ -1115,7 +1043,7 @@ async function main(){
   }
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
   await fs.writeFile(OUTPUT,JSON.stringify(payload,null,2));
-  console.log(`Wrote ${markets.length} analyses; ${technicalCandidates.length} smart candidates; ${aiCalls} fresh Luna call(s); ${trendChanges} trend change(s), ${trendFlips} flip(s); ${payload.confirmed_signals} confirmed signals.`);
+  console.log(`Wrote ${markets.length} analyses; ${trendChanges} trend change(s), ${trendFlips} flip(s); ${payload.confirmed_signals} confirmed signals.`);
 }
 
 main().catch(error=>{console.error(error instanceof Error?error.message:error);process.exit(1);});
