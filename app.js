@@ -581,7 +581,7 @@ function render(){
 
   if(!hasDerivResults()){
     setMarketStatus("Deriv : connexion en cours","error");
-    setAiStatus("OpenAI : analyse en attente","error");
+    setAiStatus("Modèles ouverts : analyse en attente","error");
     notice.className="notice warning";
     notice.textContent=payload?.note||"ATTENDRE — la première analyse Deriv H1/H4/D1 n’est pas encore disponible.";
     renderWaitingCards(results);
@@ -594,20 +594,16 @@ function render(){
     fresh?"Deriv : données multi-horizon":liveFresh?"Deriv : Live actif · serveur ancien":"Deriv : données anciennes",
     fresh||liveFresh?"live":"error"
   );
-  const aiActive=fresh&&payload.status==="ai_analyzed";
   const autonomousActive=fresh&&["autonomous_analyzed","smart_local"].includes(payload.status);
   const ossActive=fresh&&Boolean(payload?.open_source_models);
   setAiStatus(
-    aiActive?(ossActive?"Autonome + OSS + Luna":"Autonome + Luna"):
-    autonomousActive?(ossActive?"Autonome + OSS":"Moteur autonome actif"):
+    autonomousActive?(ossActive?"Moteur autonome + modèles ouverts":"Moteur autonome actif"):
     liveFresh?"Prix en direct · serveur en retard":"Analyse serveur en retard",
-    aiActive||autonomousActive||liveFresh?"live":"error"
+    autonomousActive||liveFresh?"live":"error"
   );
-  notice.className=`notice ${aiActive||autonomousActive||liveFresh?"success":"warning"}`;
-  notice.textContent=aiActive
-    ?`${payload.markets_count} analyses autonomes · ${payload.confirmed_signals??0} signal(aux) final(aux). Luna a audité ${payload.ai_candidates??0} candidat(s), mais la décision primaire reste locale.`
-    :autonomousActive
-      ?`${payload.markets_count} analyses autonomes actualisées · ${payload.confirmed_signals??0} signal(aux) final(aux). OpenAI n’est pas nécessaire pour prendre la décision.`
+  notice.className=`notice ${autonomousActive||liveFresh?"success":"warning"}`;
+  notice.textContent=autonomousActive
+      ?`${payload.markets_count} analyses autonomes actualisées · ${payload.confirmed_signals??0} signal(aux) final(aux). Modèles ouverts évalués séparément.`
       :fresh
         ?`${payload.markets_count} analyses locales actualisées. Le moteur reste sur ATTENDRE quand le consensus des stratégies est insuffisant.`
         :liveFresh
