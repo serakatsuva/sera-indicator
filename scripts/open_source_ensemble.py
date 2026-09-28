@@ -235,12 +235,17 @@ def fit_lightgbm(rows: list[dict[str, Any]], horizon: int) -> dict[str, Any]:
 
 
 def forecast_vote(last_price: float, forecast_price: float, closes: np.ndarray, horizon: int, model_name: str) -> dict[str, Any]:
-    if last_price <= 0 or not math.isfinite(forecast_price):
+    if not math.isfinite(last_price) or last_price <= 0 or not math.isfinite(forecast_price) or forecast_price <= 0:
         return {"status": "error", "direction": "NEUTRAL", "error": "invalid forecast"}
+    if len(closes) < 30 or not np.all(np.isfinite(closes)) or np.any(closes <= 0):
+        return {"status": "error", "direction": "NEUTRAL", "error": "invalid price series"}
     log_returns = np.diff(np.log(np.maximum(closes[-80:], 1e-12)))
     sigma = float(np.std(log_returns)) if len(log_returns) else 0.0
     expected_return = forecast_price / last_price - 1.0
     threshold = max(0.0002, sigma * math.sqrt(max(1, horizon)) * 0.22)
+    # Reject broken scales and outliers before assigning a model vote.
+    if not all(math.isfinite(x) for x in (sigma, expected_return, threshold)) or sigma > 0.25 or threshold > 0.5 or abs(expected_return) > 0.5:
+        return {"status": "error", "direction": "NEUTRAL", "error": "implausible volatility or forecast"}
     if expected_return > threshold:
         direction = "BUY"
     elif expected_return < -threshold:
@@ -254,6 +259,7 @@ def forecast_vote(last_price: float, forecast_price: float, closes: np.ndarray, 
         "model": model_name,
         "direction": direction,
         "confidence": confidence,
+        "reference_price": round(float(last_price), 8),
         "forecast_price": round(float(forecast_price), 8),
         "expected_return_pct": round(float(expected_return * 100.0), 4),
         "volatility_threshold_pct": round(float(threshold * 100.0), 4),
@@ -384,7 +390,7 @@ def combine_models(models: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "reliable_models": len(valid),
         "directional_models": sum(1 for x in valid.values() if x.get("direction") in ("BUY", "SELL")),
         "neutral_models": neutral,
-        "mean_confidence": round(float(np.mean(confidences)), 1) if confidences else None,
+        "mean_confidence": round(min(float(np.mean(confidences)), 65.0) if direction == "NEUTRAL" else float(np.mean(confidences)), 1) if confidences else None,
         "buy_weight": round(buy_weight, 3),
         "sell_weight": round(sell_weight, 3),
     }
@@ -460,10 +466,17 @@ def run(signals_path: Path, candles_path: Path, cache_path: Path, foundation: bo
         lgb = fit_lightgbm(rows, horizon)
         core[row_id] = {"xgboost": xgb, "lightgbm": lgb}
 
-    # Keep both foundation models connected to every analyzed market.
-    # Model weights are cached by GitHub Actions, so this avoids false "0%" states
-    # caused by markets being skipped on non-foundation cycles.
-    selected_ids = {str(row.get("id")) for row in signals["markets"]}
+    # Foundation models are CPU-heavy. Recompute only the strongest candidates;
+    # core models still assess every market on every cycle.
+    ranked = sorted(
+        signals["markets"],
+        key=lambda row: (
+            row.get("final_verdict") in ("BUY", "SELL"),
+            safe_float((row.get("decision_engine") or {}).get("score")),
+        ),
+        reverse=True,
+    )
+    selected_ids = {str(row.get("id")) for row in ranked[:8]} if foundation else set()
 
     for row in signals["markets"]:
         row_id = str(row.get("id") or "")
@@ -487,8 +500,13 @@ def run(signals_path: Path, candles_path: Path, cache_path: Path, foundation: bo
     for row in signals["markets"]:
         row_id = str(row.get("id") or "")
         prior = previous_rows.get(row_id) if isinstance(previous_rows.get(row_id), dict) else {}
-        chronos_result = chronos_map.get(row_id) if foundation else prior.get("chronos2")
-        timesfm_result = timesfm_map.get(row_id) if foundation else prior.get("timesfm25")
+        symbol = str(row.get("symbol") or "")
+        timeframe = "M15" if row.get("mode") == "day" else "H1"
+        series = candle_rows(candles, symbol, timeframe)
+        latest_epoch = int(series[-1].get("epoch") or 0) if series else 0
+        reusable = prior if int(prior.get("latest_epoch") or 0) == latest_epoch and cache_fresh({"updated_at": prior.get("foundation_updated_at")}, 20) else {}
+        chronos_result = chronos_map.get(row_id) or reusable.get("chronos2")
+        timesfm_result = timesfm_map.get(row_id) or reusable.get("timesfm25")
         if not chronos_result:
             chronos_result = {"status": "pending", "direction": "NEUTRAL"}
         if not timesfm_result:
@@ -508,7 +526,17 @@ def run(signals_path: Path, candles_path: Path, cache_path: Path, foundation: bo
             "qwen_local": {"status": "browser_optional", "model": "Qwen3-0.6B-q4f16_1-MLC"},
         }
         apply_model_guard(row, ensemble)
-        cache_markets[row_id] = {"chronos2": chronos_result, "timesfm25": timesfm_result}
+        foundation_updated_at = (
+            datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            if row_id in chronos_map or row_id in timesfm_map
+            else reusable.get("foundation_updated_at")
+        )
+        cache_markets[row_id] = {
+            "latest_epoch": latest_epoch,
+            "foundation_updated_at": foundation_updated_at,
+            "chronos2": chronos_result,
+            "timesfm25": timesfm_result,
+        }
 
     signals["open_source_models"] = {
         "version": MODEL_VERSION,
@@ -516,9 +544,9 @@ def run(signals_path: Path, candles_path: Path, cache_path: Path, foundation: bo
         "foundation": ["Chronos-2 small", "TimesFM 2.5 200M"],
         "browser_advisor": "Qwen3-0.6B via WebLLM",
         "foundation_ran": bool(foundation),
-        "connection_mode": "persistent_all_models",
+        "connection_mode": "core_every_cycle_foundation_top_candidates",
         "configured_models": 4,
-        "policy": "All four free models stay connected on each analysis cycle. Only reliable votes enter consensus; low-quality outputs remain visible but cannot influence execution.",
+        "policy": "Core models assess every market; foundation models refresh the strongest candidates. Only fresh, reliable votes enter consensus.",
     }
     signals["model"] = str(signals.get("model") or "Sera Autonomous Engine") + " + OSS Ensemble"
     signals["model_ensemble_updated_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
