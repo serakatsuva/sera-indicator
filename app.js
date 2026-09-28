@@ -151,6 +151,7 @@ const executionLabel=row=>{
 const simpleActionState=row=>{
   if(!row)return{code:"WAIT",label:"WAIT",detail:"Aucun setup exploitable",side:"wait",blink:false};
   if(!resultsAreFresh())return{code:"WAIT",label:"WAIT",detail:"ANALYSE SERVEUR EN RETARD · NOUVELLE CONFIRMATION REQUISE",side:"wait",blink:false};
+  if(liveOpposesServer(row))return{code:"WAIT",label:"WAIT",detail:"RETOURNEMENT LIVE · ANCIEN SIGNAL INVALIDÉ",side:"wait",blink:false};
   const side=setupSide(row);
   const proposal=liveEntryProposal(row);
   const execution=row?.execution_state||row?.execution?.state||"WAIT_CONFIRMATION";
@@ -647,6 +648,10 @@ function render(){
 
 function effectiveSignalState(row){
   const fresh=resultsAreFresh();
+  if(fresh&&liveOpposesServer(row))return{
+    verdict:"ATTENDRE",setupDetected:false,setupSide:"NEUTRE",
+    execution:"WAIT_CONFIRMATION",stale:true,live:false
+  };
   if(fresh)return{
     verdict:row?.final_verdict||"ATTENDRE",
     setupDetected:hasDetectedSetup(row),
@@ -702,7 +707,7 @@ function resultCard(row,fresh){
   const isForex=row?.asset_class==="forex";
   const state=effectiveSignalState(row);
   const liveValidation=liveValidationFor(row);
-  const verdict=state.verdict,confidence=fresh?Number(row.final_confidence)||0:0;
+  const verdict=state.verdict,confidence=fresh&&!state.stale?Number(row.final_confidence)||0:0;
   const card=document.createElement("button");
   card.className=`result-card${row.market===selected&&row.mode===selectedMode?" selected":""}`;
   const conditions=Number(row?.decision_engine?.condition_pass_percent)||0;
@@ -756,10 +761,10 @@ function renderSelected(){
   }
   $("decisionOrb").className=`decision-orb ${cls}`;
   $("decisionOrb").querySelector("strong").textContent=verdict;
-  $("decisionConfidence").textContent=fresh
+  $("decisionConfidence").textContent=fresh&&!effective.stale
     ?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`)
     :row?"Analyse serveur à actualiser":"Première analyse en cours";
-  $("decisionSummary").textContent=fresh&&row?.ai_summary
+  $("decisionSummary").textContent=fresh&&!effective.stale&&row?.ai_summary
     ?row.ai_summary
     :selectedIsForex
       ?row
@@ -858,7 +863,7 @@ function renderSelected(){
 }
 
 function liveEntryProposal(row){
-  if(!row||!hasDetectedSetup(row))return null;
+  if(!row||!resultsAreFresh()||liveOpposesServer(row)||!hasDetectedSetup(row))return null;
   const plan=row.setup_entry_plan;
   const levels=row.projected_levels;
   if(!plan||!levels)return null;
@@ -910,7 +915,7 @@ function renderTradeAction(row){
 function renderSwingPips(row){
   const panel=$("swingPipsPanel"),total=$("swingPipsTotal"),grid=$("swingPipsGrid"),note=$("swingPipsNote");
   if(!panel||!total||!grid)return;
-  if(!row||row.mode!=="swing"){
+  if(!row||row.mode!=="swing"||!resultsAreFresh()||liveOpposesServer(row)){
     panel.hidden=true;
     total.textContent="—";
     grid.innerHTML="";
@@ -1442,6 +1447,32 @@ function consolidateLiveConfirmations(){
   }
 }
 
+function liveOpposesServer(row){
+  const final=row?.final_verdict;
+  if(final!=="BUY"&&final!=="SELL")return false;
+  if(!liveValidationIsFresh())return false;
+  const intel=liveIntelligenceFor(row);
+  return Boolean(intel?.aligned&&(intel.side==="BUY"||intel.side==="SELL")&&intel.side!==final);
+}
+
+// A local reversal can generate a new *indicative* plan. It never authorizes an order.
+function liveReversalScenario(row){
+  if(!row||row.asset_class==="forex"||!liveValidationIsFresh())return null;
+  const live=liveValidationFor(row);
+  if(!live||(live.state!=="BUY"&&live.state!=="SELL"))return null;
+  const quote=liveQuotes.get(row.market);
+  const entry=Number(quote?.price),atr=Number(live.intel?.entry?.atr);
+  if(!quote?.epoch||Date.now()/1000-Number(quote.epoch)>20)return null;
+  if(!Number.isFinite(entry)||entry<=0||!Number.isFinite(atr)||atr<=0)return null;
+  const side=live.state,sign=side==="BUY"?1:-1;
+  const risk=Math.max(atr*1.5,entry*0.0001);
+  if(!Number.isFinite(risk)||risk<=0||risk>entry*.5)return null;
+  const levels={entry,sl:entry-sign*risk};
+  for(let i=1;i<=5;i++)levels[`tp${i}`]=entry+sign*risk*i;
+  if(levels.sl<=0||Object.values(levels).some(value=>!Number.isFinite(value)||value<=0))return null;
+  return {side,levels,score:live.score,confirmed:live.confirmation_progress};
+}
+
 function liveValidationFor(row){
   const candidate=liveValidationCandidate(row);
   if(!candidate)return null;
@@ -1637,14 +1668,13 @@ function loadChartHistory(market,row,force=false){
 
 function predictionState(row){
   if(!row)return{prediction:"NEUTRE",status:"WAIT",action:"WAIT",side:"wait"};
-  if(!resultsAreFresh()){
-    const live=liveValidationFor(row);
-    const prediction=live?.state==="BUY"||live?.state==="SELL"?live.state:"NEUTRE";
+  if(!resultsAreFresh()||liveOpposesServer(row)){
+    const scenario=liveReversalScenario(row);
     return{
-      prediction,
-      status:live?`VALIDATION LIVE ${live.confirmation_progress}`:"SYNCHRONISATION LIVE",
-      action:prediction==="BUY"?"BUY LIVE CONFIRMÉ":prediction==="SELL"?"SELL LIVE CONFIRMÉ":"WAIT",
-      side:prediction==="BUY"?"buy":prediction==="SELL"?"sell":"wait"
+      prediction:scenario?.side||"NEUTRE",
+      status:scenario?`PROJECTION LIVE ${scenario.confirmed} · SERVEUR À CONFIRMER`:"ANALYSE SERVEUR À CONFIRMER",
+      action:"WAIT",
+      side:scenario?.side==="BUY"?"buy":scenario?.side==="SELL"?"sell":"wait"
     };
   }
   const final=row.final_verdict==="BUY"||row.final_verdict==="SELL"?row.final_verdict:null;
@@ -1671,6 +1701,9 @@ function renderPredictionPanel(row){
 }
 
 function chartLevels(row){
+  const scenario=liveReversalScenario(row);
+  if(scenario&&(!resultsAreFresh()||liveOpposesServer(row)))return {...scenario.levels,zoneMin:NaN,zoneMax:NaN};
+  if(!resultsAreFresh()||liveOpposesServer(row))return {entry:NaN,zoneMin:NaN,zoneMax:NaN,sl:NaN,tp1:NaN,tp2:NaN,tp3:NaN,tp4:NaN,tp5:NaN};
   const source=row?.levels||row?.projected_levels||{};
   const plan=row?.setup_entry_plan||{};
   return{
@@ -1683,7 +1716,14 @@ function chartLevels(row){
 }
 
 function visualTradePlan(row){
-  if(!row||!resultsAreFresh())return null;
+  const scenario=liveReversalScenario(row);
+  if(scenario&&(!resultsAreFresh()||liveOpposesServer(row))){
+    const {entry,sl,tp1,tp2,tp3,tp4,tp5}=scenario.levels;
+    return {side:scenario.side,entry,sl,target:tp3,tp1,tp2,tp3,tp4,tp5,rr:3,
+      timeframe:row?.mode==="swing"?"H1 / H4 / D1":"M15 / H1",
+      state:"PROJECTION LOCALE · ATTENDRE VALIDATION SERVEUR",isProjected:true};
+  }
+  if(!row||!resultsAreFresh()||liveOpposesServer(row))return null;
   const side=(row.final_verdict==="BUY"||row.final_verdict==="SELL")?row.final_verdict:(hasDetectedSetup(row)?setupSide(row):"NEUTRE");
   if(side!=="BUY"&&side!=="SELL")return null;
 
@@ -1717,7 +1757,7 @@ function renderVisualTradePlan(row){
   host.hidden=!plan;
   if(!plan)return;
   host.className=`visual-trade-plan ${plan.side.toLowerCase()}`;
-  $("visualPlanTitle").textContent=plan.isProjected?"Scénario projeté":"Plan confirmé";
+  $("visualPlanTitle").textContent=plan.isProjected?"Scénario projeté · non exécutable":"Plan confirmé";
   $("visualPlanTf").textContent=plan.timeframe;
   $("visualPlanSide").textContent=plan.side;
   $("visualPlanEntry").textContent=fmtEntry(plan.entry);
