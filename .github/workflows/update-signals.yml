@@ -10,13 +10,13 @@ on:
       - 'scripts/open_source_ensemble.py'
       - 'scripts/adaptive_evidence.py'
       - 'scripts/send_gmail_alerts.py'
+      - 'scripts/qa_signals.py'
       - 'requirements-ml.txt'
       - 'requirements-foundation.txt'
   schedule:
-    # Two staggered 10-minute schedules = one analysis every 5 minutes.
-    # Avoids GitHub's busiest :00/:05 cron boundaries.
-    - cron: '2,12,22,32,42,52 * * * *'
-    - cron: '7,17,27,37,47,57 * * * *'
+    # Core models every 5 minutes; foundation models every 15 minutes.
+    - cron: '2,17,32,47 * * * *'
+    - cron: '7,12,22,27,37,42,52,57 * * * *'
 
 permissions:
   contents: write
@@ -59,12 +59,20 @@ jobs:
       - name: Install core open-source models
         run: python -m pip install -r requirements-ml.txt
 
-      - name: Keep all free models connected
+      - name: Select free model cadence
         id: foundation
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
         run: |
-          echo "run=true" >> "$GITHUB_OUTPUT"
-          echo "XGBoost + LightGBM + Chronos-2 + TimesFM are enabled for this cycle."
+          if [[ "$EVENT_NAME" != "schedule" || "$SCHEDULE" == "2,17,32,47 * * * *" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Core and foundation models enabled for strongest candidates."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Core models enabled; fresh foundation forecasts reused when valid."
+          fi
 
       - name: Cache Hugging Face models
         if: steps.foundation.outputs.run == 'true'
@@ -110,6 +118,9 @@ jobs:
           --signals data/signals.json
           --candles /tmp/sera-candles.json
           --memory data/adaptive-evidence.json
+
+      - name: Validate generated signals before publication
+        run: python scripts/qa_signals.py
 
       - name: Send Gmail Swing alerts
         env:
