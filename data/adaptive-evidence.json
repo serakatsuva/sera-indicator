@@ -1,6 +1,6 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-20T09:50:24.163688Z",
+  "updated_at": "2026-10-20T14:34:18.072559Z",
   "records": [
     {
       "key": "R_10:swing|1789848000|BUY",
@@ -13456,7 +13456,7 @@
       "status": "open",
       "created_at": "2026-10-19T15:36:33.233019Z",
       "max_stage": 0,
-      "last_epoch": 1792488600
+      "last_epoch": 1792505700
     },
     {
       "key": "WLDUSD:day|1792469700|SELL",
@@ -13495,8 +13495,8 @@
       },
       "status": "open",
       "created_at": "2026-10-20T04:46:29.778012Z",
-      "max_stage": 0,
-      "last_epoch": 1792488600
+      "max_stage": 1,
+      "last_epoch": 1792505700
     },
     {
       "key": "CRASH600:day|1792488600|SELL",
@@ -13528,8 +13528,12 @@
         "tp4": 20877.5234,
         "tp5": 20516.962999999996
       },
-      "status": "open",
-      "created_at": "2026-10-20T09:50:24.075009Z"
+      "status": "resolved",
+      "created_at": "2026-10-20T09:50:24.075009Z",
+      "result": "LOSS",
+      "r": -1.0,
+      "max_stage": 0,
+      "resolved_epoch": 1792499400
     },
     {
       "key": "JD100:day|1792488600|SELL",
@@ -13567,7 +13571,49 @@
         "tp5": 70.56999999999996
       },
       "status": "open",
-      "created_at": "2026-10-20T09:50:24.075046Z"
+      "created_at": "2026-10-20T09:50:24.075046Z",
+      "max_stage": 0,
+      "last_epoch": 1792505700
+    },
+    {
+      "key": "BOOM900:day|1792505700|BUY",
+      "id": "BOOM900:day",
+      "market": "Boom 900 Index",
+      "symbol": "BOOM900",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1792505700,
+      "setup_type": "BREAKOUT_CONTINUATION",
+      "regime": "TRENDING",
+      "confidence": 96,
+      "execution_score": 90.0,
+      "active_strategies": [
+        "Trend following",
+        "SMC structure",
+        "Breakout + impulse",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "ADX / DMI trend strength",
+        "Donchian breakout",
+        "Bollinger squeeze release",
+        "Trend efficiency ratio",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 8760.812,
+        "sl": 8655.762,
+        "tp1": 8918.386999999999,
+        "tp2": 9012.931999999999,
+        "tp3": 9138.991999999997,
+        "tp4": 9265.051999999996,
+        "tp5": 9391.111999999996
+      },
+      "status": "open",
+      "created_at": "2026-10-20T14:34:17.998039Z"
     }
   ],
   "profiles": {
@@ -14769,11 +14815,11 @@
       "wins": 0
     },
     "Crash 600 Index|day|GENERIC|TRANSITION": {
-      "samples": 2,
-      "decisive_samples": 1,
+      "samples": 3,
+      "decisive_samples": 2,
       "win_rate": 0.0,
-      "avg_r": -0.5,
-      "losses": 1,
+      "avg_r": -0.667,
+      "losses": 2,
       "breakeven_or_flat": 1,
       "wins": 0
     },
@@ -14895,9 +14941,9 @@
     },
     "FVG / Order Block": {
       "samples": 150,
-      "decisive_samples": 81,
-      "win_rate": 39.5,
-      "avg_r": 0.195
+      "decisive_samples": 82,
+      "win_rate": 39.0,
+      "avg_r": 0.189
     },
     "Trend memory": {
       "samples": 150,
@@ -14956,8 +15002,8 @@
     "Family context confirmation": {
       "samples": 150,
       "decisive_samples": 73,
-      "win_rate": 46.6,
-      "avg_r": 0.29
+      "win_rate": 45.2,
+      "avg_r": 0.259
     }
   }
 }
