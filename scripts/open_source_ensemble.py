@@ -146,7 +146,10 @@ def vote_from_probability(prob_up: float, validation_accuracy: float | None = No
         direction = "SELL"
     else:
         direction = "NEUTRAL"
-    confidence = round(max(p, 1.0 - p) * 100.0, 1)
+    # Cap at 95% like every other model: a small tree model saying 99% (e.g. Boom 50,
+    # whose candles almost always close up) is overconfidence, and >95 failed signal QA,
+    # blocking the publication of every market.
+    confidence = round(clamp(max(p, 1.0 - p) * 100.0, 50.0, 95.0), 1)
     quality = float(validation_accuracy) if validation_accuracy is not None else None
     status = "ok" if quality is None or quality >= 0.53 else "low_quality"
     if status != "ok":
@@ -567,6 +570,9 @@ def run(signals_path: Path, candles_path: Path, cache_path: Path, foundation: bo
 
 
 def self_test() -> None:
+    for extreme in (0.0, 0.003, 0.997, 1.0):
+        vote = vote_from_probability(extreme, 0.7)
+        assert 50.0 <= vote["confidence"] <= 95.0, vote
     rows = []
     base = 100.0
     for i in range(140):
