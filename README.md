@@ -15,7 +15,7 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 `USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
-## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.20
+## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.30
 
 Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade.mq5`.
 
@@ -34,6 +34,13 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - **Symboles Forex reconnus chez tous les brokers** : `EUR/USD`, `EURUSD-STD`, `EURUSD`, `EURUSD.m`, `frxEURUSD`…
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - Option `TradeDaySignals` (désactivée par défaut) pour prendre aussi les signaux Day M15/H1.
+
+### v2.30 (Deriv) / v1.10 (Weltrade) — lots et positions selon la balance
+
+- **Lot proportionnel à la balance** : chaque trade risque `RiskPercent` (0,5 %) de l’équité jusqu’au SL. Plus de plafond fixe de 1 USD (`MaximumLossUSD = 0`) ni de lot maximum de 0,05 (`MaximumLot = 0` → limite du broker).
+- **Lot minimum** : si le lot calculé est inférieur au minimum du broker, l’EA prend le lot minimum (`UseMinimumLotWhenRiskTooSmall`) au lieu d’ignorer le signal.
+- **Pas de plafond de positions** (`MaximumOpenPositionsCap = 0`) : une position par marché ayant un signal, sans limite de nombre ni de trades par jour.
+- Seul garde-fou conservé : le **risque total ouvert** (somme des pertes possibles jusqu’aux SL) reste sous `MaximumTotalOpenRiskPercent` = 10 % de l’équité, avec la marge libre et l’arrêt d’urgence.
 
 ### v2.20 — robustesse
 

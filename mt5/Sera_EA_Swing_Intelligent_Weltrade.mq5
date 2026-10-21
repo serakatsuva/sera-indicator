@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "1.00"
+#property version   "1.10"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -34,9 +34,10 @@ input int DeviationPoints=50;
 // --- Risque par trade (identique a Sera EA)
 input double RiskPercent=0.50;
 input double MaximumAdaptiveRiskPercent=0.75;
-input double MaximumLossUSD=1.00;
-input double MaximumAdaptiveLossUSD=1.50;
-input double MaximumLot=0.05;
+input double MaximumLossUSD=0.0;         // 0 = pas de plafond en USD : le risque suit la balance (RiskPercent)
+input double MaximumAdaptiveLossUSD=0.0;
+input double MaximumLot=0.0;             // 0 = lot maximum du broker
+input bool UseMinimumLotWhenRiskTooSmall=true;   // prendre le lot minimum si le lot calculé est plus petit
 input bool EnableAdaptiveLot=true;
 input double EquityGrowthStepPercent=5.0;
 input double RiskIncreasePerEquityStep=0.05;
@@ -50,7 +51,7 @@ input bool EnableBalanceScaling=true;
 input int MaximumOpenPositions=1;
 input int MaximumPendingOrders=1;
 input int MaximumTradesPerDay=2;
-input int MaximumOpenPositionsCap=50;
+input int MaximumOpenPositionsCap=0;           // 0 = pas de plafond : une position par indice ayant un signal
 input double BalancePerPositionUSD=0.0;
 input double MaximumTotalOpenRiskPercent=10.0;
 input bool OnePositionPerSymbol=true;
@@ -81,7 +82,7 @@ double AssetRiskFactor(const string symbol)
 }
 
 // ===================================================================================
-//  MODULES PARTAGES — repris a l'identique de Sera EA Swing Intelligent v2.20
+//  MODULES PARTAGES — repris a l'identique de Sera EA Swing Intelligent Deriv v2.30
 //  (risque, ordres, gestion TP1-TP5, sortie partielle, coupure, arret d'urgence)
 // ===================================================================================
 
@@ -266,12 +267,15 @@ double AdaptiveRiskPercent()
    return MathMax(0.10,MathMin(risk,MaximumAdaptiveRiskPercent));
 }
 
+// Plafond de perte en USD par trade. 0 = pas de plafond : le risque suit la balance (RiskPercent).
 double AdaptiveLossCap()
 {
+   if(MaximumLossUSD<=0) return 0.0;
    if(!EnableAdaptiveLot) return MaximumLossUSD;
    double risk=AdaptiveRiskPercent();
    double ratio=RiskPercent>0?risk/RiskPercent:1.0;
-   return MathMin(MaximumAdaptiveLossUSD,MaximumLossUSD*MathMax(1.0,ratio));
+   double cap=MaximumLossUSD*MathMax(1.0,ratio);
+   return MaximumAdaptiveLossUSD>0?MathMin(MaximumAdaptiveLossUSD,cap):cap;
 }
 
 double SafeVolume(const string symbol,const double entry,const double sl)
@@ -279,15 +283,24 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    double tick_size=SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_SIZE);
    double tick_value=SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_VALUE_LOSS);
    double min_lot=SymbolInfoDouble(symbol,SYMBOL_VOLUME_MIN);
-   double max_lot=MathMin(SymbolInfoDouble(symbol,SYMBOL_VOLUME_MAX),MaximumLot);
+   double max_lot=SymbolInfoDouble(symbol,SYMBOL_VOLUME_MAX);
+   if(MaximumLot>0) max_lot=MathMin(max_lot,MaximumLot);
    double step=SymbolInfoDouble(symbol,SYMBOL_VOLUME_STEP);
    if(tick_size<=0 || tick_value<=0 || step<=0 || MathAbs(entry-sl)<=0) return 0;
    double adaptiveRisk=AdaptiveRiskPercent()*AssetRiskFactor(symbol);
    double lossCap=AdaptiveLossCap()*AssetRiskFactor(symbol);
-   double risk=MathMin(AccountInfoDouble(ACCOUNT_EQUITY)*adaptiveRisk/100.0,lossCap);
+   // Lot proportionnel à l'équité : RiskPercent de l'équité perdus si le SL est touché.
+   double risk=AccountInfoDouble(ACCOUNT_EQUITY)*adaptiveRisk/100.0;
+   if(lossCap>0) risk=MathMin(risk,lossCap);
    double loss_per_lot=(MathAbs(entry-sl)/tick_size)*tick_value;
    double volume=MathFloor((risk/loss_per_lot)/step)*step;
-   if(volume<min_lot) return 0;
+   // Petit compte : si le lot calculé est sous le minimum du broker, on prend le lot minimum
+   // (le budget de risque total TotalRiskAllows reste le garde-fou).
+   if(volume<min_lot)
+   {
+      if(!UseMinimumLotWhenRiskTooSmall) return 0;
+      volume=min_lot;
+   }
    return MathMax(min_lot,MathMin(volume,max_lot));
 }
 
@@ -328,16 +341,18 @@ bool HasSeraPositionOn(const string symbol)
 int AllowedOpenPositions()
 {
    if(!EnableBalanceScaling) return MaximumOpenPositions;
-   int slots=MaximumOpenPositionsCap;
+   int cap=MaximumOpenPositionsCap>0?MaximumOpenPositionsCap:100000;   // 0 = pas de plafond
+   int slots=cap;
    if(BalancePerPositionUSD>0)
       slots=(int)MathMin(slots,MathFloor(AccountInfoDouble(ACCOUNT_BALANCE)/BalancePerPositionUSD));
    slots=(int)MathMax(MaximumOpenPositions,slots);
-   return (int)MathMax(1,MathMin(MaximumOpenPositionsCap,slots));
+   return (int)MathMax(1,MathMin(cap,slots));
 }
 
 int AllowedTradesPerDay()
 {
    if(!EnableBalanceScaling) return MaximumTradesPerDay;
+   if(MaximumOpenPositionsCap<=0) return 100000;   // pas de plafond : les signaux et le budget de risque décident
    return (int)MathMax(MaximumTradesPerDay,MathMin(MaximumOpenPositionsCap*2,AllowedOpenPositions()*2));
 }
 
@@ -1180,7 +1195,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.00"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.00");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.10"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.10");
    if(!sent){ Print("SyntX: ordre refuse ",d.symbol," ",trade.ResultRetcodeDescription()); return false; }
    StoreLevel("SWX_TRADEDBAR_",d.symbol,(double)d.barTime);
    StoreTradeLevels(d.symbol,d.symbol,d.entry,d.tp1,d.tp2,d.tp3,d.tp4,d.tp5,final_tp,"swing");
@@ -1223,7 +1238,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
          if(g_decisions[order[j]].score>g_decisions[order[i]].score){ int t=order[i]; order[i]=order[j]; order[j]=t; }
    int signals=0;
    for(int i=0;i<n;i++) if(g_decisions[i].verdict=="BUY" || g_decisions[i].verdict=="SELL") signals++;
-   string text="Sera EA Swing Intelligent Weltrade v1.00 — "+mode_label+(can_trade?" — auto-trade ACTIF":" — alertes seulement")+
+   string text="Sera EA Swing Intelligent Weltrade v1.10 — "+mode_label+(can_trade?" — auto-trade ACTIF":" — alertes seulement")+
       "\nIndices suivis: "+IntegerToString(n)+" · signaux confirmes: "+IntegerToString(signals)+
       " · positions "+IntegerToString(OpenSeraPositions())+"/"+IntegerToString(AllowedOpenPositions())+
       " · risque ouvert "+DoubleToString(OpenSeraRiskUSD(),2)+
@@ -1280,7 +1295,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v1.00: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v1.10: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)
