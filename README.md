@@ -15,7 +15,7 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 `USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
-## Exécution MT5 — Sera EA Swing Intelligent v2.10
+## Exécution MT5 — Sera EA Swing Intelligent v2.20
 
 Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`).
 
@@ -34,6 +34,15 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - **Symboles Forex reconnus chez tous les brokers** : `EUR/USD`, `EURUSD-STD`, `EURUSD`, `EURUSD.m`, `frxEURUSD`…
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - Option `TradeDaySignals` (désactivée par défaut) pour prendre aussi les signaux Day M15/H1.
+
+### v2.20 — robustesse
+
+- **Flux dédié à l’EA** : `data/ea-signals.json` (~60 Ko au lieu de 2,5 Mo), publié à chaque cycle avec uniquement les champs lus par l’EA, sans valeur `null`. L’EA bascule sur `signals.json` si ce flux est indisponible. Un test (`scripts/qa_ea_parser.py`) rejoue les fonctions de lecture JSON de l’EA sur les deux flux et vérifie chaque valeur lue.
+- **Gestion des positions indépendante des signaux** : point mort, verrouillage des gains, sortie partielle et durée maximale continuent à chaque cycle de 30 s, même si les signaux arrivent en retard.
+- **Positions issues d’ordres limites gérées** : leurs niveaux TP1–TP5 sont désormais enregistrés (ils ne l’étaient pas avant).
+- **Sortie partielle à TP1** : 50 % de la position encaissés (`PartialCloseAtTP1Percent`), le reste continue avec le SL au point mort.
+- **Arrêt d’urgence** : si l’équité chute de 15 % sous la balance (`EmergencyEquityStopPercent`), toutes les positions Sera sont fermées et les ordres en attente annulés.
+- Message clair dans l’onglet *Experts* si l’URL n’est pas autorisée dans WebRequest.
 
 ### v2.10 — les signaux décident, coupure en cas de retournement
 

@@ -11,6 +11,7 @@ on:
       - 'scripts/adaptive_evidence.py'
       - 'scripts/send_gmail_alerts.py'
       - 'scripts/qa_signals.py'
+      - 'scripts/build_ea_feed.py'
       - 'requirements-ml.txt'
       - 'requirements-foundation.txt'
   schedule:
@@ -133,6 +134,12 @@ jobs:
       - name: Validate generated signals before publication
         run: python scripts/qa_signals.py
 
+      - name: Build compact EA feed
+        run: |
+          python scripts/build_ea_feed.py --self-test
+          python scripts/build_ea_feed.py
+          python scripts/qa_ea_parser.py
+
       - name: Send Gmail Swing alerts
         env:
           GMAIL_ALERT_FROM: ${{ secrets.GMAIL_ALERT_FROM }}
@@ -150,6 +157,7 @@ jobs:
           cp data/open-source-ai.json /tmp/sera-generated/data/open-source-ai.json
           cp data/adaptive-evidence.json /tmp/sera-generated/data/adaptive-evidence.json
           cp data/email-alert-state.json /tmp/sera-generated/data/email-alert-state.json
+          cp data/ea-signals.json /tmp/sera-generated/data/ea-signals.json
 
           for attempt in 1 2 3; do
             git fetch origin main
@@ -158,7 +166,8 @@ jobs:
             cp /tmp/sera-generated/data/open-source-ai.json data/open-source-ai.json
             cp /tmp/sera-generated/data/adaptive-evidence.json data/adaptive-evidence.json
             cp /tmp/sera-generated/data/email-alert-state.json data/email-alert-state.json
-            git add data/signals.json data/open-source-ai.json data/adaptive-evidence.json data/email-alert-state.json
+            cp /tmp/sera-generated/data/ea-signals.json data/ea-signals.json
+            git add data/signals.json data/open-source-ai.json data/adaptive-evidence.json data/email-alert-state.json data/ea-signals.json
 
             if git diff --cached --quiet; then
               echo "No signal changes to commit."

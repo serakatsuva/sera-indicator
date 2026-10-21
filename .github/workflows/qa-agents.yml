@@ -58,6 +58,8 @@ jobs:
           python-version: '3.11'
       - name: Validate real-account guards
         run: python scripts/qa_ea.py
+      - name: Replay EA JSON parser on published feeds
+        run: python scripts/qa_ea_parser.py
 
   intelligence-agent:
     name: Agent Intelligence

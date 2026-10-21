@@ -1,10 +1,11 @@
 #property copyright "Sera EA Swing Intelligent"
-#property version   "2.10"
+#property version   "2.20"
 #property strict
 
 #include <Trade/Trade.mqh>
 
-input string SignalsUrl="https://serakatsuva.github.io/sera-indicator/data/signals.json";
+input string SignalsUrl="https://serakatsuva.github.io/sera-indicator/data/ea-signals.json";   // flux compact dédié à l'EA (~60 Ko)
+input string FallbackSignalsUrl="https://serakatsuva.github.io/sera-indicator/data/signals.json"; // flux complet si le flux EA est indisponible
 input bool EnableTrendWatch=true;
 input bool EnableTerminalAlert=true;
 input bool EnablePushNotification=false;
@@ -75,7 +76,7 @@ input int MaximumSwingHoldingHours=240;      // 10 jours maximum pour un Swing
 input int MaximumDayHoldingHours=48;
 input bool AvoidForexWeekendGap=true;        // pas de nouvelle entrée Forex du vendredi soir au dimanche
 
-// --- v2.10 : nombre de positions selon la balance et les profits
+// --- v2.20 : nombre de positions selon la balance et les profits
 input bool EnableBalanceScaling=true;          // remplace les limites fixes 1 position / 2 trades par jour
 input int MaximumOpenPositionsCap=50;          // plafond absolu de positions Sera ouvertes
 input double BalancePerPositionUSD=0.0;        // 0 = pas de limite par balance : ce sont les signaux qui décident
@@ -83,8 +84,12 @@ input double MaximumTotalOpenRiskPercent=10.0; // somme des pertes possibles jus
 input double DailyLossPercentLimit=5.0;        // perte journalière max en % de la balance (au moins MaximumDailyLossUSD)
 input bool OnePositionPerSymbol=true;          // une seule position Sera par marché
 
-// --- v2.10 : coupure en cas de retournement du marché
+// --- v2.20 : coupure en cas de retournement du marché
 input bool CutOnMarketReversal=true;           // fermer dès qu'un retournement est confirmé
+
+// --- v2.20 : robustesse
+input double PartialCloseAtTP1Percent=50.0;    // encaisser cette part de la position à TP1 (0 = désactivé)
+input double EmergencyEquityStopPercent=15.0;  // fermer toutes les positions Sera si l'équité chute de X % sous la balance (0 = désactivé)
 input int ReversalStructureBars=24;            // cassure du plus bas / plus haut des N dernières bougies H1 (24 = 1 jour)
 
 CTrade trade;
@@ -182,14 +187,26 @@ string ResolveTradeSymbol(const string market_name,const string deriv_code)
    return "";
 }
 
-bool FetchSignals(string &json)
+bool FetchUrl(const string url,string &json)
 {
+   if(url=="") return false;
    char body[],response[]; string headers;
    ResetLastError();
-   int code=WebRequest("GET",SignalsUrl,"","",10000,body,0,response,headers);
-   if(code!=200){ Print("Sera: téléchargement impossible, HTTP=",code," erreur=",GetLastError()); return false; }
+   int code=WebRequest("GET",url,"","",15000,body,0,response,headers);
+   if(code==-1 && GetLastError()==4014)
+   {
+      Print("Sera: WebRequest refuse. Ajoutez https://serakatsuva.github.io dans Outils > Options > Expert Advisors > Autoriser WebRequest.");
+      return false;
+   }
+   if(code!=200){ Print("Sera: telechargement impossible ",url," HTTP=",code," erreur=",GetLastError()); return false; }
    json=CharArrayToString(response,0,WHOLE_ARRAY,CP_UTF8);
-   return StringLen(json)>50;
+   return StringLen(json)>50 && StringFind(json,"\"markets\"")>=0;
+}
+
+bool FetchSignals(string &json)
+{
+   if(FetchUrl(SignalsUrl,json)) return true;
+   return FetchUrl(FallbackSignalsUrl,json);
 }
 
 int OpenSeraPositions()
@@ -535,7 +552,7 @@ void RunLocalSwingIntelligence()
    string side; double score=0.0,atr=0.0;
    if(!LocalSwingDecision(symbol,side,score,atr)) return;
 
-   Comment("Sera EA Swing Intelligent v2.10 | ",AssetProfileName(symbol),
+   Comment("Sera EA Swing Intelligent v2.20 | ",AssetProfileName(symbol),
            " | Local Swing H1/H4: ",side," ",DoubleToString(score,0),"%",
            " | Risk ",DoubleToString(AdaptiveRiskPercent()*AssetRiskFactor(symbol),2),"%");
 
@@ -571,8 +588,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.10")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.10");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.20")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.20");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -645,7 +662,7 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    return MathMax(min_lot,MathMin(volume,max_lot));
 }
 
-// ---------- v2.10 : mise à l'échelle selon la balance et les profits ----------
+// ---------- v2.20 : mise à l'échelle selon la balance et les profits ----------
 
 // Perte possible (devise du compte) si le SL d'une position est touché. Une position déjà
 // protégée au point mort ou mieux compte pour 0.
@@ -962,6 +979,94 @@ bool JsonFlagTrue(const string object,const string key)
    return StringSubstr(object,p,4)=="true";
 }
 
+// Les niveaux d'un trade sont enregistrés par setup ET par symbole : la gestion des positions
+// (point mort, verrouillage, sortie partielle) continue même si les signaux n'arrivent plus.
+void StoreTradeLevels(const string setup_id,const string symbol,const double entry,const double tp1,const double tp2,
+                      const double tp3,const double tp4,const double tp5,const double final_tp,const string mode)
+{
+   string keys[2];
+   keys[0]=setup_id; keys[1]="SYM:"+symbol;
+   for(int k=0;k<2;k++)
+   {
+      StoreLevel("SERA_ENTRY_",keys[k],entry);
+      StoreLevel("SERA_TP1_",keys[k],tp1);
+      StoreLevel("SERA_TP2_",keys[k],tp2);
+      StoreLevel("SERA_TP3_",keys[k],tp3);
+      StoreLevel("SERA_TP4_",keys[k],tp4);
+      StoreLevel("SERA_TP5_",keys[k],tp5);
+      StoreLevel("SERA_FINALTP_",keys[k],final_tp);
+   }
+   StoreState("SERA_DAYMODE_","SYM:"+symbol,mode=="day"?1:0);
+}
+
+// Encaisse une partie de la position la première fois que TP1 est atteint.
+void PartialCloseAtTP1(const string symbol,const double tp1)
+{
+   if(PartialCloseAtTP1Percent<=0 || tp1<=0 || !SelectSeraPosition(symbol)) return;
+   ulong ticket=(ulong)PositionGetInteger(POSITION_TICKET);
+   string ticket_key=IntegerToString((long)ticket);
+   if(StoredState("SERA_PARTIAL_",ticket_key)==1) return;
+   long position_type=PositionGetInteger(POSITION_TYPE);
+   MqlTick tick;
+   if(!SymbolInfoTick(symbol,tick)) return;
+   double price=position_type==POSITION_TYPE_BUY?tick.bid:tick.ask;
+   if(!ReachedLevel(position_type,price,tp1)) return;
+   double volume=PositionGetDouble(POSITION_VOLUME);
+   double step=SymbolInfoDouble(symbol,SYMBOL_VOLUME_STEP);
+   double min_lot=SymbolInfoDouble(symbol,SYMBOL_VOLUME_MIN);
+   if(step<=0) return;
+   double part=MathFloor((volume*PartialCloseAtTP1Percent/100.0)/step)*step;
+   StoreState("SERA_PARTIAL_",ticket_key,1);   // une seule tentative par position
+   if(part<min_lot || volume-part<min_lot)
+   {
+      Print("Sera TP1: volume trop petit pour une sortie partielle sur ",symbol,", position conservee entiere");
+      return;
+   }
+   trade.SetExpertMagicNumber(MagicNumber);
+   if(trade.PositionClosePartial(ticket,part)) Print("Sera TP1: ",DoubleToString(part,2)," lot encaisse sur ",symbol);
+   else Print("Sera TP1: sortie partielle refusee ",trade.ResultRetcodeDescription());
+}
+
+// Gère TOUTES les positions Sera à chaque cycle, indépendamment de la réception des signaux.
+void ManageAllSeraPositions()
+{
+   for(int i=PositionsTotal()-1;i>=0;i--)
+   {
+      ulong ticket=PositionGetTicket(i);
+      if(ticket<=0 || PositionGetInteger(POSITION_MAGIC)!=MagicNumber) continue;
+      string symbol=PositionGetString(POSITION_SYMBOL);
+      datetime opened=(datetime)PositionGetInteger(POSITION_TIME);
+      string key="SYM:"+symbol;
+      int max_hours=StoredState("SERA_DAYMODE_",key)==1?MaximumDayHoldingHours:MaximumSwingHoldingHours;
+      if(max_hours>0 && TimeCurrent()-opened>(long)max_hours*3600)
+      {
+         trade.SetExpertMagicNumber(MagicNumber);
+         if(trade.PositionClose(ticket)) Print("Sera: ",symbol," ferme — duree maximale atteinte");
+         continue;
+      }
+      PartialCloseAtTP1(symbol,StoredLevel("SERA_TP1_",key));
+      ManageSeraPosition(key,symbol);
+   }
+}
+
+// Arrêt d'urgence : si l'équité chute trop sous la balance (gap, crash), tout est fermé.
+bool EmergencyEquityStop()
+{
+   if(EmergencyEquityStopPercent<=0) return false;
+   double balance=AccountInfoDouble(ACCOUNT_BALANCE),equity=AccountInfoDouble(ACCOUNT_EQUITY);
+   if(balance<=0 || (balance-equity)/balance*100.0<EmergencyEquityStopPercent) return false;
+   Print("Sera ARRET D'URGENCE: equite ",DoubleToString(equity,2)," / balance ",DoubleToString(balance,2)," — fermeture de toutes les positions Sera");
+   trade.SetExpertMagicNumber(MagicNumber);
+   for(int i=PositionsTotal()-1;i>=0;i--)
+   {
+      ulong ticket=PositionGetTicket(i);
+      if(ticket>0 && PositionGetInteger(POSITION_MAGIC)==MagicNumber) trade.PositionClose(ticket);
+   }
+   CancelAllSeraPendingOrders("arret d'urgence equite");
+   if(EnablePushNotification) SendNotification("Sera: arret d'urgence, positions fermees (equite -"+DoubleToString(EmergencyEquityStopPercent,0)+"%)");
+   return true;
+}
+
 // Objet JSON d'une clé, ou "" si la valeur n'est pas un objet (null, absent...).
 string JsonObject(const string object,const string key)
 {
@@ -1143,10 +1248,8 @@ void Evaluate(const string json)
 
             if(pending_candidate)
             {
-               int levels_pos_pending=StringFind(object,"\"levels\"");
-               string levels_pending=levels_pos_pending>=0?ExtractObjectAt(object,StringFind(object,"{",levels_pos_pending)):"";
-               int plan_pos=StringFind(object,"\"setup_entry_plan\"");
-               string plan=plan_pos>=0?ExtractObjectAt(object,StringFind(object,"{",plan_pos)):"";
+               string levels_pending=JsonObject(object,"levels");
+               string plan=JsonObject(object,"setup_entry_plan");
                double pending_entry=JsonNumber(plan,"suggested_entry");
                if(pending_entry<=0) pending_entry=JsonNumber(levels_pending,"entry");
                double pending_sl=JsonNumber(levels_pending,"sl");
@@ -1175,7 +1278,11 @@ void Evaluate(const string json)
                }
                if(pending_margin_ok && !pending_broker_ok) PrintOnce("Sera: limite "+symbol+" en attente — "+pending_why);
                if(pending_broker_ok && PlaceOrUpdatePendingLimit(setup_id,symbol,verdict,pending_entry,pending_sl,pending_final_tp,pending_volume))
+               {
                   StoreState("SERA_OPEN_",setup_id,1);
+                  StoreTradeLevels(setup_id,symbol,pending_entry,JsonNumber(levels_pending,"tp1"),JsonNumber(levels_pending,"tp2"),
+                                   pending_tp3,pending_tp4,pending_tp5,pending_final_tp,mode);
+               }
             }
             else
             {
@@ -1197,8 +1304,7 @@ void Evaluate(const string json)
             }
             else
             {
-               int levels_pos=StringFind(object,"\"levels\"");
-               string levels=levels_pos>=0?ExtractObjectAt(object,StringFind(object,"{",levels_pos)):"";
+               string levels=JsonObject(object,"levels");
                double signal_entry=JsonNumber(levels,"entry");
                double sl=JsonNumber(levels,"sl");
                double tp1=JsonNumber(levels,"tp1"),tp2=JsonNumber(levels,"tp2"),tp3=JsonNumber(levels,"tp3");
@@ -1249,18 +1355,12 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.10"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.10");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.20"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.20");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
                         StoreState("SERA_OPEN_",setup_id,1);
-                        StoreLevel("SERA_ENTRY_",setup_id,signal_entry);
-                        StoreLevel("SERA_TP1_",setup_id,tp1);
-                        StoreLevel("SERA_TP2_",setup_id,tp2);
-                        StoreLevel("SERA_TP3_",setup_id,tp3);
-                        StoreLevel("SERA_TP4_",setup_id,tp4);
-                        StoreLevel("SERA_TP5_",setup_id,tp5);
-                        StoreLevel("SERA_FINALTP_",setup_id,final_tp);
+                        StoreTradeLevels(setup_id,symbol,signal_entry,tp1,tp2,tp3,tp4,tp5,final_tp,mode);
                         Print("Sera: ",verdict," ",symbol," volume=",volume," SL=",sl," final TP=",final_tp," management TP1-TP5 actif");
                         return;
                      }
@@ -1282,8 +1382,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera EA Swing Intelligent v2.10 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
-   Print("Sera EA Swing Intelligent v2.10: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Comment("Sera EA Swing Intelligent v2.20 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
+   Print("Sera EA Swing Intelligent v2.20: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
@@ -1294,6 +1394,8 @@ int OnInit()
 void OnDeinit(const int reason){ EventKillTimer(); Comment(""); }
 void OnTimer()
 {
+   if(EmergencyEquityStop()) return;
+   ManageAllSeraPositions();
    CutReversedPositions();
    RunLocalSwingIntelligence();
    string json;
