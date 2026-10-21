@@ -21,7 +21,7 @@ Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent.mq5` (et une copie identiq
 
 L’EA prend **automatiquement** les Swing publiés par le moteur : ordre au marché sur `EXECUTE_NOW`, ordre limite dans la zone d’entrée sur `WAIT_RETRACE`, puis gestion TP1–TP5.
 
-**Compte démo par défaut** : `AllowRealAccount = false`. Après quelques jours de validation en démo, passer ce paramètre à `true` pour le compte réel.
+**Compte réel autorisé** : `AllowRealAccount = true` (choix du propriétaire). L’EA trade sur le compte MT5 connecté, réel ou démo. Pour bloquer le réel, passer ce paramètre à `false` dans les entrées de l’EA.
 
 Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoriser WebRequest pour `https://serakatsuva.github.io`, attacher l’EA sur **un seul** graphique et activer **Algo Trading**.
 

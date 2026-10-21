@@ -10,7 +10,7 @@ if not version:
     errors.append("EA version missing")
 
 required = {
-    "demo by default": "AllowRealAccount=false",
+    "real account enabled (owner choice)": "AllowRealAccount=true",
     "fresh signals only": "MaximumSignalAgeMinutes=20",
     "broker H1/H4 confirmation": "BrokerConfirms(symbol,verdict",
     "smart exit on reversal or max holding": "SmartExit(setup_id,symbol,mode,verdict,confidence)",
