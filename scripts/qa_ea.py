@@ -82,6 +82,25 @@ for opening, closing in ("()", "{}", "[]"):
     if clean.count(opening) != clean.count(closing):
         errors.append(f"bracket mismatch {opening}{closing}: {clean.count(opening)} vs {clean.count(closing)}")
 
+swx_path = Path("mt5/Sera_Weltrade_SyntX_EA.mq5")
+if swx_path.exists():
+    swx = swx_path.read_text(encoding="utf-8")
+    for name, token in {
+        "SyntX: emergency equity stop first": "if(EmergencyEquityStop()) return;",
+        "SyntX: positions managed every cycle": "ManageAllSeraPositions();",
+        "SyntX: reversal cut": "CutReversedPositions();",
+        "SyntX: total risk budget": "TotalRiskAllows(PositionRiskUSD(",
+        "SyntX: one trade per signal bar": "SWX_TRADEDBAR_",
+        "SyntX: 2-candle confirmation": "cycles>=2",
+        "SyntX: high-conviction score": "d.score>=84",
+        "SyntX: own magic number": "MagicNumber=26102101",
+        "SyntX: own global-variable namespace": '"SWX_',
+    }.items():
+        if token not in swx:
+            errors.append(f"missing {name}: {token}")
+    if '"SERA_' in swx:
+        errors.append("SyntX EA must not share SERA_ global variables with the Sera EA")
+
 if errors:
     print("\n".join("ERROR: " + e for e in errors))
     raise SystemExit(1)

@@ -76,6 +76,37 @@ L’EA résout le symbole MT5 à partir du nom de marché et du code Deriv avant
 
 GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le terminal MT5 déjà authentifié et lit les signaux publiés dans `data/signals.json`.
 
+## Sera Weltrade SyntX EA — indices synthétiques Weltrade
+
+`mt5/Sera_Weltrade_SyntX_EA.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ni GitHub.
+
+**Indices détectés automatiquement** (ou liste manuelle dans `SymbolsList`) :
+
+| Famille | Comportement (source : support Weltrade) | Par défaut |
+|---|---|---|
+| PainX / MAX PainX | monte, avec des chutes ponctuelles (≈ Crash) — un BUY est « à contre-spike » | activé |
+| GainX / MAX GainX | baisse, avec des sauts ponctuels (≈ Boom) — un SELL est « à contre-spike » | activé |
+| FX Vol / SFX Vol | volatilité ; SFX Vol a des spikes dans les deux sens | activé |
+| SwitchX / BreakX / TrendX | changent de régime | activé |
+| FlipX | pas de tendance (50 % de changement de sens par pas) | désactivé |
+| PlusX / FiboX / QuadX | progressions mathématiques | désactivé |
+
+**Fonctionnement** : à chaque nouvelle bougie H1 clôturée, l’EA analyse chaque indice sur 1 000 bougies H1, H4 et D1 (EMA, RSI/ATR/ADX de Wilder, MACD, structure, liquidité, régime), applique les mêmes 20 stratégies pondérées et les mêmes seuils que le serveur (score 84/100, consensus 72 %, 80 % des conditions, H1/H4/D1 alignés, confirmation sur 2 bougies H1), puis :
+- `EXECUTE_NOW` → ordre au marché avec SL et TP3 (TP4 si score ≥ 88) ;
+- `WAIT_RETRACE` → ordre limite sur l’EMA20 H1 ;
+- gestion identique à Sera EA v2.20 : 50 % encaissés à TP1, SL au point mort, verrouillage TP1→TP3, coupure en cas de retournement, durée maximale, arrêt d’urgence à −15 % d’équité ;
+- nombre de positions décidé par les signaux (jusqu’à 50, une par indice), sous un risque cumulé de 10 % de l’équité.
+
+Le haut du graphique affiche les indices suivis, les meilleurs setups (score, % de conditions, confirmation 1/2 ou 2/2, état) et le risque ouvert. Numéro magique et variables globales propres (`SWX_`) : il peut tourner sur le même terminal que Sera EA sans interférence.
+
+**Vérifications automatiques (QA GitHub)** — le MQL5 ne peut pas être compilé sur les serveurs GitHub, donc :
+- `scripts/qa_mql_cpp.py` compile les deux EA en C++ contre des déclarations de l’API MT5 (`tests/mql/mt5stubs.h`) ;
+- `scripts/qa_mql_static.py` vérifie parenthèses, fonctions et identifiants ;
+- `scripts/qa_swx_engine.py` compile le moteur d’analyse de l’EA et le compare **valeur par valeur** au moteur serveur : indicateurs (180 valeurs), décisions sur 240 marchés simulés (2 400 valeurs) et chemin de signal BUY/SELL/ordre limite avec niveaux SL/TP (40 valeurs) ;
+- les 40 modules de risque et de gestion sont repris à l’identique de Sera EA v2.20.
+
+Avant le compte réel : compiler dans MetaEditor (F7), puis lancer un **backtest dans le testeur de stratégie MT5** sur les indices Weltrade (mode « Chaque tick basé sur les ticks réels »).
+
 ## Mode réel et risque
 
 Le projet est désormais conçu pour fournir des décisions destinées à un usage réel et l’EA autorise le compte réel par défaut. Cela ne transforme pas les signaux en certitudes : slippage, changement de régime, spikes, latence, erreurs de symbole et mouvements rapides peuvent produire des pertes.

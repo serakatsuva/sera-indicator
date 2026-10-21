@@ -13,6 +13,7 @@ on:
       # data/** removed: the signal bot commits every 5 min and validates
       # signals itself (qa_signals.py) before publishing.
       - 'mt5/**'
+      - 'tests/mql/**'
       - 'scripts/**'
       - 'tests/**'
       - 'package.json'
@@ -60,6 +61,15 @@ jobs:
         run: python scripts/qa_ea.py
       - name: Replay EA JSON parser on published feeds
         run: python scripts/qa_ea_parser.py
+      - name: Static MQL5 checks (both EAs)
+        run: python scripts/qa_mql_static.py mt5/Sera_EA_Swing_Intelligent.mq5 mt5/Sera_Weltrade_SyntX_EA.mq5
+      - name: Compile both EAs as C++ against MT5 API stubs
+        run: python scripts/qa_mql_cpp.py mt5/Sera_EA_Swing_Intelligent.mq5 mt5/Sera_Weltrade_SyntX_EA.mq5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Weltrade SyntX engine == production engine (compiled with g++)
+        run: python scripts/qa_swx_engine.py
 
   intelligence-agent:
     name: Agent Intelligence
