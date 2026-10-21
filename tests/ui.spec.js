@@ -403,3 +403,44 @@ test('family filter wraps to multiple lines and does not require horizontal scro
   expect(data.wrap).toBe('wrap');
   expect(['visible','clip']).toContain(data.overflowX);
 });
+
+test('signal popup uses the free Sera Chart Engine with timeframe and framing controls', async ({ page }) => {
+  await page.locator('.result-card').first().click();
+  await expect(page.locator('#signalModal')).toBeVisible();
+  await expect(page.locator('#chartArea')).toHaveClass(/tv-active/);
+  await expect(page.locator('#seraChartToolbar button[data-frame="plan"]')).toBeVisible();
+  const tfButtons = page.locator('#seraChartToolbar button[data-tf]');
+  expect(await tfButtons.count()).toBeGreaterThan(0);
+  await tfButtons.last().click();
+  await page.locator('#seraChartToolbar button[data-frame="full"]').click();
+  await expect(page.locator('#seraChartToolbar button[data-frame="full"]')).toHaveClass(/active/);
+  expect(await page.evaluate(() => window.SeraChart.state.disabled)).toBe(false);
+});
+
+test('chart engine draws entry, stop, five targets and the signal marker', async ({ page }) => {
+  await page.locator('.result-card').first().click();
+  await expect(page.locator('#chartArea')).toHaveClass(/tv-active/);
+  const result = await page.evaluate(() => {
+    const now = Math.floor(Date.now() / 1000 / 3600) * 3600;
+    const candles = Array.from({ length: 120 }, (_, i) => {
+      const open = 1.1 + i * 0.0004, close = open + 0.0003;
+      return { epoch: now - (119 - i) * 3600, open, high: close + 0.0002, low: open - 0.0002, close };
+    });
+    const entry = candles.at(-1).close, risk = 0.003;
+    const levels = { entry, sl: entry - risk, zoneMin: entry - 0.0005, zoneMax: entry + 0.0005 };
+    [1.5, 2.4, 3.6, 4.8, 6].forEach((k, i) => { levels[`tp${i + 1}`] = entry + risk * k; });
+    const ok = window.SeraChart.render({
+      row: { market: 'TEST/USD', mode: 'swing', asset_class: 'forex', chart_candles: candles, entry_tf: { closedAt: candles.at(-3).epoch } },
+      market: 'TEST/USD', mode: 'swing', spec: { entry: 'H1', confirmation: 'H4', macro: 'D1' }, isForex: true,
+      levels, plan: { side: 'BUY', entry, sl: levels.sl, target: levels.tp3, isProjected: false },
+      prediction: 'BUY', liveSeries: () => [], fmt: v => Number(v).toFixed(5), decimals: () => 5
+    });
+    const s = window.SeraChart.state;
+    return { ok, lines: s.priceLines.length, points: s.data.length, disabled: s.disabled, marker: s.markersKey };
+  });
+  expect(result.ok).toBe(true);
+  expect(result.disabled).toBe(false);
+  expect(result.points).toBe(120);
+  expect(result.lines).toBe(9); // zone x2, SL, entry, TP1..TP5
+  expect(result.marker).toContain('BUY');
+});

@@ -177,7 +177,7 @@ function wilderAdx(rows,trSeries,period=14){
 function inspectCandles(candles){
   if(!Array.isArray(candles)||candles.length<80)return null;
   const normalized=candles.map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close,epoch:+c.epoch}));
-  if(normalized.some(c=>![c.open,c.high,c.low,c.close,c.epoch].every(Number.isFinite)))return null;
+  if(normalized.some(c=>![c.open,c.high,c.low,c.close,c.epoch].every(Number.isFinite)||c.low<=0||c.close<=0))return null;
 
   const closes=normalized.map(c=>c.close),highs=normalized.map(c=>c.high),lows=normalized.map(c=>c.low),last=normalized.at(-1);
   const ema20=emaValue(closes,20),ema50=emaValue(closes,50),ema200=emaValue(closes,Math.min(200,closes.length));
@@ -453,9 +453,12 @@ async function fetchYahooHourly(meta){
       const result=payload?.chart?.result?.[0];
       const quote=result?.indicators?.quote?.[0],timestamps=result?.timestamp||[];
       if(!quote||timestamps.length<80)throw new Error('insufficient Yahoo candles');
+      // Yahoo returns null for empty hours: +null === 0 used to create zero-price candles
+      // that corrupted ATR, swing lows and D1 ranges. Keep only real, positive OHLC rows.
+      const num=value=>value===null||value===undefined?NaN:Number(value);
       const rows=timestamps.map((epoch,index)=>({
-        epoch:+epoch,open:+quote.open?.[index],high:+quote.high?.[index],low:+quote.low?.[index],close:+quote.close?.[index]
-      })).filter(row=>[row.epoch,row.open,row.high,row.low,row.close].every(Number.isFinite));
+        epoch:num(epoch),open:num(quote.open?.[index]),high:num(quote.high?.[index]),low:num(quote.low?.[index]),close:num(quote.close?.[index])
+      })).filter(row=>[row.epoch,row.open,row.high,row.low,row.close].every(Number.isFinite)&&row.open>0&&row.high>0&&row.low>0&&row.close>0&&row.high>=row.low);
       if(rows.length<80)throw new Error('insufficient valid Yahoo OHLC candles');
       return onlyClosedCandles(rows,3600);
     }catch(error){lastError=error;}

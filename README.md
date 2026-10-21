@@ -191,3 +191,21 @@ Cette couche évite que Sera soit seulement un empilement d’indicateurs : il c
 - **Bougies ouvertes exclues** dans tous les cas lors de l’agrégation H4/D1.
 - **`mt5/Sera_Swing_Executor.mq5` corrigé** : il modifiait des paramètres `const` (erreur de compilation MQL5). Il est maintenant identique à `Sera_EA_Swing_Intelligent.mq5`, et la QA vérifie que les deux copies restent identiques.
 - Les commits automatiques de `data/` ne relancent plus les tests navigateur Playwright à chaque cycle de 5 minutes.
+
+## Graphique de position — Sera Chart Engine
+
+Le graphique du popup d’analyse utilise désormais **TradingView Lightweight Charts** (gratuit, open source, Apache 2.0), intégré dans `vendor/` : aucun CDN, aucune clé, chargement rapide.
+
+- jusqu’à **300 bougies**, zoom (molette ou pincement), défilement, axe du temps en heure locale ;
+- **Entrée, SL, TP1–TP5** et zone d’entrée affichés sur l’axe des prix ;
+- **boîtes risque / rendement** (vert vers TP3, rouge vers le SL) avec le ratio R:R, comme l’outil « Position » de TradingView ;
+- **flèche BUY / SELL** sur la bougie du signal, **EMA20 / EMA50**, légende OHLC au survol ;
+- choix de l’unité de temps : **H1 / H4 / D1** en Swing, **M15 / H1** en Day (Forex : H1 publié par le serveur) ;
+- cadrage **Prix** (bougies seules), **Plan TP3** (par défaut) ou **Tout TP5**, et bouton ⟲ pour revenir aux dernières bougies.
+
+Si la bibliothèque ne se charge pas, l’ancien graphique canvas reprend automatiquement la main.
+
+### Corrections liées
+
+- Les heures vides renvoyées par Yahoo (`null`) devenaient des bougies à **0** dans le moteur et faussaient l’ATR, les plus bas de swing et le D1 des paires Forex. Elles sont maintenant écartées.
+- `liveEntryProposal` plantait sur une paire Forex avec setup détecté lorsqu’aucun prix Deriv live n’était disponible ; corrigé.

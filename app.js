@@ -864,7 +864,7 @@ function liveEntryProposal(row){
   const levels=row.projected_levels;
   if(!plan||!levels)return null;
   const side=setupSide(row);
-  const live=liveQuote?.symbol===symbols[row.market]?Number(liveQuote.price):Number(row.price);
+  const live=liveQuote&&symbols[row.market]&&liveQuote.symbol===symbols[row.market]?Number(liveQuote.price):Number(row.price);
   if(!Number.isFinite(live))return {...plan,live_price:null,live_state:plan.status};
 
   const inZone=live>=Number(plan.zone_min)&&live<=Number(plan.zone_max);
@@ -1764,6 +1764,19 @@ function renderVisualTradePlan(row){
 }
 
 function renderRealtimeCandles(row){
+  // Sera Chart Engine (TradingView Lightweight Charts, gratuit) en priorité;
+  // l'ancien rendu canvas ci-dessous reste le secours si la bibliothèque échoue.
+  if(window.SeraChart){
+    const spec=chartSpecForRow(row);
+    const handled=window.SeraChart.render({
+      row,market:selected,mode:row?.mode||selectedMode,spec,
+      symbol:symbols[selected],isForex:row?.asset_class==="forex"||marketFamily!=="synthetic",
+      levels:chartLevels(row),plan:visualTradePlan(row),prediction:predictionState(row).prediction,
+      liveSeries:tf=>liveCandleSeries.get(`${selected}:${tf}`)||[],
+      fmt:fmtEntry,decimals:priceDecimals,wsUrl:DERIV_WS_URL
+    });
+    if(handled)return;
+  }
   const canvas=$("liveCandlesCanvas"),axis=$("livePriceAxis");
   if(!canvas||!axis)return;
   const ctx=canvas.getContext("2d");
