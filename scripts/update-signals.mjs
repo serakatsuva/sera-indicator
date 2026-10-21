@@ -4,7 +4,7 @@ import path from 'node:path';
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public?app_id=1089';
-const ENGINE_VERSION='Sera Autonomous Engine v4.0 · High Conviction Swing';
+const ENGINE_VERSION='Sera Autonomous Engine v4.1 · High Conviction Swing';
 
 let MARKETS=[
   {market:'Boom 300 Index',symbol:'BOOM300N',family:'boom',spikeBias:'UP'},
@@ -131,6 +131,49 @@ function emaValue(values,period){
   return values.reduce((value,price,index)=>index?value+k*(price-value):price,values[0]);
 }
 
+// Wilder smoothing (RMA), the standard used by RSI, ATR and ADX on MT5/TradingView.
+function wilderSeries(values,period){
+  if(values.length<period)return [];
+  const out=new Array(values.length).fill(NaN);
+  let value=average(values.slice(0,period));
+  out[period-1]=value;
+  for(let i=period;i<values.length;i++){value=(value*(period-1)+values[i])/period;out[i]=value;}
+  return out;
+}
+
+function wilderRsi(closes,period=14){
+  const gains=[],losses=[];
+  for(let i=1;i<closes.length;i++){
+    const delta=closes[i]-closes[i-1];
+    gains.push(Math.max(delta,0));losses.push(Math.max(-delta,0));
+  }
+  const avgGain=wilderSeries(gains,period).at(-1),avgLoss=wilderSeries(losses,period).at(-1);
+  if(!Number.isFinite(avgGain)||!Number.isFinite(avgLoss))return 50;
+  if(avgLoss===0)return avgGain===0?50:100;
+  return 100-(100/(1+avgGain/avgLoss));
+}
+
+// Proper ADX(14): Wilder-smoothed +DM/-DM/TR, then Wilder-smoothed DX.
+function wilderAdx(rows,trSeries,period=14){
+  const plusDm=[],minusDm=[],tr=[];
+  for(let i=1;i<rows.length;i++){
+    const up=rows[i].high-rows[i-1].high,down=rows[i-1].low-rows[i].low;
+    plusDm.push(up>down&&up>0?up:0);
+    minusDm.push(down>up&&down>0?down:0);
+    tr.push(trSeries[i]);
+  }
+  const sPlus=wilderSeries(plusDm,period),sMinus=wilderSeries(minusDm,period),sTr=wilderSeries(tr,period);
+  const dx=[];
+  let plusDI=0,minusDI=0;
+  for(let i=period-1;i<tr.length;i++){
+    const t=Math.max(sTr[i],.0000001);
+    plusDI=100*sPlus[i]/t;minusDI=100*sMinus[i]/t;
+    dx.push(100*Math.abs(plusDI-minusDI)/Math.max(plusDI+minusDI,.0000001));
+  }
+  const adx=wilderSeries(dx,period).at(-1);
+  return {adx:Number.isFinite(adx)?adx:(dx.at(-1)||0),plusDI,minusDI};
+}
+
 function inspectCandles(candles){
   if(!Array.isArray(candles)||candles.length<80)return null;
   const normalized=candles.map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close,epoch:+c.epoch}));
@@ -140,15 +183,10 @@ function inspectCandles(candles){
   const ema20=emaValue(closes,20),ema50=emaValue(closes,50),ema200=emaValue(closes,Math.min(200,closes.length));
   const ema20Prev=emaValue(closes.slice(0,-6),20);
 
-  const gains=[],losses=[];
-  for(let i=closes.length-14;i<closes.length;i++){
-    const delta=closes[i]-closes[i-1];
-    gains.push(Math.max(delta,0));losses.push(Math.max(-delta,0));
-  }
-  const avgGain=average(gains),avgLoss=average(losses),rsi=avgLoss===0?100:100-(100/(1+avgGain/avgLoss));
+  const rsi=wilderRsi(closes,14);
 
   const trSeries=normalized.map((c,i)=>i?Math.max(c.high-c.low,Math.abs(c.high-normalized[i-1].close),Math.abs(c.low-normalized[i-1].close)):c.high-c.low);
-  const atr=average(trSeries.slice(-15));
+  const atr=wilderSeries(trSeries.slice(1),14).at(-1)||average(trSeries.slice(-14));
   const recent=normalized.slice(-22,-2),swingHigh=Math.max(...recent.map(c=>c.high)),swingLow=Math.min(...recent.map(c=>c.low));
 
   const bullish=ema20>ema50&&last.close>ema20;
@@ -169,19 +207,8 @@ function inspectCandles(candles){
 
   // Additional independent confirmations: ADX/DMI, MACD, Bollinger, Donchian,
   // trend efficiency, lag autocorrelation, market structure and candle patterns.
-  const dmPlus=[],dmMinus=[],tr14=[];
-  for(let i=normalized.length-14;i<normalized.length;i++){
-    const up=normalized[i].high-normalized[i-1].high;
-    const down=normalized[i-1].low-normalized[i].low;
-    dmPlus.push(up>down&&up>0?up:0);
-    dmMinus.push(down>up&&down>0?down:0);
-    tr14.push(trSeries[i]);
-  }
-  const trSum=Math.max(tr14.reduce((a,b)=>a+b,0),.0000001);
-  const plusDI=100*dmPlus.reduce((a,b)=>a+b,0)/trSum;
-  const minusDI=100*dmMinus.reduce((a,b)=>a+b,0)/trSum;
-  const dx=100*Math.abs(plusDI-minusDI)/Math.max(plusDI+minusDI,.0000001);
-  const adx=dx;
+  // v4.1: real smoothed ADX instead of a single raw DX value (which jumped above 20 on noise).
+  const {adx,plusDI,minusDI}=wilderAdx(normalized,trSeries,14);
   const dmiAligned=bullish?plusDI>minusDI:minusDI>plusDI;
 
   const ema12=emaValue(closes,12),ema26=emaValue(closes,26),macd=ema12-ema26;
@@ -329,7 +356,8 @@ function technicalSetup(meta,entryTf,confirmationTf,mode,macroTf=null){
 function onlyClosedCandles(rows,seconds){
   const now=Math.floor(Date.now()/1000);
   const closed=rows.filter(row=>Number(row.epoch)+seconds<=now);
-  return closed.length>=80?closed:rows.slice(0,-1);
+  // Never fall back to rows that include the still-open candle.
+  return closed;
 }
 
 async function fetchDerivCandles(){
@@ -386,10 +414,12 @@ async function fetchDerivCandles(){
   });
 }
 
-function aggregateCandles(rows,seconds){
+// offsetSeconds shifts the bucket boundaries. Forex uses 7200 so D1/H4 candles start at
+// 22:00 UTC (New York close), like MT5 broker charts, instead of UTC midnight.
+function aggregateCandles(rows,seconds,offsetSeconds=0){
   const groups=new Map();
   for(const row of rows){
-    const epoch=Math.floor(Number(row.epoch)/seconds)*seconds;
+    const epoch=Math.floor((Number(row.epoch)+offsetSeconds)/seconds)*seconds-offsetSeconds;
     const current=groups.get(epoch);
     if(!current){groups.set(epoch,{...row,epoch});continue;}
     current.high=Math.max(current.high,row.high);
@@ -439,8 +469,8 @@ async function fetchForexCandles(){
     try{
       const h1=await fetchYahooHourly(meta);
       received.set(`${meta.symbol}:H1`,h1);
-      received.set(`${meta.symbol}:H4`,aggregateCandles(h1,14400));
-      received.set(`${meta.symbol}:D1`,aggregateCandles(h1,86400));
+      received.set(`${meta.symbol}:H4`,aggregateCandles(h1,14400,7200));
+      received.set(`${meta.symbol}:D1`,aggregateCandles(h1,86400,7200));
     }catch(error){
       console.warn(`Skipping ${meta.market} Forex data: ${error instanceof Error?error.message:error}`);
     }
@@ -482,7 +512,17 @@ function attachTrendMemory(setup,previous){
   const flip=Boolean(old&&previousBias!=='NEUTRE'&&currentBias!=='NEUTRE'&&currentBias!==previousBias);
   const previousFinal=old?.final_verdict||'ATTENDRE';
   const previousCycles=Number(old?.trend_memory?.bias_cycles)||0;
-  const biasCycles=currentBias==='NEUTRE'?0:(currentBias===previousBias?Math.min(previousCycles+1,24):1);
+  // v4.1: a confirmation cycle = a NEW closed entry candle (H1 in Swing, M15 in Day).
+  // Before, every 5-minute run re-read the same closed H1 candle and still counted
+  // as a new cycle, so "2/2" could be reached in 5 minutes on identical data.
+  const currentCandle=Number(setup.entry_tf?.closedAt)||0;
+  const previousCandle=Number(old?.trend_memory?.bias_candle??old?.entry_tf?.closedAt)||0;
+  const newCandle=!old||!currentCandle||currentCandle!==previousCandle;
+  const biasCycles=currentBias==='NEUTRE'
+    ?0
+    :currentBias===previousBias
+      ?(newCandle?Math.min(previousCycles+1,24):Math.max(1,previousCycles))
+      :1;
   const previousConditions=Number(old?.decision_engine?.condition_pass_percent)||0;
   const previousScore=Number(old?.decision_engine?.score)||0;
   const previousExecution=old?.execution_state||old?.execution?.state||'NONE';
@@ -491,6 +531,7 @@ function attachTrendMemory(setup,previous){
   const candidateScore=Math.round(clamp(setup.technical_confidence+maturityBonus+(setup.entry_tf.regime==='TRENDING'?4:0)-flipPenalty,0,100));
   return {...setup,trend_memory:{
     previous_bias:previousBias,current_bias:currentBias,previous_final:previousFinal,persistence,flip,bias_cycles:biasCycles,
+    bias_candle:currentCandle,new_candle:newCandle,
     previous_conditions:previousConditions,previous_score:previousScore,previous_execution_state:previousExecution,candidate_score:candidateScore,
     confirmation_progress:setup.mode==='swing'?`${Math.min(biasCycles,2)}/2`:'1/1',confirmation_cycles_required:setup.mode==='swing'?2:1
   }};
@@ -658,6 +699,11 @@ function attachFamilyContext(setup,contexts){
 function autonomousDecision(setup){
   const e=setup.entry_tf,c=setup.confirmation_tf,d=setup.macro_tf,m=setup.trend_memory||{},f=setup.family_context||{},side=e.side;
   const swing=setup.mode==='swing';
+  // v4.1: freshness gate. If the last closed entry candle is too old (Forex weekend,
+  // market closed, broken feed), no BUY/SELL can be produced from stale data.
+  const entrySeconds=swing?3600:900;
+  const candleAgeMinutes=Math.max(0,Math.round((Date.now()/1000-(Number(e.closedAt)||0)-entrySeconds)/60));
+  const freshnessGate=candleAgeMinutes<=(swing?150:45);
   const macroAligned=!swing||Boolean(d&&side===d.side);
   const aligned=side===c.side&&macroAligned;
   const adverse=(setup.family==='boom'&&side==='SELL')||(setup.family==='crash'&&side==='BUY');
@@ -736,16 +782,18 @@ function autonomousDecision(setup){
   const structureGate=!swing||Boolean((e.bos||e.choch||e.retest)&&e.marketStructureAligned&&c.marketStructureAligned);
   const momentumGate=!swing||Boolean(e.momentum&&c.dmiAligned&&d?.dmiAligned);
   const persistenceGate=!swing||Number(m.bias_cycles)>=2;
-  const signal=aligned&&qualityGate&&confirmationGate&&adverseGate&&riskGate&&familyGate&&conditionGate&&continuationGate&&structureGate&&momentumGate&&persistenceGate&&consensus>=minimumConsensus&&score>=minimumScore;
+  const signal=freshnessGate&&aligned&&qualityGate&&confirmationGate&&adverseGate&&riskGate&&familyGate&&conditionGate&&continuationGate&&structureGate&&momentumGate&&persistenceGate&&consensus>=minimumConsensus&&score>=minimumScore;
   const verdict=signal?side:'ATTENDRE';
-  const setupDetected=aligned&&qualityGate&&!e.spikeRisk&&!m.flip&&!macroExhaustion&&continuationGate&&score>=(swing?70:60)&&conditionPassPercent>=(swing?65:50);
+  const setupDetected=freshnessGate&&aligned&&qualityGate&&!e.spikeRisk&&!m.flip&&!macroExhaustion&&continuationGate&&score>=(swing?70:60)&&conditionPassPercent>=(swing?65:50);
   const detectedSide=setupDetected?side:'NEUTRE';
 
   const active=strategies.filter(s=>s.applicable&&s.support).map(s=>s.name);
   const missing=strategies.filter(s=>s.applicable&&!s.support).map(s=>s.name);
   const confidence=signal?Math.round(clamp(score,swing?84:75,96)):Math.round(clamp(score,18,swing?83:74));
   const confirmationProgress=swing?`${Math.min(Number(m.bias_cycles)||0,2)}/2`:'1/1';
-  const summary=signal
+  const summary=!freshnessGate
+    ?`ATTENDRE · données non fraîches: dernière bougie ${swing?'H1':'M15'} clôturée il y a ${candleAgeMinutes} min (marché fermé ou flux interrompu).`
+    :signal
     ?`${verdict} haute conviction · ${setupType}: H1/H4/D1 alignés, confirmation ${confirmationProgress}, score ${score}/100, ${conditionPassPercent}% des conditions et consensus ${Math.round(consensus*100)}%.`
     :`ATTENDRE autonome · ${setupType}: ${conditionsPassed}/${conditionsTotal} conditions (${conditionPassPercent}%), consensus ${Math.round(consensus*100)}%, score ${score}/100${swing?`, confirmation ${confirmationProgress}`:''}. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles.`;
 
@@ -758,7 +806,8 @@ function autonomousDecision(setup){
     confirmation_progress:confirmationProgress,confirmation_cycles_required:swing?2:1,macro_exhaustion:macroExhaustion,
     active_strategies:active,missing_strategies:missing,
     strategies:strategies.map(s=>({id:s.id,name:s.name,weight:s.weight,applicable:s.applicable,support:s.support})),
-    risk_gate:riskGate,adverse_gate:adverseGate,confirmation_gate:confirmationGate,family_gate:familyGate,summary
+    risk_gate:riskGate,adverse_gate:adverseGate,confirmation_gate:confirmationGate,family_gate:familyGate,
+    freshness_gate:freshnessGate,candle_age_minutes:candleAgeMinutes,summary
   };
 }
 
@@ -957,9 +1006,10 @@ function finalize(setup,previous){
   };
 }
 async function selfTest(){
+  const lastEpoch=Math.floor(Date.now()/1000/3600)*3600-3600;
   const candles=Array.from({length:240},(_,i)=>{
     const base=1000+i*.8,open=base+Math.sin(i/4)*2,close=base+1+Math.sin(i/4)*2;
-    return{open,high:Math.max(open,close)+3,low:Math.min(open,close)-3,close,epoch:1700000000+i*900};
+    return{open,high:Math.max(open,close)+3,low:Math.min(open,close)-3,close,epoch:lastEpoch-(239-i)*900};
   });
   const result=inspectCandles(candles);
   if(!result||!Number.isFinite(result.atr)||!['BUY','SELL'].includes(result.side)||!result.regime)throw new Error('Smart technical engine self-test failed');
@@ -979,10 +1029,29 @@ async function selfTest(){
   const firstCycle=attachTrendMemory(completeSwing,null);
   const firstDecision=autonomousDecision(attachFamilyContext(firstCycle,new Map()));
   if(firstDecision.verdict!=='ATTENDRE'||firstDecision.confirmation_progress!=='1/2')throw new Error('Swing first-cycle guard self-test failed');
-  const previous={markets:[{id:`${completeSwing.symbol}:swing`,timing:{bias:'BUY'},trend_memory:{current_bias:'BUY',bias_cycles:1}}]};
+  const swingId=`${completeSwing.symbol}:swing`,candleEpoch=completeSwing.entry_tf.closedAt;
+  // Re-reading the SAME closed H1 candle 5 minutes later must not count as a second cycle.
+  const sameCandle={markets:[{id:swingId,timing:{bias:'BUY'},trend_memory:{current_bias:'BUY',bias_cycles:1,bias_candle:candleEpoch}}]};
+  const repeated=autonomousDecision(attachFamilyContext(attachTrendMemory(completeSwing,sameCandle),new Map()));
+  if(repeated.verdict!=='ATTENDRE'||repeated.confirmation_progress!=='1/2')throw new Error('Same-candle cycle guard self-test failed');
+  const previous={markets:[{id:swingId,timing:{bias:'BUY'},trend_memory:{current_bias:'BUY',bias_cycles:1,bias_candle:candleEpoch-3600}}]};
   const secondCycle=attachTrendMemory(completeSwing,previous);
   const secondDecision=autonomousDecision(attachFamilyContext(secondCycle,new Map()));
   if(secondDecision.verdict!=='BUY'||secondDecision.score<84||secondDecision.confirmation_progress!=='2/2')throw new Error('High-conviction Swing self-test failed');
+  // A perfect setup on stale data (e.g. Forex weekend) must stay ATTENDRE.
+  const staleTf={...strong,closedAt:candleEpoch-6*3600};
+  const staleSwing=technicalSetup(MARKETS[0],staleTf,{...staleTf,trendQuality:92},MODES[1],{...staleTf,trendQuality:88,adx:28});
+  const staleDecision=autonomousDecision(attachFamilyContext(attachTrendMemory(staleSwing,{markets:[{id:swingId,timing:{bias:'BUY'},trend_memory:{current_bias:'BUY',bias_cycles:3,bias_candle:candleEpoch-7*3600}}]}),new Map()));
+  if(staleDecision.verdict!=='ATTENDRE'||staleDecision.freshness_gate!==false||staleDecision.setup_detected)throw new Error('Freshness guard self-test failed');
+  // Indicator sanity: Wilder RSI/ADX behave like MT5/TradingView.
+  const trendRows=Array.from({length:200},(_,i)=>({open:100+i,high:101.5+i,low:99.5+i,close:101+i,epoch:lastEpoch-(199-i)*3600}));
+  const chopRows=Array.from({length:200},(_,i)=>{const p=100+(i%2?1:-1);return{open:100,high:Math.max(100,p)+.5,low:Math.min(100,p)-.5,close:p,epoch:lastEpoch-(199-i)*3600};});
+  const trendInfo=inspectCandles(trendRows),chopInfo=inspectCandles(chopRows);
+  if(!(trendInfo.adx>40&&trendInfo.rsi>70&&chopInfo.adx<20&&chopInfo.rsi>35&&chopInfo.rsi<65))throw new Error(`Indicator sanity self-test failed (trend ADX ${trendInfo.adx.toFixed(1)} RSI ${trendInfo.rsi.toFixed(1)}, chop ADX ${chopInfo.adx.toFixed(1)} RSI ${chopInfo.rsi.toFixed(1)})`);
+  // Forex D1 buckets start at 22:00 UTC (New York close).
+  const fxRows=Array.from({length:48},(_,i)=>({open:1,high:1,low:1,close:1,epoch:Date.UTC(2026,0,5,0)/1000+i*3600}));
+  const fxDays=aggregateCandles(fxRows,86400,7200).map(r=>new Date(r.epoch*1000).getUTCHours());
+  if(!fxDays.length||fxDays.some(h=>h!==22))throw new Error('Forex D1 alignment self-test failed');
   console.log(ENGINE_VERSION+' self-test passed.');
 }
 

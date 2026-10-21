@@ -180,3 +180,14 @@ Sera possède désormais une mémoire d’expérience persistante. À chaque cyc
 - ne peut jamais créer un BUY/SELL, inverser la direction ou contourner les garde-fous.
 
 Cette couche évite que Sera soit seulement un empilement d’indicateurs : il commence à mesurer ce qui fonctionne réellement dans ses propres décisions.
+
+
+## Moteur v4.1 — corrections de fiabilité Swing
+
+- **2 cycles = 2 bougies H1 clôturées distinctes.** Avant, chaque exécution de 5 minutes relisait la même bougie H1 et comptait un nouveau cycle : la confirmation `2/2` pouvait être atteinte en 5 minutes sur des données identiques. Le compteur n’avance désormais que lorsqu’une nouvelle bougie d’entrée (H1 en Swing, M15 en Day) est clôturée.
+- **ADX réel (Wilder, 14).** L’ancien calcul utilisait une seule valeur DX brute, très bruitée, qui dépassait souvent 20 sans vraie tendance. RSI(14) et ATR(14) utilisent aussi le lissage de Wilder, comme MT5 et TradingView.
+- **Garde-fou de fraîcheur.** Si la dernière bougie d’entrée clôturée est trop ancienne (Forex le week-end, flux interrompu), le marché reste sur `ATTENDRE` et aucun setup n’est affiché (`freshness_gate`, `candle_age_minutes`).
+- **Forex H4/D1 alignés sur 22:00 UTC** (clôture New York), comme les graphiques des brokers MT5, au lieu de minuit UTC.
+- **Bougies ouvertes exclues** dans tous les cas lors de l’agrégation H4/D1.
+- **`mt5/Sera_Swing_Executor.mq5` corrigé** : il modifiait des paramètres `const` (erreur de compilation MQL5). Il est maintenant identique à `Sera_EA_Swing_Intelligent.mq5`, et la QA vérifie que les deux copies restent identiques.
+- Les commits automatiques de `data/` ne relancent plus les tests navigateur Playwright à chaque cycle de 5 minutes.

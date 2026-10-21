@@ -47,6 +47,10 @@ clean = re.sub(r'"(?:\\.|[^"\\])*"', '""', clean)
 if clean.count('{') != clean.count('}'):
     errors.append("brace count mismatch")
 
+executor = Path("mt5/Sera_Swing_Executor.mq5")
+if executor.exists() and executor.read_text(encoding="utf-8") != text:
+    errors.append("mt5/Sera_Swing_Executor.mq5 differs from Sera_EA_Swing_Intelligent.mq5 (keep both copies identical)")
+
 if errors:
     print("\n".join("ERROR: " + e for e in errors))
     raise SystemExit(1)
