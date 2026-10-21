@@ -15,7 +15,7 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 `USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
-## Exécution MT5 — Sera EA Swing Intelligent v2.00
+## Exécution MT5 — Sera EA Swing Intelligent v2.10
 
 Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`).
 
@@ -35,26 +35,19 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - Option `TradeDaySignals` (désactivée par défaut) pour prendre aussi les signaux Day M15/H1.
 
-### v2.00 — nombre de positions selon la balance et les profits
+### v2.10 — les signaux décident, coupure en cas de retournement
 
-L’EA n’est plus limité à 1 position et 2 trades par jour (`EnableBalanceScaling = true`) :
+**Nombre de positions** (`EnableBalanceScaling = true`) : l’EA prend **chaque bon signal**, une position par marché (`OnePositionPerSymbol`), jusqu’à **50 positions** (`MaximumOpenPositionsCap`). Les profits n’entrent pas dans le calcul. Le seul frein est le **risque cumulé** : la somme des pertes possibles jusqu’aux SL de toutes les positions ne dépasse pas **10 % de l’équité** (`MaximumTotalOpenRiskPercent`). Une position sécurisée au point mort compte pour 0. `BalancePerPositionUSD` (0 par défaut) permet, si on le souhaite, de limiter à 1 position par tranche de balance. Perte journalière maximale : **5 % de la balance** (`DailyLossPercentLimit`).
 
-- **1 position par tranche de 50 USD de balance** (`BalancePerPositionUSD`) ;
-- **+1 position par tranche de 5 USD de profit du jour**, réalisé ou latent (`ProfitPerExtraPositionUSD`), uniquement s’il n’y a pas de perte en cours de série (aucune martingale) ;
-- **plafond : 50 positions** (`MaximumOpenPositionsCap`), **une seule par marché** (`OnePositionPerSymbol`) ;
-- **risque cumulé maximum : 10 % de l’équité** (`MaximumTotalOpenRiskPercent`) : la somme des pertes possibles jusqu’aux SL de toutes les positions. Une position sécurisée au point mort compte pour 0, ce qui libère de la place pour de nouvelles entrées ;
-- perte journalière maximale : **5 % de la balance** (`DailyLossPercentLimit`, au moins `MaximumDailyLossUSD`).
+**Coupure en cas de retournement** (`CutOnMarketReversal = true`), vérifiée toutes les 30 secondes sur chaque position Sera :
 
-| Balance | Profit du jour | Positions max |
-|---|---|---|
-| 100 $ | 0 $ | 2 |
-| 100 $ | 20 $ | 6 |
-| 300 $ | 25 $ | 11 |
-| 1 000 $ | 0 $ | 20 |
-| 1 000 $ | 100 $ | 40 |
-| 2 500 $ | 0 $ | 50 |
+- **données du broker** (bougies H1 clôturées après l’entrée) : croisement EMA20/EMA50 contre la position avec clôture du mauvais côté de l’EMA50, **confirmé** par une clôture H4 de l’autre côté de l’EMA20 H4 ; ou cassure du plus bas / plus haut des **24 dernières bougies H1** (`ReversalStructureBars`) ;
+- **analyse serveur** : tendances H1 et H4 retournées **et** tendance H4 cassée (EMA20 passée de l’autre côté de l’EMA50) ;
+- toujours actifs : verdict final inversé (`CloseOnSignalReversal`) et durée maximale (`MaximumSwingHoldingHours`).
 
-Le nombre de positions ouvertes, la capacité actuelle et le risque ouvert s’affichent en haut du graphique MT5. L’EA ouvre au plus une nouvelle position par cycle de 30 secondes.
+Un simple repli dans la tendance ne déclenche pas la coupure : c’est justement là que se font les entrées en retracement.
+
+Le haut du graphique MT5 affiche le nombre de positions ouvertes, la capacité et le risque ouvert. L’EA ouvre au plus une nouvelle position par cycle de 30 secondes.
 
 ### Garde-fous conservés
 

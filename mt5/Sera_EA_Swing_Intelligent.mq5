@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent"
-#property version   "2.00"
+#property version   "2.10"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -75,14 +75,17 @@ input int MaximumSwingHoldingHours=240;      // 10 jours maximum pour un Swing
 input int MaximumDayHoldingHours=48;
 input bool AvoidForexWeekendGap=true;        // pas de nouvelle entrée Forex du vendredi soir au dimanche
 
-// --- v2.00 : nombre de positions selon la balance et les profits
+// --- v2.10 : nombre de positions selon la balance et les profits
 input bool EnableBalanceScaling=true;          // remplace les limites fixes 1 position / 2 trades par jour
 input int MaximumOpenPositionsCap=50;          // plafond absolu de positions Sera ouvertes
-input double BalancePerPositionUSD=50.0;       // 1 position autorisée par tranche de balance
-input double ProfitPerExtraPositionUSD=5.0;    // +1 position par tranche de profit du jour (réalisé + latent)
+input double BalancePerPositionUSD=0.0;        // 0 = pas de limite par balance : ce sont les signaux qui décident
 input double MaximumTotalOpenRiskPercent=10.0; // somme des pertes possibles jusqu'aux SL, en % de l'équité
 input double DailyLossPercentLimit=5.0;        // perte journalière max en % de la balance (au moins MaximumDailyLossUSD)
 input bool OnePositionPerSymbol=true;          // une seule position Sera par marché
+
+// --- v2.10 : coupure en cas de retournement du marché
+input bool CutOnMarketReversal=true;           // fermer dès qu'un retournement est confirmé
+input int ReversalStructureBars=24;            // cassure du plus bas / plus haut des N dernières bougies H1 (24 = 1 jour)
 
 CTrade trade;
 datetime last_poll=0;
@@ -532,7 +535,7 @@ void RunLocalSwingIntelligence()
    string side; double score=0.0,atr=0.0;
    if(!LocalSwingDecision(symbol,side,score,atr)) return;
 
-   Comment("Sera EA Swing Intelligent v2.00 | ",AssetProfileName(symbol),
+   Comment("Sera EA Swing Intelligent v2.10 | ",AssetProfileName(symbol),
            " | Local Swing H1/H4: ",side," ",DoubleToString(score,0),"%",
            " | Risk ",DoubleToString(AdaptiveRiskPercent()*AssetRiskFactor(symbol),2),"%");
 
@@ -568,8 +571,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.00")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.00");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.10")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.10");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -642,7 +645,7 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    return MathMax(min_lot,MathMin(volume,max_lot));
 }
 
-// ---------- v2.00 : mise à l'échelle selon la balance et les profits ----------
+// ---------- v2.10 : mise à l'échelle selon la balance et les profits ----------
 
 // Perte possible (devise du compte) si le SL d'une position est touché. Une position déjà
 // protégée au point mort ou mieux compte pour 0.
@@ -692,16 +695,15 @@ bool HasSeraPositionOn(const string symbol)
    return false;
 }
 
-// Nombre de positions autorisé : 1 par tranche de balance, +1 par tranche de profit du jour.
-// Pas de bonus de profit après une perte (aucune martingale).
+// Ce sont les signaux qui décident : chaque bon signal (un par marché) peut être pris jusqu'au
+// plafond, tant que le risque cumulé reste sous MaximumTotalOpenRiskPercent (TotalRiskAllows).
+// Les profits n'entrent pas dans le calcul.
 int AllowedOpenPositions()
 {
    if(!EnableBalanceScaling) return MaximumOpenPositions;
-   double balance=AccountInfoDouble(ACCOUNT_BALANCE);
-   int slots=BalancePerPositionUSD>0?(int)MathFloor(balance/BalancePerPositionUSD):MaximumOpenPositions;
-   double profit=DailyNetProfit()+OpenSeraFloatingProfit();
-   if(profit>0 && ProfitPerExtraPositionUSD>0 && ConsecutiveLosses()==0)
-      slots+=(int)MathFloor(profit/ProfitPerExtraPositionUSD);
+   int slots=MaximumOpenPositionsCap;
+   if(BalancePerPositionUSD>0)
+      slots=(int)MathMin(slots,MathFloor(AccountInfoDouble(ACCOUNT_BALANCE)/BalancePerPositionUSD));
    slots=(int)MathMax(MaximumOpenPositions,slots);
    return (int)MathMax(1,MathMin(MaximumOpenPositionsCap,slots));
 }
@@ -950,15 +952,100 @@ void PrintOnce(const string message)
    Print(message);
 }
 
-// Ferme une position Sera si le serveur inverse le signal de CE setup, ou si elle a
-// dépassé la durée maximale prévue pour son horizon (Swing ou Day).
-void SmartExit(const string setup_id,const string symbol,const string mode,const string verdict,const double confidence)
+bool JsonFlagTrue(const string object,const string key)
+{
+   string token="\""+key+"\"";
+   int p=StringFind(object,token); if(p<0) return false;
+   p=StringFind(object,":",p+StringLen(token)); if(p<0) return false;
+   p++;
+   while(p<StringLen(object) && (StringGetCharacter(object,p)==' ' || StringGetCharacter(object,p)=='\t')) p++;
+   return StringSubstr(object,p,4)=="true";
+}
+
+// Objet JSON d'une clé, ou "" si la valeur n'est pas un objet (null, absent...).
+string JsonObject(const string object,const string key)
+{
+   string token="\""+key+"\"";
+   int p=StringFind(object,token); if(p<0) return "";
+   p=StringFind(object,":",p+StringLen(token)); if(p<0) return "";
+   p++;
+   while(p<StringLen(object) && (StringGetCharacter(object,p)==' ' || StringGetCharacter(object,p)=='\t' || StringGetCharacter(object,p)=='\n' || StringGetCharacter(object,p)=='\r')) p++;
+   if(p>=StringLen(object) || StringGetCharacter(object,p)!='{') return "";
+   return ExtractObjectAt(object,p);
+}
+
+// Retournement lu sur les bougies H1 clôturées du broker, uniquement sur des bougies
+// ouvertes APRÈS l'entrée : EMA20 repassée de l'autre côté de l'EMA50 avec une clôture du
+// mauvais côté de l'EMA50, ou cassure du plus bas / plus haut des N dernières bougies.
+bool BrokerReversal(const string symbol,const long position_type,const datetime opened,string &reason)
+{
+   int need=(int)MathMax(ReversalStructureBars+2,3);
+   MqlRates rates[];
+   ArraySetAsSeries(rates,true);
+   if(CopyRates(symbol,PERIOD_H1,1,need,rates)<need) return false;
+   if(rates[0].time<opened) return false;
+   double fast=BrokerCloseEMA(symbol,PERIOD_H1,20);
+   double slow=BrokerCloseEMA(symbol,PERIOD_H1,50);
+   if(fast==EMPTY_VALUE || slow==EMPTY_VALUE) return false;
+   bool buy=position_type==POSITION_TYPE_BUY;
+   double close=rates[0].close;
+   double extreme=buy?rates[1].low:rates[1].high;
+   for(int i=2;i<=ReversalStructureBars && i<need;i++)
+      extreme=buy?MathMin(extreme,rates[i].low):MathMax(extreme,rates[i].high);
+   double h4_ema=BrokerCloseEMA(symbol,PERIOD_H4,20);
+   double h4_close[];
+   bool h4_against=false;
+   if(h4_ema!=EMPTY_VALUE && CopyClose(symbol,PERIOD_H4,1,1,h4_close)==1)
+      h4_against=buy?(h4_close[0]<h4_ema):(h4_close[0]>h4_ema);
+   bool ema_flip=h4_against && (buy?(fast<slow && close<slow):(fast>slow && close>slow));
+   bool structure_break=buy?(close<extreme):(close>extreme);
+   if(ema_flip){ reason="EMA20/EMA50 H1 retournees, confirme par la cloture H4"; return true; }
+   if(structure_break){ reason="cassure de structure H1 sur "+IntegerToString(ReversalStructureBars)+" bougies"; return true; }
+   return false;
+}
+
+// Vérifie toutes les positions Sera à chaque cycle et coupe celles dont le marché s'est retourné.
+void CutReversedPositions()
+{
+   if(!CutOnMarketReversal) return;
+   for(int i=PositionsTotal()-1;i>=0;i--)
+   {
+      ulong ticket=PositionGetTicket(i);
+      if(ticket<=0 || PositionGetInteger(POSITION_MAGIC)!=MagicNumber) continue;
+      string symbol=PositionGetString(POSITION_SYMBOL);
+      long position_type=PositionGetInteger(POSITION_TYPE);
+      datetime opened=(datetime)PositionGetInteger(POSITION_TIME);
+      string reason="";
+      if(!BrokerReversal(symbol,position_type,opened,reason)) continue;
+      trade.SetExpertMagicNumber(MagicNumber);
+      if(trade.PositionClose(ticket)) Print("Sera Reversal Cut: ",symbol," ferme — ",reason);
+      else Print("Sera Reversal Cut: fermeture refusee ",symbol," ",trade.ResultRetcodeDescription());
+   }
+}
+
+// Ferme une position Sera si le serveur inverse le signal de CE setup (verdict final opposé,
+// ou tendance H1 ET H4 du serveur retournées), ou si elle a dépassé la durée maximale.
+void SmartExit(const string setup_id,const string symbol,const string mode,const string verdict,const double confidence,const string object)
 {
    if(symbol=="" || StoredState("SERA_OPEN_",setup_id)!=1) return;
    if(!SelectSeraPosition(symbol)){ StoreState("SERA_OPEN_",setup_id,0); return; }
    long position_type=PositionGetInteger(POSITION_TYPE);
+   string verdict_note="";
    bool reversal=CloseOnSignalReversal && confidence>=MinimumConfidence &&
       ((position_type==POSITION_TYPE_BUY && verdict=="SELL") || (position_type==POSITION_TYPE_SELL && verdict=="BUY"));
+   if(!reversal && CutOnMarketReversal)
+   {
+      string confirmation=JsonObject(object,"confirmation_tf");
+      string entry_side=JsonString(JsonObject(object,"entry_tf"),"side");
+      string confirmation_side=JsonString(confirmation,"side");
+      string against=position_type==POSITION_TYPE_BUY?"SELL":"BUY";
+      // Un simple repli (clôture sous l'EMA20) ne suffit pas : la tendance H4 doit être cassée.
+      if(entry_side==against && confirmation_side==against && JsonFlagTrue(confirmation,"trendStrong"))
+      {
+         reversal=true;
+         verdict_note="tendance serveur H1 et H4 retournees ("+against+")";
+      }
+   }
    datetime opened=(datetime)PositionGetInteger(POSITION_TIME);
    int max_hours=mode=="day"?MaximumDayHoldingHours:MaximumSwingHoldingHours;
    bool expired=max_hours>0 && TimeCurrent()-opened>(long)max_hours*3600;
@@ -967,7 +1054,7 @@ void SmartExit(const string setup_id,const string symbol,const string mode,const
    if(trade.PositionClose(symbol))
    {
       StoreState("SERA_OPEN_",setup_id,0);
-      Print("Sera Smart Exit: ",symbol," ferme — ",reversal?"signal serveur inverse ("+verdict+")":"duree maximale atteinte");
+      Print("Sera Smart Exit: ",symbol," ferme — ",reversal?(verdict_note!=""?verdict_note:"signal serveur inverse ("+verdict+")"):"duree maximale atteinte");
    }
    else Print("Sera Smart Exit: fermeture refusee ",trade.ResultRetcodeDescription());
 }
@@ -1021,7 +1108,7 @@ void Evaluate(const string json)
          string symbol=ResolveTradeSymbol(market_name,deriv_code);
          if(symbol!="") ManageSeraPosition(setup_id,symbol);
          int state=VerdictState(verdict);
-         if(symbol!="") SmartExit(setup_id,symbol,mode,verdict,confidence);
+         if(symbol!="") SmartExit(setup_id,symbol,mode,verdict,confidence,object);
          bool row_fresh=!JsonFlagFalse(object,"freshness_gate");
          bool directional_confirmed=(row_fresh && state!=0 && confidence>=MinimumConfidence && conditions_percent>=MinimumAutonomousConditionsPercent);
          bool symbol_can_trade=can_trade && (symbol=="" || !WeekendGapRisk(symbol));
@@ -1162,7 +1249,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.00"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.00");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.10"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.10");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -1195,8 +1282,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera EA Swing Intelligent v2.00 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
-   Print("Sera EA Swing Intelligent v2.00: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Comment("Sera EA Swing Intelligent v2.10 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
+   Print("Sera EA Swing Intelligent v2.10: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
@@ -1207,6 +1294,7 @@ int OnInit()
 void OnDeinit(const int reason){ EventKillTimer(); Comment(""); }
 void OnTimer()
 {
+   CutReversedPositions();
    RunLocalSwingIntelligence();
    string json;
    if(FetchSignals(json)) Evaluate(json);
