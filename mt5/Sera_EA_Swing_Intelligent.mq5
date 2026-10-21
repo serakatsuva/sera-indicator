@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent"
-#property version   "1.90"
+#property version   "2.00"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -75,8 +75,21 @@ input int MaximumSwingHoldingHours=240;      // 10 jours maximum pour un Swing
 input int MaximumDayHoldingHours=48;
 input bool AvoidForexWeekendGap=true;        // pas de nouvelle entrée Forex du vendredi soir au dimanche
 
+// --- v2.00 : nombre de positions selon la balance et les profits
+input bool EnableBalanceScaling=true;          // remplace les limites fixes 1 position / 2 trades par jour
+input int MaximumOpenPositionsCap=50;          // plafond absolu de positions Sera ouvertes
+input double BalancePerPositionUSD=50.0;       // 1 position autorisée par tranche de balance
+input double ProfitPerExtraPositionUSD=5.0;    // +1 position par tranche de profit du jour (réalisé + latent)
+input double MaximumTotalOpenRiskPercent=10.0; // somme des pertes possibles jusqu'aux SL, en % de l'équité
+input double DailyLossPercentLimit=5.0;        // perte journalière max en % de la balance (au moins MaximumDailyLossUSD)
+input bool OnePositionPerSymbol=true;          // une seule position Sera par marché
+
 CTrade trade;
 datetime last_poll=0;
+
+// Déclarations anticipées (fonctions définies plus bas, utilisées par l'intelligence locale).
+int AllowedOpenPositions();
+int AllowedTradesPerDay();
 datetime local_last_h1_bar=0;
 
 string JsonString(const string object,const string key)
@@ -292,7 +305,9 @@ int ConsecutiveLosses()
 bool RiskCircuitOpen()
 {
    double daily=DailyNetProfit();
-   if(daily<=-MaximumDailyLossUSD){ Print("Sera circuit breaker: perte journaliere ",daily); return true; }
+   double daily_limit=MaximumDailyLossUSD;
+   if(EnableBalanceScaling) daily_limit=MathMax(MaximumDailyLossUSD,AccountInfoDouble(ACCOUNT_BALANCE)*DailyLossPercentLimit/100.0);
+   if(daily<=-daily_limit){ Print("Sera circuit breaker: perte journaliere ",daily," / limite ",daily_limit); return true; }
 
    double balance=AccountInfoDouble(ACCOUNT_BALANCE),equity=AccountInfoDouble(ACCOUNT_EQUITY);
    if(balance>0)
@@ -517,14 +532,14 @@ void RunLocalSwingIntelligence()
    string side; double score=0.0,atr=0.0;
    if(!LocalSwingDecision(symbol,side,score,atr)) return;
 
-   Comment("Sera EA Swing Intelligent v1.90 | ",AssetProfileName(symbol),
+   Comment("Sera EA Swing Intelligent v2.00 | ",AssetProfileName(symbol),
            " | Local Swing H1/H4: ",side," ",DoubleToString(score,0),"%",
            " | Risk ",DoubleToString(AdaptiveRiskPercent()*AssetRiskFactor(symbol),2),"%");
 
    if(!EnableLocalAutoEntry || side=="WAIT") return;
    if(!EnableAutomaticTrading || RiskCircuitOpen()) return;
    if(AccountInfoInteger(ACCOUNT_TRADE_MODE)!=ACCOUNT_TRADE_MODE_DEMO && !AllowRealAccount) return;
-   if(OpenSeraPositions()>=MaximumOpenPositions || TradesToday()>=MaximumTradesPerDay) return;
+   if(OpenSeraPositions()>=AllowedOpenPositions() || TradesToday()>=AllowedTradesPerDay()) return;
    if(PositionSelect(symbol)) return;
 
    MqlTick tick;
@@ -553,8 +568,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v1.90")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v1.90");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.00")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.00");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -625,6 +640,90 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    double volume=MathFloor((risk/loss_per_lot)/step)*step;
    if(volume<min_lot) return 0;
    return MathMax(min_lot,MathMin(volume,max_lot));
+}
+
+// ---------- v2.00 : mise à l'échelle selon la balance et les profits ----------
+
+// Perte possible (devise du compte) si le SL d'une position est touché. Une position déjà
+// protégée au point mort ou mieux compte pour 0.
+double PositionRiskUSD(const string symbol,const long type,const double open,const double sl,const double volume)
+{
+   if(sl<=0 || volume<=0) return 0.0;
+   double distance=type==POSITION_TYPE_BUY?open-sl:sl-open;
+   if(distance<=0) return 0.0;
+   double tick_size=SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_SIZE);
+   double tick_value=SymbolInfoDouble(symbol,SYMBOL_TRADE_TICK_VALUE_LOSS);
+   if(tick_size<=0 || tick_value<=0) return 0.0;
+   return distance/tick_size*tick_value*volume;
+}
+
+double OpenSeraRiskUSD()
+{
+   double total=0.0;
+   for(int i=PositionsTotal()-1;i>=0;i--)
+   {
+      ulong ticket=PositionGetTicket(i);
+      if(ticket<=0 || PositionGetInteger(POSITION_MAGIC)!=MagicNumber) continue;
+      total+=PositionRiskUSD(PositionGetString(POSITION_SYMBOL),PositionGetInteger(POSITION_TYPE),
+                             PositionGetDouble(POSITION_PRICE_OPEN),PositionGetDouble(POSITION_SL),PositionGetDouble(POSITION_VOLUME));
+   }
+   return total;
+}
+
+double OpenSeraFloatingProfit()
+{
+   double total=0.0;
+   for(int i=PositionsTotal()-1;i>=0;i--)
+   {
+      ulong ticket=PositionGetTicket(i);
+      if(ticket>0 && PositionGetInteger(POSITION_MAGIC)==MagicNumber)
+         total+=PositionGetDouble(POSITION_PROFIT)+PositionGetDouble(POSITION_SWAP);
+   }
+   return total;
+}
+
+bool HasSeraPositionOn(const string symbol)
+{
+   for(int i=PositionsTotal()-1;i>=0;i--)
+   {
+      ulong ticket=PositionGetTicket(i);
+      if(ticket>0 && PositionGetInteger(POSITION_MAGIC)==MagicNumber && PositionGetString(POSITION_SYMBOL)==symbol) return true;
+   }
+   return false;
+}
+
+// Nombre de positions autorisé : 1 par tranche de balance, +1 par tranche de profit du jour.
+// Pas de bonus de profit après une perte (aucune martingale).
+int AllowedOpenPositions()
+{
+   if(!EnableBalanceScaling) return MaximumOpenPositions;
+   double balance=AccountInfoDouble(ACCOUNT_BALANCE);
+   int slots=BalancePerPositionUSD>0?(int)MathFloor(balance/BalancePerPositionUSD):MaximumOpenPositions;
+   double profit=DailyNetProfit()+OpenSeraFloatingProfit();
+   if(profit>0 && ProfitPerExtraPositionUSD>0 && ConsecutiveLosses()==0)
+      slots+=(int)MathFloor(profit/ProfitPerExtraPositionUSD);
+   slots=(int)MathMax(MaximumOpenPositions,slots);
+   return (int)MathMax(1,MathMin(MaximumOpenPositionsCap,slots));
+}
+
+int AllowedTradesPerDay()
+{
+   if(!EnableBalanceScaling) return MaximumTradesPerDay;
+   return (int)MathMax(MaximumTradesPerDay,MathMin(MaximumOpenPositionsCap*2,AllowedOpenPositions()*2));
+}
+
+int AllowedPendingOrders()
+{
+   if(!EnableBalanceScaling) return MaximumPendingOrders;
+   return (int)MathMax(MaximumPendingOrders,AllowedOpenPositions());
+}
+
+// Le risque cumulé (positions ouvertes + nouvelle position) doit rester sous le plafond.
+bool TotalRiskAllows(const double new_risk_usd)
+{
+   if(!EnableBalanceScaling) return true;
+   double budget=AccountInfoDouble(ACCOUNT_EQUITY)*MaximumTotalOpenRiskPercent/100.0;
+   return OpenSeraRiskUSD()+new_risk_usd<=budget;
 }
 
 uint SeraHash(const string id)
@@ -894,7 +993,9 @@ void Evaluate(const string json)
    else if(EnableTrendWatch && EnableAutomaticTrading)
    {
       string account_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"REEL";
-      Comment("Sera Trend Watch + Auto-trade actifs — "+account_mode+" — risque "+DoubleToString(RiskPercent,2)+"% / max "+DoubleToString(MaximumLossUSD,2)+" USD");
+      Comment("Sera Trend Watch + Auto-trade actifs — "+account_mode+" — risque "+DoubleToString(RiskPercent,2)+"% / max "+DoubleToString(MaximumLossUSD,2)+" USD"+
+              " — positions "+IntegerToString(OpenSeraPositions())+"/"+IntegerToString(AllowedOpenPositions())+
+              " — risque ouvert "+DoubleToString(OpenSeraRiskUSD(),2)+" USD");
    }
 
    int markets=StringFind(json,"\"markets\""); if(markets<0) return;
@@ -949,8 +1050,9 @@ void Evaluate(const string json)
                && execution_score>=MinimumPendingExecutionScore
                && conditions_percent>=MinimumPendingConditionsPercent
                && symbol_can_trade
-               && OpenSeraPositions()<MaximumOpenPositions
-               && (FindSeraPendingOrder(symbol)>0 || OpenSeraPendingOrders()<MaximumPendingOrders);
+               && OpenSeraPositions()<AllowedOpenPositions()
+               && (!OnePositionPerSymbol || !HasSeraPositionOn(symbol))
+               && (FindSeraPendingOrder(symbol)>0 || OpenSeraPendingOrders()<AllowedPendingOrders());
 
             if(pending_candidate)
             {
@@ -978,6 +1080,12 @@ void Evaluate(const string json)
 
                string pending_why="";
                bool pending_broker_ok=pending_margin_ok && BrokerConfirms(symbol,verdict,pending_why);
+               if(pending_broker_ok && FindSeraPendingOrder(symbol)==0 &&
+                  !TotalRiskAllows(PositionRiskUSD(symbol,verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,pending_entry,pending_sl,pending_volume)))
+               {
+                  pending_broker_ok=false;
+                  PrintOnce("Sera: limite "+symbol+" en attente — risque cumule maximum atteint");
+               }
                if(pending_margin_ok && !pending_broker_ok) PrintOnce("Sera: limite "+symbol+" en attente — "+pending_why);
                if(pending_broker_ok && PlaceOrUpdatePendingLimit(setup_id,symbol,verdict,pending_entry,pending_sl,pending_final_tp,pending_volume))
                   StoreState("SERA_OPEN_",setup_id,1);
@@ -994,7 +1102,7 @@ void Evaluate(const string json)
             }
          }
 
-         if(directional_confirmed && execution_ready && symbol_can_trade && state!=previous_trade_state && OpenSeraPositions()<MaximumOpenPositions && TradesToday()<MaximumTradesPerDay)
+         if(directional_confirmed && execution_ready && symbol_can_trade && state!=previous_trade_state && OpenSeraPositions()<AllowedOpenPositions() && TradesToday()<AllowedTradesPerDay() && (!OnePositionPerSymbol || !HasSeraPositionOn(symbol)))
          {
             if(symbol=="")
             {
@@ -1043,12 +1151,18 @@ void Evaluate(const string json)
                      volume=0;
                      broker_why="skip";
                   }
+                  if(volume>0 && !TotalRiskAllows(PositionRiskUSD(symbol,verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,price,sl,volume)))
+                  {
+                     PrintOnce("Sera: entree "+verdict+" "+symbol+" reportee — risque cumule maximum atteint ("+DoubleToString(MaximumTotalOpenRiskPercent,1)+"% de l'equite)");
+                     volume=0;
+                     broker_why="skip";
+                  }
                   if(volume>0)
                   {
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.90"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v1.90");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.00"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.00");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -1081,8 +1195,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera EA Swing Intelligent v1.90 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
-   Print("Sera EA Swing Intelligent v1.90: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Comment("Sera EA Swing Intelligent v2.00 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
+   Print("Sera EA Swing Intelligent v2.00: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),

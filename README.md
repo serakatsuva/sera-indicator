@@ -15,7 +15,7 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 `USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
-## Exécution MT5 — Sera EA Swing Intelligent v1.90
+## Exécution MT5 — Sera EA Swing Intelligent v2.00
 
 Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`).
 
@@ -35,6 +35,27 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - Option `TradeDaySignals` (désactivée par défaut) pour prendre aussi les signaux Day M15/H1.
 
+### v2.00 — nombre de positions selon la balance et les profits
+
+L’EA n’est plus limité à 1 position et 2 trades par jour (`EnableBalanceScaling = true`) :
+
+- **1 position par tranche de 50 USD de balance** (`BalancePerPositionUSD`) ;
+- **+1 position par tranche de 5 USD de profit du jour**, réalisé ou latent (`ProfitPerExtraPositionUSD`), uniquement s’il n’y a pas de perte en cours de série (aucune martingale) ;
+- **plafond : 50 positions** (`MaximumOpenPositionsCap`), **une seule par marché** (`OnePositionPerSymbol`) ;
+- **risque cumulé maximum : 10 % de l’équité** (`MaximumTotalOpenRiskPercent`) : la somme des pertes possibles jusqu’aux SL de toutes les positions. Une position sécurisée au point mort compte pour 0, ce qui libère de la place pour de nouvelles entrées ;
+- perte journalière maximale : **5 % de la balance** (`DailyLossPercentLimit`, au moins `MaximumDailyLossUSD`).
+
+| Balance | Profit du jour | Positions max |
+|---|---|---|
+| 100 $ | 0 $ | 2 |
+| 100 $ | 20 $ | 6 |
+| 300 $ | 25 $ | 11 |
+| 1 000 $ | 0 $ | 20 |
+| 1 000 $ | 100 $ | 40 |
+| 2 500 $ | 0 $ | 50 |
+
+Le nombre de positions ouvertes, la capacité actuelle et le risque ouvert s’affichent en haut du graphique MT5. L’EA ouvre au plus une nouvelle position par cycle de 30 secondes.
+
 ### Garde-fous conservés
 
 - `EnableAutomaticTrading = true`
@@ -45,8 +66,7 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - conditions autonomes minimales : **80 %**
 - score d’exécution EA minimal : **78 %**; le serveur impose **84 %** aux signaux Swing haute conviction
 - état requis pour l’ordre réel : **EXECUTE_NOW**
-- maximum : **1 position Sera ouverte**
-- maximum : **2 entrées Sera par jour**
+- sans mise à l’échelle (`EnableBalanceScaling = false`) : 1 position, 2 entrées par jour
 - Stop Loss obligatoire
 - anti-doublon persistant par setup
 
