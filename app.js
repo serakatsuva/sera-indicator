@@ -94,6 +94,7 @@ let lastMinuteValidationAt=0;
 let marketFamily="synthetic";
 let selectedIndexFamily=localStorage.getItem("seraIndexFamily")||"all";
 let tradingMode="all";
+let derivTradingMode="all";
 let selectedMode="day";
 let trendWatchEnabled=localStorage.getItem("seraTrendWatchEnabled")==="1";
 let trendWatchScope=localStorage.getItem("seraTrendWatchScope")||"selected";
@@ -178,6 +179,7 @@ const setupSide=row=>{
 };
 const hasDetectedSetup=row=>Boolean(row?.setup_detected||row?.decision_engine?.setup_detected)&&setupSide(row)!=="NEUTRE";
 const modelDirectionLabel=value=>value==="BUY"?"BUY":value==="SELL"?"SELL":"NEUTRE";
+const hasLiveQuoteFor=market=>Boolean(liveQuote&&symbols[market]&&liveQuote.symbol===symbols[market]&&Number.isFinite(Number(liveQuote.price)));
 const priceDecimals=n=>{const value=Math.abs(Number(n));if(value>=1000)return 2;if(value>=100)return 3;if(value>=10)return 4;return 5;};
 const fmtEntry=n=>Number.isFinite(Number(n))?Number(n).toLocaleString("en-US",{minimumFractionDigits:priceDecimals(n),maximumFractionDigits:priceDecimals(n)}):"—";
 const signedDistance=(value,side)=>{
@@ -298,11 +300,29 @@ function closeSignalModal(){
   setTimeout(()=>{signalModal.hidden=true;},160);
 }
 
+function syncModeButtons(){
+  const forex=marketFamily==="forex";
+  document.querySelectorAll(".mode-filter").forEach(button=>{
+    const active=button.dataset.mode===tradingMode;
+    const unavailable=forex&&button.dataset.mode!=="swing";
+    button.classList.toggle("active",active);
+    button.setAttribute("aria-selected",String(active));
+    button.classList.toggle("unavailable",unavailable);
+    button.setAttribute("aria-disabled",String(unavailable));
+    button.title=unavailable?"Forex : analyse Swing H1/H4/D1 uniquement. Le Day M15/H1 est disponible sur les indices Deriv.":"";
+  });
+}
+
 function setTradingMode(mode){
-  if(marketFamily==="forex"&&mode==="day")mode="swing";
+  if(marketFamily==="forex"&&mode!=="swing"){
+    const notice=$("notice");
+    if(notice){notice.className="notice warning";notice.textContent="Forex : seul le Swing H1/H4/D1 est analysé. Passez sur Deriv pour le Day M15/H1.";}
+    return;
+  }
   tradingMode=mode;
+  if(marketFamily!=="forex")derivTradingMode=mode;
   if(mode!=="all")selectedMode=mode;
-  document.querySelectorAll(".mode-filter").forEach(button=>{const active=button.dataset.mode===mode;button.classList.toggle("active",active);button.setAttribute("aria-selected",String(active));});
+  syncModeButtons();
   $("updateFrequency").textContent="Ticks live · consolidation 1 min · serveur ~5 min";
   render();
 }
@@ -379,6 +399,7 @@ function setIndexFamily(family){
 }
 
 function setMarketFamily(family){
+  if(marketFamily!=="forex")derivTradingMode=tradingMode;
   marketFamily=family;
   $("syntheticFilter").classList.toggle("active",family==="synthetic");
   $("forexFilter").classList.toggle("active",family==="forex");
@@ -387,16 +408,15 @@ function setMarketFamily(family){
   if(family==="synthetic"){
     const markets=marketsForIndexFamily();
     selected=markets[0]||derivMarkets[0];
+    // Revenir à l'horizon choisi pour Deriv (Day, Swing ou Tous) au lieu de rester bloqué sur Swing.
+    tradingMode=derivTradingMode||"all";
+    if(tradingMode!=="all")selectedMode=tradingMode;
   }else{
     selected=forexMarkets[0];
     tradingMode="swing";
     selectedMode="swing";
-    document.querySelectorAll(".mode-filter").forEach(button=>{
-      const active=button.dataset.mode==="swing";
-      button.classList.toggle("active",active);
-      button.setAttribute("aria-selected",String(active));
-    });
   }
+  syncModeButtons();
   liveQuote=null;
   renderIndexFamilyFilter();
   fillMarketSelect();
@@ -788,11 +808,11 @@ function renderSelected(){
       swingBadge.textContent="";
     }
   }
-  const currentPrice=!selectedIsForex&&liveQuote?.symbol===symbols[selected]?liveQuote.price:row?.price;
+  const currentPrice=!selectedIsForex&&hasLiveQuoteFor(selected)?liveQuote.price:row?.price;
   $("livePrice").textContent=fmtEntry(currentPrice);
   $("liveChange").textContent=selectedIsForex
     ?(row?"Yahoo Finance indicatif · confirmer sur MT5":"Première analyse Forex en cours")
-    :liveQuote?.symbol===symbols[selected]?"Prix Deriv live":detected?`SETUP ${detectedSide} détecté`:row?`${row.technical_verdict} technique`:"Deriv · attente";
+    :hasLiveQuoteFor(selected)?"Prix Deriv live":detected?`SETUP ${detectedSide} détecté`:row?`${row.technical_verdict} technique`:"Deriv · attente";
   const displayedLevels=fresh?(verdict!=="ATTENDRE"&&row?.levels?row.levels:(detected?row?.projected_levels:null)):null;
   const levelValues=displayedLevels
     ?[displayedLevels.entry,displayedLevels.sl,displayedLevels.tp1,displayedLevels.tp2,displayedLevels.tp3,displayedLevels.tp4,displayedLevels.tp5]
@@ -864,7 +884,7 @@ function liveEntryProposal(row){
   const levels=row.projected_levels;
   if(!plan||!levels)return null;
   const side=setupSide(row);
-  const live=liveQuote&&symbols[row.market]&&liveQuote.symbol===symbols[row.market]?Number(liveQuote.price):Number(row.price);
+  const live=hasLiveQuoteFor(row.market)?Number(liveQuote.price):Number(row.price);
   if(!Number.isFinite(live))return {...plan,live_price:null,live_state:plan.status};
 
   const inZone=live>=Number(plan.zone_min)&&live<=Number(plan.zone_max);

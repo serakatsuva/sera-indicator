@@ -444,3 +444,21 @@ test('chart engine draws entry, stop, five targets and the signal marker', async
   expect(result.lines).toBe(9); // zone x2, SL, entry, TP1..TP5
   expect(result.marker).toContain('BUY');
 });
+
+test('Day M15/H1 horizon works on Deriv and is restored after visiting Forex', async ({ page }) => {
+  await page.locator('.mode-filter[data-mode="day"]').click();
+  await expect(page.locator('.mode-filter[data-mode="day"]')).toHaveClass(/active/);
+  const cards = page.locator('#results .result-card');
+  if (await cards.count()) {
+    await cards.first().click();
+    await expect(page.locator('#selectedTimeframe')).toContainText('M15');
+    await page.evaluate(() => closeSignalModal());
+    await page.waitForTimeout(300);
+  }
+  await page.locator('#forexFilter').click();
+  await expect(page.locator('.mode-filter[data-mode="day"]')).toHaveAttribute('aria-disabled', 'true');
+  await page.locator('.mode-filter[data-mode="day"]').click({ force: true });
+  await expect(page.locator('#notice')).toContainText('Swing');
+  await page.locator('#syntheticFilter').click();
+  await expect(page.locator('.mode-filter[data-mode="day"]')).toHaveClass(/active/);
+});
