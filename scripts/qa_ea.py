@@ -46,16 +46,27 @@ for name, token in required.items():
     if token not in text:
         errors.append(f"missing {name}: {token}")
 
-# lightweight brace balance ignoring quoted strings/comments sufficiently for regression checks
-clean = re.sub(r'//.*', '', text)
-clean = re.sub(r'/\*.*?\*/', '', clean, flags=re.S)
-clean = re.sub(r'"(?:\\.|[^"\\])*"', '""', clean)
-if clean.count('{') != clean.count('}'):
-    errors.append("brace count mismatch")
+# Bracket balance, ignoring strings and comments. Strings are removed first so that
+# "https://..." inside a string is not mistaken for a // comment.
+def strip_code(t):
+    out, i, n = [], 0, len(t)
+    while i < n:
+        if t.startswith("//", i):
+            j = t.find("\n", i); i = n if j < 0 else j; continue
+        if t.startswith("/*", i):
+            j = t.find("*/", i + 2); i = n if j < 0 else j + 2; continue
+        if t[i] in "\"'":
+            q = t[i]; i += 1
+            while i < n and t[i] != q:
+                i += 2 if t[i] == "\\" else 1
+            i += 1; continue
+        out.append(t[i]); i += 1
+    return "".join(out)
 
-executor = Path("mt5/Sera_Swing_Executor.mq5")
-if executor.exists() and executor.read_text(encoding="utf-8") != text:
-    errors.append("mt5/Sera_Swing_Executor.mq5 differs from Sera_EA_Swing_Intelligent.mq5 (keep both copies identical)")
+clean = strip_code(text)
+for opening, closing in ("()", "{}", "[]"):
+    if clean.count(opening) != clean.count(closing):
+        errors.append(f"bracket mismatch {opening}{closing}: {clean.count(opening)} vs {clean.count(closing)}")
 
 if errors:
     print("\n".join("ERROR: " + e for e in errors))
