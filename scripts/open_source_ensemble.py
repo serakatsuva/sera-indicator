@@ -556,6 +556,12 @@ def run(signals_path: Path, candles_path: Path, cache_path: Path, foundation: bo
         "version": MODEL_VERSION,
         "updated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "foundation_ran": bool(foundation),
+        # Last time Chronos-2/TimesFM actually ran: the workflow uses it to schedule them
+        # every ~15 minutes, whatever triggered the cycle (cron, chain or manual).
+        "foundation_updated_at": (
+            datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            if foundation else previous_cache.get("foundation_updated_at")
+        ),
         "markets": cache_markets,
     })
 

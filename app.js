@@ -18,7 +18,7 @@ function appMarketFamily(name){
   if(n.includes("jump"))return"jump";
   if(n.includes("step"))return"step";
   if(n.includes("range break"))return"range";
-  if(n.includes("dex"))return"dex";
+  if(/\bdex\b/.test(n))return"dex"; // "Index" contient aussi "dex"
   if(n.includes("drift switch"))return"drift";
   if(n.includes("volswitch"))return"volswitch";
   if(n.includes("volatility")||n.includes("high frequency vol")||n.includes("vol over "))return n.includes("(1s)")?"volatility1s":"volatility";
@@ -31,7 +31,7 @@ function appLooksSynthetic(item){
   const subgroup=String(item?.subgroup||item?.subgroup_type||"").toLowerCase();
   const name=String(item?.underlying_symbol_name||item?.display_name||item?.underlying_symbol||item?.symbol||"").toLowerCase();
   return market.includes("synthetic")||market.includes("derived")||submarket.includes("synthetic")||subgroup.includes("synthetic")||
-    /(boom|crash|volatility|jump|step|range break|dex|drift switch|volswitch|high frequency vol|exponential growth|vol over )/.test(name);
+    /(boom|crash|volatility|jump|step|range break|\bdex\b|drift switch|volswitch|high frequency vol|exponential growth|vol over )/.test(name);
 }
 
 function discoverAppDerivMarkets(){
@@ -209,7 +209,9 @@ const swingBadgeText=row=>{
   return `${prefix} ${kind} · ${swingDurationLabel(timing)}`;
 };
 const hasDerivResults=()=>payload?.ok===true&&["ai_analyzed","autonomous_analyzed","smart_local","technical_only"].includes(payload?.status)&&Array.isArray(payload?.markets);
-const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<10;
+// Le moteur tourne en continu (~6–10 min par cycle) : une analyse reste exploitable 20 min.
+const SERVER_FRESH_MINUTES=20;
+const resultsAreFresh=()=>hasDerivResults()&&ageMinutes(payload.updated_at)<SERVER_FRESH_MINUTES;
 
 $("refreshButton").addEventListener("click",()=>loadSignals(true));
 $("marketSelect").addEventListener("change",event=>{
@@ -323,7 +325,7 @@ function setTradingMode(mode){
   if(marketFamily!=="forex")derivTradingMode=mode;
   if(mode!=="all")selectedMode=mode;
   syncModeButtons();
-  $("updateFrequency").textContent="Ticks live · consolidation 1 min · serveur ~5 min";
+  $("updateFrequency").textContent="Ticks live · consolidation 1 min · serveur en continu (~6–10 min)";
   render();
 }
 
@@ -553,8 +555,11 @@ async function loadSignals(manual=false){
     const stamp=Date.now();
     const remote=`https://raw.githubusercontent.com/serakatsuva/sera-indicator/main/data/signals.json?t=${stamp}`;
     const local=`./data/signals.json?t=${stamp}`;
-    let response=await fetch(remote,{cache:"no-store"});
-    if(!response.ok)response=await fetch(local,{cache:"no-store"});
+    // GitHub raw est le plus frais; si le réseau le bloque (erreur, pas seulement HTTP),
+    // on retombe sur la copie publiée avec le site au lieu d'afficher une page vide.
+    let response=null;
+    try{response=await fetch(remote,{cache:"no-store"});}catch{response=null;}
+    if(!response?.ok)response=await fetch(local,{cache:"no-store"});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     payload=await response.json();
   }catch{

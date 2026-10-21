@@ -43,7 +43,7 @@ function marketFamilyFromName(name){
   if(n.includes('jump'))return 'jump';
   if(n.includes('step'))return 'step';
   if(n.includes('range break'))return 'range';
-  if(n.includes('dex'))return 'dex';
+  if(/\bdex\b/.test(n))return 'dex'; // "Index" also contains "dex"
   if(n.includes('drift switch'))return 'drift';
   if(n.includes('volswitch'))return 'volswitch';
   if(n.includes('volatility')||n.includes('high frequency vol')||n.includes('vol over '))return n.includes('(1s)')?'volatility1s':'volatility';
@@ -66,7 +66,7 @@ function looksLikeSynthetic(item){
   if(market.includes('synthetic')||market.includes('derived'))return true;
   if(submarket.includes('synthetic')||submarket.includes('random')||submarket.includes('continuous'))return true;
   if(subgroup.includes('synthetic')||subgroup.includes('derived'))return true;
-  return /(boom|crash|volatility|jump|step|range break|dex|drift switch|volswitch|high frequency vol|exponential growth|vol over )/.test(name);
+  return /(boom|crash|volatility|jump|step|range break|\bdex\b|drift switch|volswitch|high frequency vol|exponential growth|vol over )/.test(name);
 }
 
 async function discoverDerivMarkets(){
@@ -1055,6 +1055,8 @@ async function selfTest(){
   const fxRows=Array.from({length:48},(_,i)=>({open:1,high:1,low:1,close:1,epoch:Date.UTC(2026,0,5,0)/1000+i*3600}));
   const fxDays=aggregateCandles(fxRows,86400,7200).map(r=>new Date(r.epoch*1000).getUTCHours());
   if(!fxDays.length||fxDays.some(h=>h!==22))throw new Error('Forex D1 alignment self-test failed');
+  const families=['Volatility 75 Index','Volatility 75 (1s) Index','DEX 600 UP Index','Drift Switch Index 20','Step Index'].map(marketFamilyFromName);
+  if(families.join()!=='volatility,volatility1s,dex,drift,step')throw new Error('Market family self-test failed: '+families.join());
   console.log(ENGINE_VERSION+' self-test passed.');
 }
 

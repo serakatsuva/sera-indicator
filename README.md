@@ -209,3 +209,17 @@ Si la bibliothèque ne se charge pas, l’ancien graphique canvas reprend automa
 
 - Les heures vides renvoyées par Yahoo (`null`) devenaient des bougies à **0** dans le moteur et faussaient l’ATR, les plus bas de swing et le D1 des paires Forex. Elles sont maintenant écartées.
 - `liveEntryProposal` plantait sur une paire Forex avec setup détecté lorsqu’aucun prix Deriv live n’était disponible ; corrigé.
+
+## Analyse en continu (quasi temps réel)
+
+GitHub ne garantit pas les tâches planifiées : sur ce dépôt, le `cron` toutes les 5 minutes ne se déclenchait en pratique que toutes les 3 à 5 heures. Le workflow **Sera Autonomous Engine** relance donc lui-même le cycle suivant à la fin de chaque exécution (étape « Chain next cycle ») : une nouvelle analyse est publiée environ toutes les **6 à 10 minutes**, 24h/24. Le `cron` ne sert plus que de filet de sécurité pour relancer la chaîne si elle s’arrête.
+
+- XGBoost et LightGBM tournent à chaque cycle ; Chronos-2 et TimesFM au plus toutes les ~14 minutes (horodatage `foundation_updated_at` dans `data/open-source-ai.json`).
+- L’interface considère une analyse serveur comme exploitable pendant **20 minutes** ; les prix Deriv restent en direct par WebSocket.
+- **Pause / reprise** : dans GitHub → *Settings* → *Secrets and variables* → *Actions* → *Variables*, créer `SERA_REALTIME` = `off` pour arrêter la chaîne ; supprimer la variable (puis lancer le workflow une fois via *Run workflow*) pour la relancer.
+
+### Autres corrections
+
+- Les indices **Volatility** étaient classés « DEX » (le mot « Index » contient « dex »), ce qui faussait le consensus de famille du moteur et les filtres de l’interface.
+- Si `raw.githubusercontent.com` est injoignable, l’app utilise maintenant la copie publiée avec le site au lieu d’afficher une page vide.
+- Les tests d’interface obsolètes ont été mis à jour : toute la suite Playwright passe.
