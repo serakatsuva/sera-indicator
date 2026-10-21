@@ -151,6 +151,17 @@ if memory_path.exists():
 
 if errors:
     print("\n".join("ERROR: " + e for e in errors))
+    # Also emit GitHub annotations so failures are visible in the Actions summary/API
+    # (grouped by rule, with a count, to stay under the annotation limit).
+    import os, re
+    if os.environ.get("GITHUB_ACTIONS"):
+        groups = {}
+        for e in errors:
+            rule = re.sub(r"^[^:]*: ", "", e)
+            rule = re.sub(r"[-+]?\d+(\.\d+)?", "#", rule)
+            groups.setdefault(rule, []).append(e)
+        for rule, items in sorted(groups.items(), key=lambda kv: -len(kv[1]))[:9]:
+            print(f"::error title=Signal QA ({len(items)}x)::{items[0]}")
     raise SystemExit(1)
 
 print(f"Signal QA passed: {len(markets)} rows checked")
