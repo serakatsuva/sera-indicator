@@ -64,8 +64,8 @@ test('opening a signal shows entry levels and action state', async ({ page }) =>
 });
 
 test('EA links remain available in compact bar', async ({ page }) => {
-  const download = page.locator('a[href*="Sera_EA_Swing_Intelligent.mq5"]');
-  await expect(download).toBeVisible();
+  await expect(page.locator('a[href*="Sera_EA_Swing_Intelligent_Deriv.mq5"]')).toBeVisible();
+  await expect(page.locator('a[href*="Sera_EA_Swing_Intelligent_Weltrade.mq5"]')).toBeVisible();
   await expect(page.locator('#showMt5Setup')).toBeVisible();
 });
 

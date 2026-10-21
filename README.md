@@ -15,9 +15,9 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 `USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
-## Exécution MT5 — Sera EA Swing Intelligent v2.20
+## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.20
 
-Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`).
+Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade.mq5`.
 
 L’EA prend **automatiquement** les Swing publiés par le moteur : ordre au marché sur `EXECUTE_NOW`, ordre limite dans la zone d’entrée sur `WAIT_RETRACE`, puis gestion TP1–TP5.
 
@@ -76,9 +76,9 @@ L’EA résout le symbole MT5 à partir du nom de marché et du code Deriv avant
 
 GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le terminal MT5 déjà authentifié et lit les signaux publiés dans `data/signals.json`.
 
-## Sera Weltrade SyntX EA — indices synthétiques Weltrade
+## Sera EA Swing Intelligent Weltrade — indices synthétiques Weltrade
 
-`mt5/Sera_Weltrade_SyntX_EA.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ni GitHub.
+`mt5/Sera_EA_Swing_Intelligent_Weltrade.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ni GitHub.
 
 **Indices détectés automatiquement** (ou liste manuelle dans `SymbolsList`) :
 
@@ -256,7 +256,7 @@ Cette couche évite que Sera soit seulement un empilement d’indicateurs : il c
 - **Garde-fou de fraîcheur.** Si la dernière bougie d’entrée clôturée est trop ancienne (Forex le week-end, flux interrompu), le marché reste sur `ATTENDRE` et aucun setup n’est affiché (`freshness_gate`, `candle_age_minutes`).
 - **Forex H4/D1 alignés sur 22:00 UTC** (clôture New York), comme les graphiques des brokers MT5, au lieu de minuit UTC.
 - **Bougies ouvertes exclues** dans tous les cas lors de l’agrégation H4/D1.
-- **`mt5/Sera_Swing_Executor.mq5` corrigé** : il modifiait des paramètres `const` (erreur de compilation MQL5). Il est maintenant identique à `Sera_EA_Swing_Intelligent.mq5`, et la QA vérifie que les deux copies restent identiques.
+- **`mt5/Sera_Swing_Executor.mq5` corrigé** : il modifiait des paramètres `const` (erreur de compilation MQL5). Il est maintenant identique à `Sera_EA_Swing_Intelligent_Deriv.mq5` (anciennement `Sera_EA_Swing_Intelligent.mq5`), et la QA vérifie que les deux copies restent identiques.
 - Les commits automatiques de `data/` ne relancent plus les tests navigateur Playwright à chaque cycle de 5 minutes.
 
 ## Graphique de position — Sera Chart Engine

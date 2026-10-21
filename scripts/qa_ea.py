@@ -2,7 +2,7 @@
 from pathlib import Path
 import re
 
-text = Path("mt5/Sera_EA_Swing_Intelligent.mq5").read_text(encoding="utf-8")
+text = Path("mt5/Sera_EA_Swing_Intelligent_Deriv.mq5").read_text(encoding="utf-8")
 errors = []
 
 version = re.search(r'#property\s+version\s+"([^"]+)"', text)
@@ -82,7 +82,11 @@ for opening, closing in ("()", "{}", "[]"):
     if clean.count(opening) != clean.count(closing):
         errors.append(f"bracket mismatch {opening}{closing}: {clean.count(opening)} vs {clean.count(closing)}")
 
-swx_path = Path("mt5/Sera_Weltrade_SyntX_EA.mq5")
+executor = Path("mt5/Sera_Swing_Executor.mq5")
+if executor.exists() and executor.read_text(encoding="utf-8") != text:
+    errors.append("mt5/Sera_Swing_Executor.mq5 differs from Sera_EA_Swing_Intelligent_Deriv.mq5 (keep both copies identical)")
+
+swx_path = Path("mt5/Sera_EA_Swing_Intelligent_Weltrade.mq5")
 if swx_path.exists():
     swx = swx_path.read_text(encoding="utf-8")
     for name, token in {

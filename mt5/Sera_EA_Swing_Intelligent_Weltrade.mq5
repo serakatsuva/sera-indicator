@@ -1,4 +1,4 @@
-#property copyright "Sera Weltrade SyntX EA"
+#property copyright "Sera EA Swing Intelligent Weltrade"
 #property version   "1.00"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
@@ -1180,7 +1180,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera SyntX v1.00"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera SyntX v1.00");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.00"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.00");
    if(!sent){ Print("SyntX: ordre refuse ",d.symbol," ",trade.ResultRetcodeDescription()); return false; }
    StoreLevel("SWX_TRADEDBAR_",d.symbol,(double)d.barTime);
    StoreTradeLevels(d.symbol,d.symbol,d.entry,d.tp1,d.tp2,d.tp3,d.tp4,d.tp5,final_tp,"swing");
@@ -1223,7 +1223,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
          if(g_decisions[order[j]].score>g_decisions[order[i]].score){ int t=order[i]; order[i]=order[j]; order[j]=t; }
    int signals=0;
    for(int i=0;i<n;i++) if(g_decisions[i].verdict=="BUY" || g_decisions[i].verdict=="SELL") signals++;
-   string text="Sera Weltrade SyntX v1.00 — "+mode_label+(can_trade?" — auto-trade ACTIF":" — alertes seulement")+
+   string text="Sera EA Swing Intelligent Weltrade v1.00 — "+mode_label+(can_trade?" — auto-trade ACTIF":" — alertes seulement")+
       "\nIndices suivis: "+IntegerToString(n)+" · signaux confirmes: "+IntegerToString(signals)+
       " · positions "+IntegerToString(OpenSeraPositions())+"/"+IntegerToString(AllowedOpenPositions())+
       " · risque ouvert "+DoubleToString(OpenSeraRiskUSD(),2)+
@@ -1280,7 +1280,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera Weltrade SyntX v1.00: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v1.00: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Equivalence test: Weltrade SyntX EA analysis engine (MQL5) vs the production engine (JS).
 
-The MQL5 analysis section of mt5/Sera_Weltrade_SyntX_EA.mq5 is compiled as C++ through a
+The MQL5 analysis section of mt5/Sera_EA_Swing_Intelligent_Weltrade.mq5 is compiled as C++ through a
 small shim (tests/mql/shim.h), then fed the same candles / indicators as the JavaScript
 engine in scripts/update-signals.mjs. Three suites must match value for value:
   1. indicators of one timeframe (EMA, Wilder RSI/ATR/ADX, MACD, structure, regime...),
@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TESTS = ROOT / "tests" / "mql"
 BUILD = TESTS / "build"
-EA = ROOT / "mt5" / "Sera_Weltrade_SyntX_EA.mq5"
+EA = ROOT / "mt5" / "Sera_EA_Swing_Intelligent_Weltrade.mq5"
 ENGINE_JS = ROOT / "scripts" / "update-signals.mjs"
 SEP = "// ===================================================================================\n"
 

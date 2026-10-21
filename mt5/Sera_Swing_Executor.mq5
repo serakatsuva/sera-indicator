@@ -1,4 +1,4 @@
-#property copyright "Sera EA Swing Intelligent"
+#property copyright "Sera EA Swing Intelligent Deriv"
 #property version   "2.20"
 #property strict
 
@@ -1382,8 +1382,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera EA Swing Intelligent v2.20 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
-   Print("Sera EA Swing Intelligent v2.20: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Comment("Sera EA Swing Intelligent Deriv v2.20 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
+   Print("Sera EA Swing Intelligent Deriv v2.20: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
