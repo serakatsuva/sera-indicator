@@ -10,7 +10,13 @@ if not version:
     errors.append("EA version missing")
 
 required = {
-    "real account enabled": "AllowRealAccount=true",
+    "demo by default": "AllowRealAccount=false",
+    "fresh signals only": "MaximumSignalAgeMinutes=20",
+    "broker H1/H4 confirmation": "BrokerConfirms(symbol,verdict",
+    "smart exit on reversal or max holding": "SmartExit(setup_id,symbol,mode,verdict,confidence)",
+    "forex weekend gap guard": "WeekendGapRisk",
+    "per-signal freshness": "freshness_gate",
+    "forex symbol resolution": "FRX\"+pair",
     "automatic trading enabled": "EnableAutomaticTrading=true",
     "execute now guard": 'execution_state=="EXECUTE_NOW"',
     "OSS guard": "UseOpenSourceModelGuard=true",

@@ -15,15 +15,29 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 `USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
-## Exécution Deriv MT5 — mode réel
+## Exécution MT5 — Sera EA Swing Intelligent v1.90
 
-Le dossier `mt5/` contient `Sera_Swing_Executor.mq5`.
+Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`).
 
-La version publiée **v1.80** est configurée pour fonctionner directement sur le compte MT5 connecté :
+L’EA prend **automatiquement** les Swing publiés par le moteur : ordre au marché sur `EXECUTE_NOW`, ordre limite dans la zone d’entrée sur `WAIT_RETRACE`, puis gestion TP1–TP5.
+
+**Compte démo par défaut** : `AllowRealAccount = false`. Après quelques jours de validation en démo, passer ce paramètre à `true` pour le compte réel.
+
+Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoriser WebRequest pour `https://serakatsuva.github.io`, attacher l’EA sur **un seul** graphique et activer **Algo Trading**.
+
+### Nouveautés v1.90
+
+- **Signaux frais uniquement** : `MaximumSignalAgeMinutes = 20` (le moteur publie en continu), et chaque marché dont la dernière bougie est trop ancienne est ignoré (`freshness_gate`).
+- **Confirmation sur les données du broker** (`UseBrokerConfirmation`) : avant toute entrée, les EMA20/EMA50 H1 et H4 calculées sur les bougies du broker doivent aller dans le sens du signal. Sinon l’entrée est reportée au cycle suivant.
+- **Sortie intelligente** : fermeture si le serveur inverse le signal de ce setup (`CloseOnSignalReversal`) ou si la position dépasse la durée maximale (`MaximumSwingHoldingHours = 240`, `MaximumDayHoldingHours = 48`).
+- **Pas de nouvelle entrée Forex/CFD du vendredi 19:00 UTC au dimanche 22:00 UTC** (`AvoidForexWeekendGap`), pour éviter les gaps du week-end. Les indices synthétiques (24/7) ne sont pas concernés.
+- **Symboles Forex reconnus chez tous les brokers** : `EUR/USD`, `EURUSD-STD`, `EURUSD`, `EURUSD.m`, `frxEURUSD`…
+- Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
+- Option `TradeDaySignals` (désactivée par défaut) pour prendre aussi les signaux Day M15/H1.
+
+### Garde-fous conservés
 
 - `EnableAutomaticTrading = true`
-- `AllowRealAccount = true`
-- `AllowSmartLocalExecution = true`
 - risque par trade : **0,50 %**
 - perte maximale calculée par trade : **1 USD**
 - lot maximum : **0,05**
