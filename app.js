@@ -94,6 +94,7 @@ let lastMinuteValidationAt=0;
 let marketFamily="synthetic";
 let selectedIndexFamily=localStorage.getItem("seraIndexFamily")||"all";
 let tradingMode="all";
+let lastSignalsRenderAt=0;
 let derivTradingMode="all";
 let selectedMode="day";
 let trendWatchEnabled=localStorage.getItem("seraTrendWatchEnabled")==="1";
@@ -423,6 +424,7 @@ function setMarketFamily(family){
   renderIndexFamilyFilter();
   fillMarketSelect();
   if(family==="synthetic"){connectLivePrice();bootstrapLiveIntelligenceHistory();}else if(liveSocket){liveSocket.close();liveSocket=null;}
+  connectForexLive();
   render();
 }
 
@@ -551,6 +553,7 @@ function renderReadyAlerts(){
 async function loadSignals(manual=false){
   const button=$("refreshButton");
   if(manual){button.disabled=true;button.innerHTML="<span>↻</span> Actualisation…";}
+  let unchanged=false;
   try{
     const stamp=Date.now();
     const remote=`https://raw.githubusercontent.com/serakatsuva/sera-indicator/main/data/signals.json?t=${stamp}`;
@@ -561,12 +564,24 @@ async function loadSignals(manual=false){
     try{response=await fetch(remote,{cache:"no-store"});}catch{response=null;}
     if(!response?.ok)response=await fetch(local,{cache:"no-store"});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
-    payload=await response.json();
+    const next=await response.json();
+    // Rien de nouveau : on évite de reconstruire toutes les cartes (le live continue).
+    if(!manual&&payload?.updated_at&&next?.updated_at===payload.updated_at&&Date.now()-lastSignalsRenderAt<60000){
+      unchanged=true;
+    }else{
+      const forexMapBefore=JSON.stringify(payload?.deriv_forex_symbols||null);
+      payload=next;
+      lastSignalsRenderAt=Date.now();
+      if(marketFamily==="forex"&&JSON.stringify(payload?.deriv_forex_symbols||null)!==forexMapBefore)connectForexLive();
+    }
   }catch{
-    payload={ok:false,status:"load_error",source_broker:"Deriv",note:"Impossible de charger les derniers résultats IA."};
+    // Une coupure passagère ne doit pas effacer la dernière analyse affichée.
+    if(manual||!payload?.ok)payload={ok:false,status:"load_error",source_broker:"Deriv",note:"Impossible de charger les derniers résultats IA."};
+    else unchanged=true;
   }finally{
     button.disabled=false;
     button.innerHTML="<span>↻</span> Actualiser les signaux";
+    if(unchanged){updateMetaClocks();return;}
     render();
     captureReadySignalAlerts();
     evaluateTrendWatch();
@@ -751,7 +766,9 @@ function resultCard(row,fresh){
   const actionChip=`<div class="trade-action-chip ${action.side} ${action.blink?"blink":""}"><i></i><strong>${escapeHtml(action.label)}</strong><span>${escapeHtml(action.detail)}</span></div>`;
   const live=isForex?null:liveScannerState(row);
   const liveStrip=isForex
-    ?`<div class="live-scan-row wait" data-live-scan><div class="live-scan-top"><span><i></i> SERVEUR</span><b data-live-price>${fmtEntry(row.price)}</b></div><div class="live-scan-motion" data-live-motion>INDICATIF · CONFIRMER MT5</div></div>`
+    ?(forexLiveFresh(row.market)
+      ?`<div class="live-scan-row wait live" data-live-scan><div class="live-scan-top"><span><i></i> <em data-live-source>LIVE</em></span><b data-live-price>${fmtEntry(forexLiveQuotes.get(row.market).price)}</b></div><div class="live-scan-motion" data-live-motion>TICKS DERIV · CONFIRMER MT5</div></div>`
+      :`<div class="live-scan-row wait" data-live-scan><div class="live-scan-top"><span><i></i> <em data-live-source>SERVEUR</em></span><b data-live-price>${fmtEntry(row.price)}</b></div><div class="live-scan-motion" data-live-motion>INDICATIF · CONFIRMER MT5</div></div>`)
     :`<div class="live-scan-row ${live.cls}" data-live-scan><div class="live-scan-top"><span><i></i> LIVE</span><b data-live-price>${live.price}</b></div><div class="live-scan-motion" data-live-motion>${escapeHtml(live.label)}</div></div>`;
   card.dataset.liveMarket=row.market;
   card.dataset.liveMode=row.mode;
@@ -813,7 +830,7 @@ function renderSelected(){
       swingBadge.textContent="";
     }
   }
-  const currentPrice=!selectedIsForex&&hasLiveQuoteFor(selected)?liveQuote.price:row?.price;
+  const currentPrice=!selectedIsForex&&hasLiveQuoteFor(selected)?liveQuote.price:selectedIsForex&&forexLiveFresh(selected)?forexLiveQuotes.get(selected).price:row?.price;
   $("livePrice").textContent=fmtEntry(currentPrice);
   $("liveChange").textContent=selectedIsForex
     ?(row?"Yahoo Finance indicatif · confirmer sur MT5":"Première analyse Forex en cours")
@@ -2068,6 +2085,88 @@ function connectLivePrice(){
   }
 }
 
+/* ---------- Forex en direct (ticks Deriv) ----------
+ * Le serveur analyse le Forex sur bougies H1 clôturées (Yahoo). Ici, le navigateur
+ * s'abonne aux ticks Deriv des paires disponibles (deriv_forex_symbols publié par le
+ * moteur) pour faire vivre le prix et la bougie H1 en cours du graphique.
+ * Prix indicatif : la décision reste celle du serveur, à confirmer sur MT5. */
+const forexLiveQuotes=new Map();
+let forexSocket=null,forexReconnectTimer=null,forexPingTimer=null,forexUiFrame=0;
+
+function derivForexMap(){
+  const published=payload?.deriv_forex_symbols;
+  if(published&&typeof published==="object"&&Object.keys(published).length)return published;
+  // Avant la première publication : tentative sur le format standard Deriv (frxEURUSD).
+  return Object.fromEntries(forexMarkets.map(name=>[name,`frx${name.replace("/","")}`]));
+}
+
+function stopForexLive(){
+  if(forexReconnectTimer){clearTimeout(forexReconnectTimer);forexReconnectTimer=null;}
+  if(forexPingTimer){clearInterval(forexPingTimer);forexPingTimer=null;}
+  const socket=forexSocket;forexSocket=null;
+  if(socket){try{socket.close();}catch{}}
+}
+
+function connectForexLive(){
+  stopForexLive();
+  if(marketFamily!=="forex")return;
+  const map=derivForexMap();
+  const bySymbol=new Map(Object.entries(map).map(([name,symbol])=>[symbol,name]));
+  let socket;
+  try{socket=new WebSocket(DERIV_WS_URL);}catch{return;}
+  forexSocket=socket;
+  socket.addEventListener("open",()=>{
+    if(socket!==forexSocket)return;
+    let req=4200;
+    for(const [name,symbol] of Object.entries(map))socket.send(JSON.stringify({ticks:symbol,subscribe:1,req_id:++req,passthrough:{market:name}}));
+    forexPingTimer=setInterval(()=>{try{socket.send(JSON.stringify({ping:1}));}catch{}},30000);
+  });
+  socket.addEventListener("message",event=>{
+    if(socket!==forexSocket)return;
+    let message;try{message=JSON.parse(event.data);}catch{return;}
+    if(message.error||!message.tick?.quote)return; // paire indisponible : on garde le prix serveur
+    const symbol=String(message.tick.symbol||message.echo_req?.ticks||"");
+    const market=bySymbol.get(symbol)||message.passthrough?.market;
+    const price=Number(message.tick.quote),epoch=Number(message.tick.epoch)||Date.now()/1000;
+    if(!market||!Number.isFinite(price)||price<=0)return;
+    forexLiveQuotes.set(market,{price,epoch,symbol});
+    updateSeriesCandle(market,"H1",3600,price,epoch);
+    scheduleForexUi(market);
+  });
+  socket.addEventListener("close",()=>{
+    if(socket!==forexSocket)return;
+    if(forexPingTimer){clearInterval(forexPingTimer);forexPingTimer=null;}
+    forexSocket=null;
+    if(marketFamily==="forex")forexReconnectTimer=setTimeout(connectForexLive,4000);
+  });
+  socket.addEventListener("error",()=>{try{socket.close();}catch{}});
+}
+
+function forexLiveFresh(market){
+  const quote=forexLiveQuotes.get(market);
+  return Boolean(quote&&Date.now()/1000-Number(quote.epoch)<120);
+}
+
+function scheduleForexUi(market){
+  document.querySelectorAll(`.result-card[data-live-market="${CSS.escape(market)}"]`).forEach(card=>{
+    const quote=forexLiveQuotes.get(market);
+    const price=card.querySelector("[data-live-price]");
+    if(price)price.textContent=fmtEntry(quote.price);
+    const source=card.querySelector("[data-live-source]");
+    if(source)source.textContent="LIVE";
+    const motion=card.querySelector("[data-live-motion]");
+    if(motion)motion.textContent="TICKS DERIV · CONFIRMER MT5";
+    card.querySelector("[data-live-scan]")?.classList.add("live");
+  });
+  if(market!==selected||forexUiFrame)return;
+  forexUiFrame=requestAnimationFrame(()=>{
+    forexUiFrame=0;
+    const quote=forexLiveQuotes.get(selected);
+    if(quote){$("livePrice").textContent=fmtEntry(quote.price);$("liveChange").textContent="Live H1 · ticks Deriv";}
+    renderRealtimeCandles(selectedSignalRow());
+  });
+}
+
 function ensureMarketOption(name){
   if([...$("marketSelect").options].some(option=>option.value===name))return;
   const option=document.createElement("option");option.value=name;option.textContent=name;$("marketSelect").appendChild(option);
@@ -2124,7 +2223,7 @@ discoverAppDerivMarkets().then(()=>{
 });
 // The heavier server payload is refreshed on its own five-minute cadence;
 // Deriv ticks and the browser-side validation remain continuous between pulls.
-setInterval(()=>loadSignals(false),60000);
+setInterval(()=>loadSignals(false),20000); // nouvelles analyses serveur affichées en ~20 s
 setInterval(updateMetaClocks,1000);
 setInterval(()=>{
   if(marketFamily!=="synthetic")return;

@@ -69,6 +69,10 @@ function looksLikeSynthetic(item){
   return /(boom|crash|volatility|jump|step|range break|\bdex\b|drift switch|volswitch|high frequency vol|exponential growth|vol over )/.test(name);
 }
 
+// Deriv forex symbols really offered by the public API (e.g. 'EUR/USD' -> 'frxEURUSD').
+// Published in signals.json so the web app subscribes to live Forex ticks only for these.
+let DERIV_FOREX_SYMBOLS={};
+
 async function discoverDerivMarkets(){
   return new Promise(resolve=>{
     const ws=new WebSocket(DERIV_WS);
@@ -84,6 +88,12 @@ async function discoverDerivMarkets(){
       let message;try{message=JSON.parse(String(event.data));}catch{return;}
       if(message.error)return done(MARKETS);
       if(!Array.isArray(message.active_symbols))return;
+      const wantedForex=new Set(FOREX_MARKETS.map(m=>m.market));
+      for(const item of message.active_symbols){
+        const symbol=String(item.underlying_symbol||item.symbol||'');
+        const match=/^frx([A-Z]{3})([A-Z]{3})$/.exec(symbol);
+        if(match&&wantedForex.has(`${match[1]}/${match[2]}`))DERIV_FOREX_SYMBOLS[`${match[1]}/${match[2]}`]=symbol;
+      }
       const discovered=message.active_symbols
         .filter(looksLikeSynthetic)
         .map(item=>{
@@ -1068,7 +1078,7 @@ async function main(){
   if(process.argv.includes('--self-test'))return selfTest();
   const previous=await readPreviousPayload();
   MARKETS=await discoverDerivMarkets();
-  console.log(`Deriv discovery found ${MARKETS.length} synthetic/derived markets.`);
+  console.log(`Deriv discovery found ${MARKETS.length} synthetic/derived markets and ${Object.keys(DERIV_FOREX_SYMBOLS).length} live Forex pairs.`);
   const [derivCandles,forexCandles]=await Promise.all([fetchDerivCandles(),fetchForexCandles()]);
   const candles=new Map([...derivCandles,...forexCandles]);
   const swingMode=MODES.find(mode=>mode.id==='swing');
@@ -1103,7 +1113,8 @@ async function main(){
     requested_forex_markets:FOREX_MARKETS.length,available_forex_markets:new Set(markets.filter(row=>row.asset_class==='forex').map(row=>row.market)).size,
     markets_count:markets.length,analysis_interval_minutes:5,trend_changes:trendChanges,trend_flips:trendFlips,
     family_context_groups:familyContexts.size,
-    confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,markets,
+    confirmed_signals:markets.filter(m=>m.final_verdict!=='ATTENDRE').length,
+    deriv_forex_symbols:DERIV_FOREX_SYMBOLS,markets,
     high_conviction_swing:{timeframes:['H1','H4','D1'],minimum_score:84,minimum_consensus_percent:72,minimum_conditions_percent:80,confirmation_cycles:2},
     safety:"Le mode swing haute conviction réduit les signaux avec H1/H4/D1, score 84/100 et confirmation 2/2. Il vise à filtrer les retournements, sans pouvoir les éliminer ni garantir un gain. Les cotations Forex Yahoo sont indicatives et doivent être confirmées sur le broker avant exécution."
   };

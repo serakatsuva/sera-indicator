@@ -462,3 +462,32 @@ test('Day M15/H1 horizon works on Deriv and is restored after visiting Forex', a
   await page.locator('#syntheticFilter').click();
   await expect(page.locator('.mode-filter[data-mode="day"]')).toHaveClass(/active/);
 });
+
+test('Forex prices and chart update in real time from Deriv ticks', async ({ page }) => {
+  await page.routeWebSocket(/derivws/, ws => {
+    ws.onMessage(message => {
+      const req = JSON.parse(String(message));
+      if (req.ticks === 'frxEURUSD') {
+        let price = 1.1;
+        const timer = setInterval(() => {
+          price += 0.0005;
+          try { ws.send(JSON.stringify({ msg_type: 'tick', tick: { symbol: 'frxEURUSD', quote: Number(price.toFixed(5)), epoch: Math.floor(Date.now() / 1000) }, echo_req: req })); }
+          catch { clearInterval(timer); }
+        }, 200);
+      }
+    });
+  });
+  // WebSocket routes only apply to pages loaded after they are installed.
+  await page.reload();
+  await dismissWelcome(page);
+  await page.waitForSelector('#results');
+  await page.locator('#forexFilter').click();
+  const card = page.locator('.result-card[data-live-market="EUR/USD"]');
+  await expect(card.locator('[data-live-source]')).toHaveText('LIVE', { timeout: 8000 });
+  await card.click();
+  await expect(page.locator('#liveChange')).toContainText('ticks Deriv');
+  const first = await page.locator('#livePrice').textContent();
+  await page.waitForTimeout(800);
+  const second = await page.locator('#livePrice').textContent();
+  expect(second).not.toBe(first);
+});

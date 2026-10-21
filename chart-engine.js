@@ -88,14 +88,18 @@
   }
 
   function seriesFor(ctx,tf){
-    if(ctx.isForex)return normalize(ctx.row?.chart_candles||[]);
-    const history=state.history.get(`${ctx.symbol}:${tf}`)||[];
+    const history=ctx.isForex?normalize(ctx.row?.chart_candles||[]):(state.history.get(`${ctx.symbol}:${tf}`)||[]);
     const live=normalize(ctx.liveSeries(tf));
     if(!history.length)return live;
-    // Les bougies live (ticks) complètent ou remplacent la fin de l'historique.
-    const merged=new Map(history.map(c=>[c.epoch,c]));
-    const firstHistory=history[0].epoch;
-    for(const c of live)if(c.epoch>=firstHistory)merged.set(c.epoch,c);
+    // Les bougies clôturées de l'historique font foi. Les ticks live prolongent la
+    // dernière bougie (ouverture conservée) et créent les bougies plus récentes.
+    const merged=new Map(history.map(c=>[c.epoch,{...c}]));
+    const lastEpoch=history.at(-1).epoch;
+    for(const c of live){
+      if(c.epoch<lastEpoch)continue;
+      const base=merged.get(c.epoch);
+      merged.set(c.epoch,base?{...base,high:Math.max(base.high,c.high),low:Math.min(base.low,c.low),close:c.close}:c);
+    }
     return [...merged.values()].sort((a,b)=>a.epoch-b.epoch).slice(-HISTORY_COUNT);
   }
 

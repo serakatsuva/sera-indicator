@@ -223,3 +223,10 @@ GitHub ne garantit pas les tâches planifiées : sur ce dépôt, le `cron` toute
 - Les indices **Volatility** étaient classés « DEX » (le mot « Index » contient « dex »), ce qui faussait le consensus de famille du moteur et les filtres de l’interface.
 - Si `raw.githubusercontent.com` est injoignable, l’app utilise maintenant la copie publiée avec le site au lieu d’afficher une page vide.
 - Les tests d’interface obsolètes ont été mis à jour : toute la suite Playwright passe.
+
+## Temps réel dans l’application
+
+- **Indices Deriv** : prix et bougies en direct (WebSocket Deriv), comme avant.
+- **Forex** : l’application s’abonne aussi aux ticks Deriv des paires disponibles (`deriv_forex_symbols`, publié par le moteur à chaque cycle). Le prix de la carte passe de « SERVEUR » à « LIVE » et la bougie H1 en cours du graphique bouge tick par tick. Les paires absentes chez Deriv (souvent les exotiques) gardent le prix serveur.
+- **Signaux** : relus toutes les **20 secondes** ; l’interface n’est reconstruite que lorsqu’une nouvelle analyse arrive. Une coupure réseau passagère ne fait plus disparaître la dernière analyse.
+- La décision BUY/SELL reste celle du moteur serveur (cycle continu de ~5 min) ; le prix live Forex est indicatif et doit être confirmé sur MT5.
