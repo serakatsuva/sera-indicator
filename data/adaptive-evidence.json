@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-23T13:04:36.399213Z",
+  "updated_at": "2026-10-23T13:09:14.260975Z",
   "records": [
-    {
-      "key": "JD75:day|1790193600|SELL",
-      "id": "JD75:day",
-      "market": "Jump 75 Index",
-      "symbol": "JD75",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1790193600,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 95,
-      "execution_score": 77.0,
-      "active_strategies": [
-        "SMC structure",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 7153.74,
-        "sl": 7474.44,
-        "tp1": 6672.6900000000005,
-        "tp2": 6384.06,
-        "tp3": 5999.22,
-        "tp4": 5614.380000000001,
-        "tp5": 5229.540000000001
-      },
-      "status": "resolved",
-      "created_at": "2026-09-23T20:07:56.497752Z",
-      "max_stage": 3,
-      "last_epoch": 1790251200,
-      "result": "WIN_TP3",
-      "r": 3.6,
-      "resolved_epoch": 1790253000
-    },
     {
       "key": "RB100:swing|1790193600|BUY",
       "id": "RB100:swing",
@@ -24200,19 +24162,45 @@
         "tp5": 1213.4520000000002
       },
       "status": "open",
-      "created_at": "2026-10-23T13:04:36.343439Z"
+      "created_at": "2026-10-23T13:04:36.343439Z",
+      "max_stage": 0,
+      "last_epoch": 1792759500
+    },
+    {
+      "key": "1HZ30V:day|1792759500|SELL",
+      "id": "1HZ30V:day",
+      "market": "Volatility 30 (1s) Index",
+      "symbol": "1HZ30V",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1792759500,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 94,
+      "execution_score": 82.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 6090.626,
+        "sl": 6163.088,
+        "tp1": 5981.933000000001,
+        "tp2": 5916.717200000001,
+        "tp3": 5829.762800000002,
+        "tp4": 5742.808400000003,
+        "tp5": 5655.854000000003
+      },
+      "status": "open",
+      "created_at": "2026-10-23T13:09:14.169527Z"
     }
   ],
   "profiles": {
-    "Jump 75 Index|day|GENERIC|TRANSITION": {
-      "samples": 2,
-      "decisive_samples": 2,
-      "win_rate": 100.0,
-      "avg_r": 2.55,
-      "losses": 0,
-      "breakeven_or_flat": 0,
-      "wins": 2
-    },
     "Range Break 100 Index|swing|GENERIC|TRENDING": {
       "samples": 1,
       "decisive_samples": 0,
@@ -25050,6 +25038,15 @@
       "breakeven_or_flat": 2,
       "wins": 0
     },
+    "Jump 75 Index|day|GENERIC|TRANSITION": {
+      "samples": 1,
+      "decisive_samples": 1,
+      "win_rate": 100.0,
+      "avg_r": 1.5,
+      "losses": 0,
+      "breakeven_or_flat": 0,
+      "wins": 1
+    },
     "Volatility 10 Index|day|GENERIC|TRANSITION": {
       "samples": 4,
       "decisive_samples": 4,
@@ -25247,6 +25244,12 @@
       "win_rate": 7.4,
       "avg_r": -0.67
     },
+    "Breakout + impulse": {
+      "samples": 150,
+      "decisive_samples": 111,
+      "win_rate": 13.5,
+      "avg_r": -0.418
+    },
     "FVG / Order Block": {
       "samples": 150,
       "decisive_samples": 138,
@@ -25277,18 +25280,6 @@
       "win_rate": 12.5,
       "avg_r": -0.497
     },
-    "HH/HL or LH/LL structure": {
-      "samples": 150,
-      "decisive_samples": 140,
-      "win_rate": 10.0,
-      "avg_r": -0.602
-    },
-    "Breakout + impulse": {
-      "samples": 150,
-      "decisive_samples": 111,
-      "win_rate": 13.5,
-      "avg_r": -0.418
-    },
     "ADX / DMI trend strength": {
       "samples": 150,
       "decisive_samples": 110,
@@ -25312,6 +25303,12 @@
       "decisive_samples": 99,
       "win_rate": 13.1,
       "avg_r": -0.388
+    },
+    "HH/HL or LH/LL structure": {
+      "samples": 150,
+      "decisive_samples": 140,
+      "win_rate": 10.0,
+      "avg_r": -0.602
     },
     "Momentum": {
       "samples": 150,
