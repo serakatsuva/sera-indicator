@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-24T18:51:48.062549Z",
+  "updated_at": "2026-10-24T18:56:23.009960Z",
   "records": [
-    {
-      "key": "RDBEAR:day|1792610100|SELL",
-      "id": "RDBEAR:day",
-      "market": "Bear Market Index",
-      "symbol": "RDBEAR",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1792610100,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 84,
-      "execution_score": 90.0,
-      "active_strategies": [
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 1014.407,
-        "sl": 1064.0498,
-        "tp1": 939.9428,
-        "tp2": 895.2642800000001,
-        "tp3": 835.6929200000002,
-        "tp4": 776.1215600000003,
-        "tp5": 716.5502000000002
-      },
-      "status": "resolved",
-      "created_at": "2026-10-21T19:37:29.315881Z",
-      "max_stage": 3,
-      "last_epoch": 1792665900,
-      "result": "WIN_TP3",
-      "r": 3.6,
-      "resolved_epoch": 1792666800
-    },
     {
       "key": "1HZ25V:day|1792610100|SELL",
       "id": "1HZ25V:day",
@@ -24196,19 +24158,45 @@
         "tp5": 13970.226999999995
       },
       "status": "open",
-      "created_at": "2026-10-24T18:51:48.006068Z"
+      "created_at": "2026-10-24T18:51:48.006068Z",
+      "max_stage": 0,
+      "last_epoch": 1792866600
+    },
+    {
+      "key": "BOOM1000:day|1792866600|BUY",
+      "id": "BOOM1000:day",
+      "market": "Boom 1000 Index",
+      "symbol": "BOOM1000",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1792866600,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 93,
+      "execution_score": 77.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 15717.76,
+        "sl": 15541.151,
+        "tp1": 15982.6735,
+        "tp2": 16141.6216,
+        "tp3": 16353.552400000002,
+        "tp4": 16565.483200000002,
+        "tp5": 16777.414000000004
+      },
+      "status": "open",
+      "created_at": "2026-10-24T18:56:22.915865Z"
     }
   ],
   "profiles": {
-    "Bear Market Index|day|GENERIC|TRANSITION": {
-      "samples": 4,
-      "decisive_samples": 2,
-      "win_rate": 100.0,
-      "avg_r": 1.275,
-      "losses": 0,
-      "breakeven_or_flat": 2,
-      "wins": 2
-    },
     "Volatility 25 (1s) Index|day|GENERIC|TRANSITION": {
       "samples": 10,
       "decisive_samples": 9,
@@ -24469,6 +24457,15 @@
       "losses": 1,
       "breakeven_or_flat": 0,
       "wins": 0
+    },
+    "Bear Market Index|day|GENERIC|TRANSITION": {
+      "samples": 3,
+      "decisive_samples": 1,
+      "win_rate": 100.0,
+      "avg_r": 0.5,
+      "losses": 0,
+      "breakeven_or_flat": 2,
+      "wins": 1
     },
     "Step Index 400|day|GENERIC|TRENDING": {
       "samples": 7,
@@ -24985,17 +24982,17 @@
     }
   },
   "strategy_profiles": {
+    "SMC structure": {
+      "samples": 150,
+      "decisive_samples": 103,
+      "win_rate": 19.4,
+      "avg_r": -0.285
+    },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 111,
       "win_rate": 18.9,
       "avg_r": -0.306
-    },
-    "FVG / Order Block": {
-      "samples": 150,
-      "decisive_samples": 105,
-      "win_rate": 21.0,
-      "avg_r": -0.249
     },
     "Trend memory": {
       "samples": 150,
@@ -25027,12 +25024,6 @@
       "win_rate": 20.2,
       "avg_r": -0.264
     },
-    "SMC structure": {
-      "samples": 150,
-      "decisive_samples": 103,
-      "win_rate": 19.4,
-      "avg_r": -0.285
-    },
     "Trend following": {
       "samples": 150,
       "decisive_samples": 114,
@@ -25044,6 +25035,12 @@
       "decisive_samples": 112,
       "win_rate": 14.3,
       "avg_r": -0.428
+    },
+    "FVG / Order Block": {
+      "samples": 150,
+      "decisive_samples": 105,
+      "win_rate": 21.0,
+      "avg_r": -0.249
     },
     "MACD momentum alignment": {
       "samples": 150,
