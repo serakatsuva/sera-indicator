@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-24T20:50:06.368161Z",
+  "updated_at": "2026-10-24T20:55:00.919461Z",
   "records": [
-    {
-      "key": "stpRNG3:day|1792614600|SELL",
-      "id": "stpRNG3:day",
-      "market": "Step Index 300",
-      "symbol": "stpRNG3",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1792614600,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 93,
-      "execution_score": 81.0,
-      "active_strategies": [
-        "SMC structure",
-        "Momentum",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 13131.4,
-        "sl": 13234.9,
-        "tp1": 12976.15,
-        "tp2": 12883,
-        "tp3": 12758.8,
-        "tp4": 12634.6,
-        "tp5": 12510.4
-      },
-      "status": "resolved",
-      "created_at": "2026-10-21T20:49:42.574627Z",
-      "max_stage": 2,
-      "last_epoch": 1792786500,
-      "result": "TIMEOUT_TP2",
-      "r": 2.4,
-      "resolved_epoch": 1792787400
-    },
     {
       "key": "1HZ25V:day|1792614600|SELL",
       "id": "1HZ25V:day",
@@ -24192,18 +24154,42 @@
       "created_at": "2026-10-24T20:33:51.515276Z",
       "max_stage": 0,
       "last_epoch": 1792873800
+    },
+    {
+      "key": "stpRNG3:day|1792873800|BUY",
+      "id": "stpRNG3:day",
+      "market": "Step Index 300",
+      "symbol": "stpRNG3",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1792873800,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 90,
+      "execution_score": 98.0,
+      "active_strategies": [
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 13138.6,
+        "sl": 13083.7,
+        "tp1": 13220.95,
+        "tp2": 13270.359999999999,
+        "tp3": 13336.24,
+        "tp4": 13402.119999999999,
+        "tp5": 13467.999999999998
+      },
+      "status": "open",
+      "created_at": "2026-10-24T20:55:00.859189Z"
     }
   ],
   "profiles": {
-    "Step Index 300|day|GENERIC|TRANSITION": {
-      "samples": 3,
-      "decisive_samples": 3,
-      "win_rate": 100.0,
-      "avg_r": 2.1,
-      "losses": 0,
-      "breakeven_or_flat": 0,
-      "wins": 3
-    },
     "Volatility 25 (1s) Index|day|GENERIC|TRANSITION": {
       "samples": 11,
       "decisive_samples": 10,
@@ -24239,6 +24225,15 @@
       "losses": 12,
       "breakeven_or_flat": 0,
       "wins": 0
+    },
+    "Step Index 300|day|GENERIC|TRANSITION": {
+      "samples": 2,
+      "decisive_samples": 2,
+      "win_rate": 100.0,
+      "avg_r": 1.95,
+      "losses": 0,
+      "breakeven_or_flat": 0,
+      "wins": 2
     },
     "Volatility 100 Index|day|BREAKOUT_CONTINUATION|TRENDING": {
       "samples": 10,
@@ -24980,17 +24975,17 @@
     }
   },
   "strategy_profiles": {
-    "SMC structure": {
-      "samples": 150,
-      "decisive_samples": 101,
-      "win_rate": 18.8,
-      "avg_r": -0.295
-    },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 108,
-      "win_rate": 18.5,
-      "avg_r": -0.303
+      "win_rate": 17.6,
+      "avg_r": -0.325
+    },
+    "FVG / Order Block": {
+      "samples": 150,
+      "decisive_samples": 104,
+      "win_rate": 20.2,
+      "avg_r": -0.259
     },
     "Trend memory": {
       "samples": 150,
@@ -25014,7 +25009,7 @@
       "samples": 150,
       "decisive_samples": 107,
       "win_rate": 15.0,
-      "avg_r": -0.377
+      "avg_r": -0.383
     },
     "HH/HL or LH/LL structure": {
       "samples": 150,
@@ -25022,11 +25017,11 @@
       "win_rate": 19.3,
       "avg_r": -0.287
     },
-    "FVG / Order Block": {
+    "SMC structure": {
       "samples": 150,
-      "decisive_samples": 104,
-      "win_rate": 20.2,
-      "avg_r": -0.259
+      "decisive_samples": 101,
+      "win_rate": 18.8,
+      "avg_r": -0.295
     },
     "Breakout + impulse": {
       "samples": 150,
