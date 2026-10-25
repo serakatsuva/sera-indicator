@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-25T07:34:00.536939Z",
+  "updated_at": "2026-10-25T07:39:29.014754Z",
   "records": [
-    {
-      "key": "JD25:day|1792643400|SELL",
-      "id": "JD25:day",
-      "market": "Jump 25 Index",
-      "symbol": "JD25",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1792643400,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 86,
-      "execution_score": 92.0,
-      "active_strategies": [
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 133030.6,
-        "sl": 134520.23,
-        "tp1": 130796.155,
-        "tp2": 129455.488,
-        "tp3": 127667.93199999999,
-        "tp4": 125880.37599999999,
-        "tp5": 124092.81999999998
-      },
-      "status": "resolved",
-      "created_at": "2026-10-22T04:47:38.994963Z",
-      "max_stage": 0,
-      "last_epoch": 1792655100,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1792656000
-    },
     {
       "key": "JD50:day|1792643400|SELL",
       "id": "JD50:day",
@@ -24200,7 +24162,9 @@
         "tp5": 5754.038000000001
       },
       "status": "open",
-      "created_at": "2026-10-25T07:34:00.448268Z"
+      "created_at": "2026-10-25T07:34:00.448268Z",
+      "max_stage": 0,
+      "last_epoch": 1792912500
     },
     {
       "key": "JD100:day|1792912500|SELL",
@@ -24238,7 +24202,9 @@
         "tp5": 62.07999999999997
       },
       "status": "open",
-      "created_at": "2026-10-25T07:34:00.448325Z"
+      "created_at": "2026-10-25T07:34:00.448325Z",
+      "max_stage": 0,
+      "last_epoch": 1792912500
     },
     {
       "key": "JD75:day|1792912500|SELL",
@@ -24278,7 +24244,9 @@
         "tp5": 3439.8799999999965
       },
       "status": "open",
-      "created_at": "2026-10-25T07:34:00.448338Z"
+      "created_at": "2026-10-25T07:34:00.448338Z",
+      "max_stage": 0,
+      "last_epoch": 1792912500
     },
     {
       "key": "1HZ50V:day|1792912500|BUY",
@@ -24311,19 +24279,45 @@
         "tp5": 230799.4800000001
       },
       "status": "open",
-      "created_at": "2026-10-25T07:34:00.448373Z"
+      "created_at": "2026-10-25T07:34:00.448373Z",
+      "max_stage": 0,
+      "last_epoch": 1792912500
+    },
+    {
+      "key": "1HZ30V:day|1792912500|BUY",
+      "id": "1HZ30V:day",
+      "market": "Volatility 30 (1s) Index",
+      "symbol": "1HZ30V",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1792912500,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 94,
+      "execution_score": 98.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation"
+      ],
+      "levels": {
+        "entry": 6134.004,
+        "sl": 6090.193,
+        "tp1": 6199.720499999999,
+        "tp2": 6239.1503999999995,
+        "tp3": 6291.723599999998,
+        "tp4": 6344.296799999998,
+        "tp5": 6396.869999999998
+      },
+      "status": "open",
+      "created_at": "2026-10-25T07:39:28.940231Z"
     }
   ],
   "profiles": {
-    "Jump 25 Index|day|GENERIC|TRANSITION": {
-      "samples": 8,
-      "decisive_samples": 8,
-      "win_rate": 0.0,
-      "avg_r": -1.0,
-      "losses": 8,
-      "breakeven_or_flat": 0,
-      "wins": 0
-    },
     "Jump 50 Index|day|BREAKOUT_CONTINUATION|TRENDING": {
       "samples": 18,
       "decisive_samples": 13,
@@ -24810,6 +24804,15 @@
       "breakeven_or_flat": 2,
       "wins": 0
     },
+    "Jump 25 Index|day|GENERIC|TRANSITION": {
+      "samples": 7,
+      "decisive_samples": 7,
+      "win_rate": 0.0,
+      "avg_r": -1.0,
+      "losses": 7,
+      "breakeven_or_flat": 0,
+      "wins": 0
+    },
     "Jump 100 Index|day|GENERIC|TRENDING": {
       "samples": 2,
       "decisive_samples": 2,
@@ -25127,17 +25130,23 @@
     }
   },
   "strategy_profiles": {
-    "Momentum": {
+    "Trend following": {
       "samples": 150,
-      "decisive_samples": 113,
-      "win_rate": 20.4,
-      "avg_r": -0.244
+      "decisive_samples": 114,
+      "win_rate": 7.0,
+      "avg_r": -0.595
     },
-    "FVG / Order Block": {
+    "SMC structure": {
       "samples": 150,
-      "decisive_samples": 110,
-      "win_rate": 19.1,
-      "avg_r": -0.263
+      "decisive_samples": 107,
+      "win_rate": 15.9,
+      "avg_r": -0.36
+    },
+    "Breakout + impulse": {
+      "samples": 150,
+      "decisive_samples": 112,
+      "win_rate": 8.0,
+      "avg_r": -0.551
     },
     "Trend memory": {
       "samples": 150,
@@ -25162,30 +25171,6 @@
       "decisive_samples": 114,
       "win_rate": 16.7,
       "avg_r": -0.323
-    },
-    "HH/HL or LH/LL structure": {
-      "samples": 150,
-      "decisive_samples": 112,
-      "win_rate": 16.1,
-      "avg_r": -0.335
-    },
-    "Trend following": {
-      "samples": 150,
-      "decisive_samples": 114,
-      "win_rate": 7.0,
-      "avg_r": -0.595
-    },
-    "SMC structure": {
-      "samples": 150,
-      "decisive_samples": 107,
-      "win_rate": 15.9,
-      "avg_r": -0.36
-    },
-    "Breakout + impulse": {
-      "samples": 150,
-      "decisive_samples": 112,
-      "win_rate": 8.0,
-      "avg_r": -0.551
     },
     "ADX / DMI trend strength": {
       "samples": 150,
@@ -25216,6 +25201,24 @@
       "decisive_samples": 114,
       "win_rate": 6.1,
       "avg_r": -0.65
+    },
+    "HH/HL or LH/LL structure": {
+      "samples": 150,
+      "decisive_samples": 112,
+      "win_rate": 16.1,
+      "avg_r": -0.335
+    },
+    "FVG / Order Block": {
+      "samples": 150,
+      "decisive_samples": 110,
+      "win_rate": 19.1,
+      "avg_r": -0.263
+    },
+    "Momentum": {
+      "samples": 150,
+      "decisive_samples": 113,
+      "win_rate": 20.4,
+      "avg_r": -0.244
     }
   }
 }
