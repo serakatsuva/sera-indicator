@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-26T03:35:55.225765Z",
+  "updated_at": "2026-10-26T03:40:34.286713Z",
   "records": [
-    {
-      "key": "R_25:day|1792719900|BUY",
-      "id": "R_25:day",
-      "market": "Volatility 25 Index",
-      "symbol": "R_25",
-      "mode": "day",
-      "direction": "BUY",
-      "opened_epoch": 1792719900,
-      "setup_type": "GENERIC",
-      "regime": "RANGE",
-      "confidence": 85,
-      "execution_score": 78.0,
-      "active_strategies": [
-        "SMC structure",
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation"
-      ],
-      "levels": {
-        "entry": 2787.712,
-        "sl": 2769.508,
-        "tp1": 2815.018,
-        "tp2": 2831.4016000000006,
-        "tp3": 2853.2464000000004,
-        "tp4": 2875.0912000000008,
-        "tp5": 2896.936000000001
-      },
-      "status": "resolved",
-      "created_at": "2026-10-23T02:06:14.510801Z",
-      "max_stage": 2,
-      "last_epoch": 1792845000,
-      "result": "LOCKED_TP1",
-      "r": 1.5,
-      "resolved_epoch": 1792845900
-    },
     {
       "key": "1HZ50V:day|1792719900|SELL",
       "id": "1HZ50V:day",
@@ -24254,18 +24216,42 @@
       "created_at": "2026-10-26T03:21:26.228543Z",
       "max_stage": 0,
       "last_epoch": 1792984500
+    },
+    {
+      "key": "JD75:day|1792984500|SELL",
+      "id": "JD75:day",
+      "market": "Jump 75 Index",
+      "symbol": "JD75",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1792984500,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 91,
+      "execution_score": 98.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation"
+      ],
+      "levels": {
+        "entry": 5180.79,
+        "sl": 5294.44,
+        "tp1": 5010.3150000000005,
+        "tp2": 4908.030000000001,
+        "tp3": 4771.6500000000015,
+        "tp4": 4635.270000000001,
+        "tp5": 4498.890000000002
+      },
+      "status": "open",
+      "created_at": "2026-10-26T03:40:34.199703Z"
     }
   ],
   "profiles": {
-    "Volatility 25 Index|day|GENERIC|RANGE": {
-      "samples": 1,
-      "decisive_samples": 1,
-      "win_rate": 100.0,
-      "avg_r": 1.5,
-      "losses": 0,
-      "breakeven_or_flat": 0,
-      "wins": 1
-    },
     "Volatility 50 (1s) Index|day|GENERIC|TRANSITION": {
       "samples": 12,
       "decisive_samples": 10,
@@ -25204,12 +25190,6 @@
       "win_rate": 15.4,
       "avg_r": -0.293
     },
-    "Family context confirmation": {
-      "samples": 150,
-      "decisive_samples": 95,
-      "win_rate": 14.7,
-      "avg_r": -0.32
-    },
     "HH/HL or LH/LL structure": {
       "samples": 150,
       "decisive_samples": 88,
@@ -25227,6 +25207,12 @@
       "decisive_samples": 105,
       "win_rate": 7.6,
       "avg_r": -0.533
+    },
+    "Family context confirmation": {
+      "samples": 150,
+      "decisive_samples": 95,
+      "win_rate": 14.7,
+      "avg_r": -0.32
     },
     "ADX / DMI trend strength": {
       "samples": 150,
