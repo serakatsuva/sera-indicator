@@ -1,51 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-26T05:09:54.052741Z",
+  "updated_at": "2026-10-26T05:12:56.798159Z",
   "records": [
-    {
-      "key": "CRASH600:day|1792725300|SELL",
-      "id": "CRASH600:day",
-      "market": "Crash 600 Index",
-      "symbol": "CRASH600",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1792725300,
-      "setup_type": "GENERIC",
-      "regime": "TRENDING",
-      "confidence": 93,
-      "execution_score": 77.0,
-      "active_strategies": [
-        "SMC structure",
-        "Breakout + impulse",
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "ADX / DMI trend strength",
-        "MACD momentum alignment",
-        "Donchian breakout",
-        "Trend efficiency ratio",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 22228.029,
-        "sl": 22465.061,
-        "tp1": 21872.480999999992,
-        "tp2": 21659.152199999993,
-        "tp3": 21374.713799999987,
-        "tp4": 21090.275399999984,
-        "tp5": 20805.83699999998
-      },
-      "status": "resolved",
-      "created_at": "2026-10-23T03:36:18.202401Z",
-      "max_stage": 1,
-      "last_epoch": 1792896300,
-      "result": "TIMEOUT_BE",
-      "r": 0.0,
-      "resolved_epoch": 1792898100
-    },
     {
       "key": "stpRNG3:day|1792725300|SELL",
       "id": "stpRNG3:day",
@@ -24234,7 +24190,9 @@
         "tp5": 15591.726999999992
       },
       "status": "open",
-      "created_at": "2026-10-26T05:09:53.965726Z"
+      "created_at": "2026-10-26T05:09:53.965726Z",
+      "max_stage": 0,
+      "last_epoch": 1792989900
     },
     {
       "key": "R_75:day|1792989900|SELL",
@@ -24273,19 +24231,45 @@
         "tp5": 28702.46859999998
       },
       "status": "open",
-      "created_at": "2026-10-26T05:09:53.965806Z"
+      "created_at": "2026-10-26T05:09:53.965806Z",
+      "max_stage": 0,
+      "last_epoch": 1792989900
+    },
+    {
+      "key": "stpRNG5:day|1792989900|SELL",
+      "id": "stpRNG5:day",
+      "market": "Step Index 500",
+      "symbol": "stpRNG5",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1792989900,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 94,
+      "execution_score": 89.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation"
+      ],
+      "levels": {
+        "entry": 4566.5,
+        "sl": 4654,
+        "tp1": 4435.25,
+        "tp2": 4356.5,
+        "tp3": 4251.5,
+        "tp4": 4146.5,
+        "tp5": 4041.5
+      },
+      "status": "open",
+      "created_at": "2026-10-26T05:12:56.741478Z"
     }
   ],
   "profiles": {
-    "Crash 600 Index|day|GENERIC|TRENDING": {
-      "samples": 2,
-      "decisive_samples": 1,
-      "win_rate": 0.0,
-      "avg_r": -0.5,
-      "losses": 1,
-      "breakeven_or_flat": 1,
-      "wins": 0
-    },
     "Step Index 300|day|BREAKOUT_CONTINUATION|TRENDING": {
       "samples": 2,
       "decisive_samples": 2,
@@ -25033,6 +25017,15 @@
       "breakeven_or_flat": 0,
       "wins": 0
     },
+    "Crash 600 Index|day|GENERIC|TRENDING": {
+      "samples": 1,
+      "decisive_samples": 1,
+      "win_rate": 0.0,
+      "avg_r": -1.0,
+      "losses": 1,
+      "breakeven_or_flat": 0,
+      "wins": 0
+    },
     "Step Index 500|day|BREAKOUT_CONTINUATION|TRANSITION": {
       "samples": 1,
       "decisive_samples": 1,
@@ -25188,6 +25181,12 @@
     }
   },
   "strategy_profiles": {
+    "Trend following": {
+      "samples": 147,
+      "decisive_samples": 108,
+      "win_rate": 6.5,
+      "avg_r": -0.559
+    },
     "SMC structure": {
       "samples": 150,
       "decisive_samples": 84,
@@ -25196,21 +25195,15 @@
     },
     "Breakout + impulse": {
       "samples": 150,
-      "decisive_samples": 104,
-      "win_rate": 8.7,
-      "avg_r": -0.495
+      "decisive_samples": 105,
+      "win_rate": 8.6,
+      "avg_r": -0.502
     },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 92,
       "win_rate": 17.4,
       "avg_r": -0.253
-    },
-    "FVG / Order Block": {
-      "samples": 150,
-      "decisive_samples": 92,
-      "win_rate": 18.5,
-      "avg_r": -0.23
     },
     "Trend memory": {
       "samples": 150,
@@ -25238,27 +25231,33 @@
     },
     "ADX / DMI trend strength": {
       "samples": 150,
-      "decisive_samples": 101,
+      "decisive_samples": 102,
       "win_rate": 5.9,
-      "avg_r": -0.539
+      "avg_r": -0.546
     },
     "MACD momentum alignment": {
       "samples": 150,
-      "decisive_samples": 103,
-      "win_rate": 9.7,
-      "avg_r": -0.458
+      "decisive_samples": 104,
+      "win_rate": 9.6,
+      "avg_r": -0.465
     },
     "Donchian breakout": {
       "samples": 150,
-      "decisive_samples": 107,
-      "win_rate": 8.4,
-      "avg_r": -0.501
+      "decisive_samples": 108,
+      "win_rate": 8.3,
+      "avg_r": -0.508
+    },
+    "Bollinger squeeze release": {
+      "samples": 100,
+      "decisive_samples": 73,
+      "win_rate": 6.8,
+      "avg_r": -0.563
     },
     "Trend efficiency ratio": {
-      "samples": 139,
+      "samples": 138,
       "decisive_samples": 95,
       "win_rate": 5.3,
-      "avg_r": -0.572
+      "avg_r": -0.576
     },
     "HH/HL or LH/LL structure": {
       "samples": 150,
@@ -25266,17 +25265,11 @@
       "win_rate": 17.5,
       "avg_r": -0.208
     },
-    "Trend following": {
-      "samples": 147,
-      "decisive_samples": 108,
-      "win_rate": 6.5,
-      "avg_r": -0.559
-    },
-    "Bollinger squeeze release": {
-      "samples": 100,
-      "decisive_samples": 73,
-      "win_rate": 6.8,
-      "avg_r": -0.563
+    "FVG / Order Block": {
+      "samples": 150,
+      "decisive_samples": 92,
+      "win_rate": 18.5,
+      "avg_r": -0.23
     },
     "Break & retest": {
       "samples": 1,
