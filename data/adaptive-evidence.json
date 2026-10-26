@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-26T01:49:13.833272Z",
+  "updated_at": "2026-10-26T01:53:56.432412Z",
   "records": [
-    {
-      "key": "CRASH300N:day|1792716300|SELL",
-      "id": "CRASH300N:day",
-      "market": "Crash 300 Index",
-      "symbol": "CRASH300N",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1792716300,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 94,
-      "execution_score": 82.0,
-      "active_strategies": [
-        "SMC structure",
-        "Momentum",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 2259.351,
-        "sl": 2353.833,
-        "tp1": 2117.628,
-        "tp2": 2032.5942000000002,
-        "tp3": 1919.2158000000002,
-        "tp4": 1805.8374000000003,
-        "tp5": 1692.4590000000003
-      },
-      "status": "resolved",
-      "created_at": "2026-10-23T01:04:31.003173Z",
-      "max_stage": 0,
-      "last_epoch": 1792760400,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1792761300
-    },
     {
       "key": "JD75:day|1792716300|SELL",
       "id": "JD75:day",
@@ -24197,7 +24159,9 @@
         "tp5": 9732.070000000009
       },
       "status": "open",
-      "created_at": "2026-10-26T01:49:13.747068Z"
+      "created_at": "2026-10-26T01:49:13.747068Z",
+      "max_stage": 0,
+      "last_epoch": 1792978200
     },
     {
       "key": "R_50:day|1792978200|SELL",
@@ -24230,19 +24194,45 @@
         "tp5": 79.4218
       },
       "status": "open",
-      "created_at": "2026-10-26T01:49:13.747117Z"
+      "created_at": "2026-10-26T01:49:13.747117Z",
+      "max_stage": 0,
+      "last_epoch": 1792978200
+    },
+    {
+      "key": "stpRNG3:day|1792978200|BUY",
+      "id": "stpRNG3:day",
+      "market": "Step Index 300",
+      "symbol": "stpRNG3",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1792978200,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 92,
+      "execution_score": 80.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 13226.8,
+        "sl": 13182.7,
+        "tp1": 13292.949999999997,
+        "tp2": 13332.639999999996,
+        "tp3": 13385.559999999994,
+        "tp4": 13438.479999999992,
+        "tp5": 13491.39999999999
+      },
+      "status": "open",
+      "created_at": "2026-10-26T01:53:56.343632Z"
     }
   ],
   "profiles": {
-    "Crash 300 Index|day|GENERIC|TRANSITION": {
-      "samples": 5,
-      "decisive_samples": 5,
-      "win_rate": 0.0,
-      "avg_r": -1.0,
-      "losses": 5,
-      "breakeven_or_flat": 0,
-      "wins": 0
-    },
     "Jump 75 Index|day|GENERIC|TRANSITION": {
       "samples": 14,
       "decisive_samples": 14,
@@ -24251,6 +24241,15 @@
       "losses": 0,
       "breakeven_or_flat": 0,
       "wins": 14
+    },
+    "Crash 300 Index|day|GENERIC|TRANSITION": {
+      "samples": 4,
+      "decisive_samples": 4,
+      "win_rate": 0.0,
+      "avg_r": -1.0,
+      "losses": 4,
+      "breakeven_or_flat": 0,
+      "wins": 0
     },
     "Step Index 100|day|GENERIC|TRANSITION": {
       "samples": 8,
@@ -25145,17 +25144,17 @@
     }
   },
   "strategy_profiles": {
-    "SMC structure": {
-      "samples": 150,
-      "decisive_samples": 89,
-      "win_rate": 16.9,
-      "avg_r": -0.257
-    },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 97,
       "win_rate": 18.6,
       "avg_r": -0.261
+    },
+    "FVG / Order Block": {
+      "samples": 150,
+      "decisive_samples": 97,
+      "win_rate": 21.6,
+      "avg_r": -0.199
     },
     "Trend memory": {
       "samples": 150,
@@ -25187,11 +25186,11 @@
       "win_rate": 20.5,
       "avg_r": -0.185
     },
-    "FVG / Order Block": {
+    "SMC structure": {
       "samples": 150,
-      "decisive_samples": 97,
-      "win_rate": 21.6,
-      "avg_r": -0.199
+      "decisive_samples": 89,
+      "win_rate": 16.9,
+      "avg_r": -0.257
     },
     "Trend following": {
       "samples": 144,
