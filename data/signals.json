@@ -3,7 +3,7 @@
   "status": "autonomous_analyzed",
   "source_broker": "Multi-source",
   "source": "Deriv WebSocket M15/H1/H4/D1 · Yahoo Finance Forex H1 agrégé H4/D1 (indicatif)",
-  "updated_at": "2026-10-27T08:19:20.750Z",
+  "updated_at": "2026-10-27T08:24:48.980Z",
   "engine_version": "Sera Autonomous Engine v4.1 · High Conviction Swing",
   "model": "Sera Autonomous Engine v4.1 · High Conviction Swing · modèles ouverts + OSS Ensemble + Adaptive Evidence",
   "discovered_markets": 46,
@@ -12,8 +12,8 @@
   "available_forex_markets": 27,
   "markets_count": 119,
   "analysis_interval_minutes": 5,
-  "trend_changes": 11,
-  "trend_flips": 2,
+  "trend_changes": 0,
+  "trend_flips": 0,
   "family_context_groups": 18,
   "confirmed_signals": 1,
   "deriv_forex_symbols": {
@@ -79,8 +79,8 @@
         "atr": 0.44617163325073494,
         "swingHigh": 946.297,
         "swingLow": 944.48,
-        "adx": 18.880454333717505,
-        "plusDI": 27.391145218591234,
+        "adx": 18.879621097206012,
+        "plusDI": 27.391219371094866,
         "minusDI": 19.047846311371135,
         "dmiAligned": true,
         "macd": 0.06030806377009412,
@@ -172,18 +172,18 @@
         ]
       },
       "trend_memory": {
-        "previous_bias": "NEUTRE",
+        "previous_bias": "BUY",
         "current_bias": "BUY",
         "previous_final": "ATTENDRE",
-        "persistence": false,
+        "persistence": true,
         "flip": false,
         "bias_cycles": 1,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 27,
-        "previous_score": 15,
+        "new_candle": false,
+        "previous_conditions": 53,
+        "previous_score": 67,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 84,
+        "candidate_score": 88,
         "confirmation_progress": "1/1",
         "confirmation_cycles_required": 1
       },
@@ -203,12 +203,12 @@
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 67,
-        "score": 67,
-        "consensus": 58,
+        "confidence": 74,
+        "score": 76,
+        "consensus": 66,
         "setup_type": "BREAKOUT_CONTINUATION",
-        "condition_pass_percent": 53,
-        "conditions_passed": 8,
+        "condition_pass_percent": 60,
+        "conditions_passed": 9,
         "conditions_total": 15,
         "minimum_conditions_percent": 80,
         "condition_gate": false,
@@ -233,12 +233,12 @@
           "Breakout + impulse",
           "Momentum",
           "FVG / Order Block",
+          "Trend memory",
           "Volatility control",
           "Boom/Crash guard",
           "Bollinger squeeze release"
         ],
         "missing_strategies": [
-          "Trend memory",
           "Family context confirmation",
           "ADX / DMI trend strength",
           "MACD momentum alignment",
@@ -322,7 +322,7 @@
             "name": "Trend memory",
             "weight": 12,
             "applicable": true,
-            "support": false
+            "support": true
           },
           {
             "id": "volatility",
@@ -407,8 +407,8 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
-        "summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 8/15 conditions (53%), consensus 58%, score 67/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
+        "candle_age_minutes": 10,
+        "summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 9/15 conditions (60%), consensus 66%, score 76/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -439,14 +439,14 @@
         "reason": "Prix trop étendu: attendre un retour dans la zone proposée avant toute exécution."
       },
       "trend_change": {
-        "state": "FLIP",
+        "state": "STABLE",
         "current_side": "BUY",
-        "previous_side": "SELL",
+        "previous_side": "BUY",
         "quality": 83,
-        "previous_quality": 38,
-        "quality_delta": 45,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.748Z"
+        "previous_quality": 83,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.977Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -483,7 +483,7 @@
       "setup_detected": 1,
       "setup_direction": "BUY",
       "final_verdict": "ATTENDRE",
-      "final_confidence": 67,
+      "final_confidence": 74,
       "timing": {
         "bias": "BUY",
         "side": "BUY",
@@ -507,7 +507,7 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 80,
+        "score": 89,
         "phase": "PULLBACK",
         "extension_atr": 1.06,
         "max_extension_atr": 1.1,
@@ -530,25 +530,25 @@
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 80,
+      "execution_score": 89,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 8/15 conditions (53%), consensus 58%, score 67/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 9/15 conditions (60%), consensus 66%, score 76/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Trend following",
         "Stratégie locale: SMC structure",
         "Stratégie locale: Breakout + impulse",
         "Stratégie locale: Momentum",
         "Stratégie locale: FVG / Order Block",
-        "Stratégie locale: Volatility control"
+        "Stratégie locale: Trend memory"
       ],
       "ai_contradictions": [
-        "À renforcer: Trend memory",
         "À renforcer: Family context confirmation",
         "À renforcer: ADX / DMI trend strength",
-        "À renforcer: MACD momentum alignment"
+        "À renforcer: MACD momentum alignment",
+        "À renforcer: Donchian breakout"
       ],
       "ai_risk": "Moteur autonome; modèles ouverts évalués séparément.",
       "needs_expert_review": false,
@@ -616,7 +616,7 @@
         "execution_adjustment": 0,
         "gate": "NEUTRAL",
         "strategy_adjustment": -2,
-        "strategy_samples_used": 8,
+        "strategy_samples_used": 9,
         "strategy_reliability": [
           {
             "name": "Breakout + impulse",
@@ -631,6 +631,12 @@
             "avg_r": -0.209
           },
           {
+            "name": "Trend memory",
+            "samples": 150,
+            "win_rate": 18.0,
+            "avg_r": -0.255
+          },
+          {
             "name": "FVG / Order Block",
             "samples": 150,
             "win_rate": 18.3,
@@ -638,12 +644,6 @@
           },
           {
             "name": "Volatility control",
-            "samples": 150,
-            "win_rate": 17.6,
-            "avg_r": -0.268
-          },
-          {
-            "name": "Boom/Crash guard",
             "samples": 150,
             "win_rate": 17.6,
             "avg_r": -0.268
@@ -1084,7 +1084,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/17 conditions (35%), consensus 30%, score 14/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -1103,7 +1103,7 @@
         "previous_quality": 69,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.748Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -1425,9 +1425,9 @@
         "flip": false,
         "bias_cycles": 2,
         "bias_candle": 1793088000,
-        "new_candle": true,
+        "new_candle": false,
         "previous_conditions": 44,
-        "previous_score": 59,
+        "previous_score": 60,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 79,
         "confirmation_progress": "1/1",
@@ -1654,7 +1654,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 7/16 conditions (44%), consensus 49%, score 60/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -1670,10 +1670,10 @@
         "current_side": "BUY",
         "previous_side": "BUY",
         "quality": 67,
-        "previous_quality": 66,
-        "quality_delta": 1,
+        "previous_quality": 67,
+        "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.748Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -2281,7 +2281,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/17 conditions (35%), consensus 30%, score 12/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -2300,7 +2300,7 @@
         "previous_quality": 59,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -2628,7 +2628,7 @@
         "flip": false,
         "bias_cycles": 24,
         "bias_candle": 1793088000,
-        "new_candle": true,
+        "new_candle": false,
         "previous_conditions": 60,
         "previous_score": 70,
         "previous_execution_state": "WAIT_CONFIRMATION",
@@ -2856,7 +2856,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 9/15 conditions (60%), consensus 58%, score 70/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -2892,10 +2892,10 @@
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 89,
-        "previous_quality": 84,
-        "quality_delta": 5,
+        "previous_quality": 89,
+        "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -3533,7 +3533,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 8/17 conditions (47%), consensus 40%, score 41/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -3552,7 +3552,7 @@
         "previous_quality": 100,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -3880,9 +3880,9 @@
         "flip": false,
         "bias_cycles": 14,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 60,
-        "previous_score": 65,
+        "new_candle": false,
+        "previous_conditions": 53,
+        "previous_score": 62,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 85,
         "confirmation_progress": "1/1",
@@ -4108,7 +4108,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 8/15 conditions (53%), consensus 49%, score 62/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -4144,10 +4144,10 @@
         "current_side": "BUY",
         "previous_side": "BUY",
         "quality": 83,
-        "previous_quality": 82,
-        "quality_delta": 1,
+        "previous_quality": 83,
+        "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -4778,7 +4778,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/10 conditions (50%), consensus 50%, score 28/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -4797,7 +4797,7 @@
         "previous_quality": 51,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -5112,9 +5112,9 @@
         "flip": false,
         "bias_cycles": 0,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 63,
-        "previous_score": 37,
+        "new_candle": false,
+        "previous_conditions": 75,
+        "previous_score": 53,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 57,
         "confirmation_progress": "1/1",
@@ -5333,7 +5333,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 74%, score 53/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -5345,14 +5345,14 @@
       "projected_levels": null,
       "setup_entry_plan": null,
       "trend_change": {
-        "state": "STRENGTHENING",
+        "state": "STABLE",
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 78,
-        "previous_quality": 61,
-        "quality_delta": 17,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 78,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -5958,7 +5958,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 4/17 conditions (24%), consensus 20%, score 12/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -5977,7 +5977,7 @@
         "previous_quality": 57,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -6291,9 +6291,9 @@
         "flip": false,
         "bias_cycles": 10,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 88,
-        "previous_score": 90,
+        "new_candle": false,
+        "previous_conditions": 63,
+        "previous_score": 64,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 79,
         "confirmation_progress": "1/1",
@@ -6512,7 +6512,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 5/8 conditions (63%), consensus 60%, score 64/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -6544,14 +6544,14 @@
         "reason": "Prix trop étendu: attendre un retour dans la zone proposée avant toute exécution."
       },
       "trend_change": {
-        "state": "WEAKENING",
+        "state": "STABLE",
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 64,
-        "previous_quality": 96,
-        "quality_delta": -32,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 64,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -7187,7 +7187,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 9/17 conditions (53%), consensus 50%, score 62/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -7206,7 +7206,7 @@
         "previous_quality": 68,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -7534,7 +7534,7 @@
         "flip": false,
         "bias_cycles": 17,
         "bias_candle": 1793088000,
-        "new_candle": true,
+        "new_candle": false,
         "previous_conditions": 63,
         "previous_score": 55,
         "previous_execution_state": "WAIT_CONFIRMATION",
@@ -7755,7 +7755,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 5/8 conditions (63%), consensus 58%, score 55/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -7771,10 +7771,10 @@
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 45,
-        "previous_quality": 48,
-        "quality_delta": -3,
+        "previous_quality": 45,
+        "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -8380,7 +8380,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 3/17 conditions (18%), consensus 15%, score 15/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -8399,7 +8399,7 @@
         "previous_quality": 33,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -8706,9 +8706,9 @@
         "flip": false,
         "bias_cycles": 9,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 73,
-        "previous_score": 88,
+        "new_candle": false,
+        "previous_conditions": 53,
+        "previous_score": 72,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 100,
         "confirmation_progress": "1/1",
@@ -8934,7 +8934,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 8/15 conditions (53%), consensus 56%, score 72/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -8966,14 +8966,14 @@
         "reason": "Prix trop étendu: attendre un retour dans la zone proposée avant toute exécution."
       },
       "trend_change": {
-        "state": "WEAKENING",
+        "state": "STABLE",
         "current_side": "BUY",
         "previous_side": "BUY",
         "quality": 77,
-        "previous_quality": 100,
-        "quality_delta": -23,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 77,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -9611,7 +9611,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 10/17 conditions (59%), consensus 53%, score 63/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -9630,7 +9630,7 @@
         "previous_quality": 100,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -9958,7 +9958,7 @@
         "flip": false,
         "bias_cycles": 13,
         "bias_candle": 1793088000,
-        "new_candle": true,
+        "new_candle": false,
         "previous_conditions": 47,
         "previous_score": 53,
         "previous_execution_state": "WAIT_CONFIRMATION",
@@ -10186,7 +10186,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 7/15 conditions (47%), consensus 43%, score 53/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -10205,7 +10205,7 @@
         "previous_quality": 80,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -10806,7 +10806,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/10 conditions (50%), consensus 44%, score 59/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -10825,7 +10825,7 @@
         "previous_quality": 63,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -11133,18 +11133,18 @@
         ]
       },
       "trend_memory": {
-        "previous_bias": "NEUTRE",
+        "previous_bias": "SELL",
         "current_bias": "SELL",
         "previous_final": "ATTENDRE",
-        "persistence": false,
+        "persistence": true,
         "flip": false,
         "bias_cycles": 1,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 38,
-        "previous_score": 21,
+        "new_candle": false,
+        "previous_conditions": 63,
+        "previous_score": 56,
         "previous_execution_state": "WAIT_CONFIRMATION",
-        "candidate_score": 57,
+        "candidate_score": 61,
         "confirmation_progress": "1/1",
         "confirmation_cycles_required": 1
       },
@@ -11164,20 +11164,20 @@
       },
       "decision_engine": {
         "verdict": "ATTENDRE",
-        "confidence": 56,
-        "score": 56,
-        "consensus": 53,
+        "confidence": 70,
+        "score": 70,
+        "consensus": 68,
         "setup_type": "GENERIC",
-        "condition_pass_percent": 63,
-        "conditions_passed": 5,
+        "condition_pass_percent": 75,
+        "conditions_passed": 6,
         "conditions_total": 8,
         "minimum_conditions_percent": 80,
         "condition_gate": false,
         "side": "SELL",
         "aligned": true,
         "macro_aligned": true,
-        "setup_detected": false,
-        "detected_side": "NEUTRE",
+        "setup_detected": true,
+        "detected_side": "SELL",
         "minimum_score": 76,
         "minimum_consensus_percent": 66,
         "quality_gate": true,
@@ -11191,13 +11191,13 @@
         "active_strategies": [
           "Momentum",
           "FVG / Order Block",
+          "Trend memory",
           "Volatility control",
           "Boom/Crash guard",
           "Family context confirmation"
         ],
         "missing_strategies": [
           "SMC structure",
-          "Trend memory",
           "HH/HL or LH/LL structure"
         ],
         "strategies": [
@@ -11276,7 +11276,7 @@
             "name": "Trend memory",
             "weight": 12,
             "applicable": true,
-            "support": false
+            "support": true
           },
           {
             "id": "volatility",
@@ -11361,8 +11361,8 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
-        "summary": "ATTENDRE autonome · GENERIC: 5/8 conditions (63%), consensus 53%, score 56/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
+        "candle_age_minutes": 10,
+        "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 68%, score 70/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -11370,24 +11370,74 @@
         "specific_guard": true,
         "source": "Deriv public WebSocket"
       },
-      "projected_levels": null,
-      "setup_entry_plan": null,
+      "projected_levels": {
+        "entry": 969.955,
+        "sl": 1005.3678,
+        "tp1": 916.8358000000001,
+        "tp2": 884.9642800000001,
+        "tp3": 842.4689200000003,
+        "tp4": 799.9735600000004,
+        "tp5": 757.4782000000004
+      },
+      "setup_entry_plan": {
+        "side": "SELL",
+        "status": "WATCH_ENTRY_ZONE",
+        "suggested_entry": 969.955,
+        "reference_entry": 969.955,
+        "zone_min": 967.122,
+        "zone_max": 972.788,
+        "live_reference_price": 969.955,
+        "atr": 13.968,
+        "extension_atr": 0.39,
+        "max_extension_atr": 1.05,
+        "reason": "Setup dans une zone exploitable: surveiller le prix live dans la zone proposée."
+      },
       "trend_change": {
-        "state": "FLIP",
+        "state": "STABLE",
         "current_side": "SELL",
-        "previous_side": "BUY",
+        "previous_side": "SELL",
         "quality": 49,
-        "previous_quality": 51,
-        "quality_delta": -2,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 49,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
-      "projected_swing_distance": null,
-      "setup_detected": 0,
-      "setup_direction": "NEUTRE",
+      "projected_swing_distance": {
+        "unit": "Deriv synthetic normalized point",
+        "pip_size": 0.001,
+        "direction": "SELL",
+        "tp1": {
+          "price_distance": 53.119,
+          "pips_points": 53119
+        },
+        "tp2": {
+          "price_distance": 84.991,
+          "pips_points": 84991
+        },
+        "tp3": {
+          "price_distance": 127.486,
+          "pips_points": 127486
+        },
+        "tp4": {
+          "price_distance": 169.981,
+          "pips_points": 169981
+        },
+        "tp5": {
+          "price_distance": 212.477,
+          "pips_points": 212477
+        },
+        "sl": {
+          "price_distance": 35.413,
+          "pips_points": 35413
+        },
+        "estimated_swing_price_distance": 212.477,
+        "estimated_swing_pips_points": 212477
+      },
+      "setup_detected": 1,
+      "setup_direction": "SELL",
       "final_verdict": "ATTENDRE",
-      "final_confidence": 56,
+      "final_confidence": 70,
       "timing": {
         "bias": "SELL",
         "side": "SELL",
@@ -11396,8 +11446,8 @@
         "swing_days_min": null,
         "swing_days_max": null,
         "swing_days_label": null,
-        "duration_min_hours": 6,
-        "duration_max_hours": 24,
+        "duration_min_hours": 3,
+        "duration_max_hours": 12,
         "tp1_hours": null,
         "tp2_hours": null,
         "tp3_hours": null,
@@ -11411,7 +11461,7 @@
       "execution": {
         "state": "WAIT_CONFIRMATION",
         "ready": false,
-        "score": 69,
+        "score": 83,
         "phase": "PULLBACK",
         "extension_atr": 0.39,
         "max_extension_atr": 1.1,
@@ -11434,22 +11484,22 @@
       },
       "execution_state": "WAIT_CONFIRMATION",
       "execution_ready": 0,
-      "execution_score": 69,
+      "execution_score": 83,
       "confirmation_source": "none",
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE autonome · GENERIC: 5/8 conditions (63%), consensus 53%, score 56/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
+      "ai_summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 68%, score 70/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles. Exécution: WAIT_CONFIRMATION. Biais intéressant mais maturité/structure d’entrée insuffisante pour une exécution immédiate.",
       "ai_confirmations": [
         "Stratégie locale: Momentum",
         "Stratégie locale: FVG / Order Block",
+        "Stratégie locale: Trend memory",
         "Stratégie locale: Volatility control",
         "Stratégie locale: Boom/Crash guard",
         "Stratégie locale: Family context confirmation"
       ],
       "ai_contradictions": [
         "À renforcer: SMC structure",
-        "À renforcer: Trend memory",
         "À renforcer: HH/HL or LH/LL structure"
       ],
       "ai_risk": "Moteur autonome; modèles ouverts évalués séparément.",
@@ -11518,7 +11568,7 @@
         "execution_adjustment": 0,
         "gate": "NEUTRAL",
         "strategy_adjustment": -2,
-        "strategy_samples_used": 5,
+        "strategy_samples_used": 6,
         "strategy_reliability": [
           {
             "name": "Momentum",
@@ -11533,6 +11583,12 @@
             "avg_r": -0.253
           },
           {
+            "name": "Trend memory",
+            "samples": 150,
+            "win_rate": 18.0,
+            "avg_r": -0.255
+          },
+          {
             "name": "FVG / Order Block",
             "samples": 150,
             "win_rate": 18.3,
@@ -11540,12 +11596,6 @@
           },
           {
             "name": "Volatility control",
-            "samples": 150,
-            "win_rate": 17.6,
-            "avg_r": -0.268
-          },
-          {
-            "name": "Boom/Crash guard",
             "samples": 150,
             "win_rate": 17.6,
             "avg_r": -0.268
@@ -11979,7 +12029,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/10 conditions (60%), consensus 51%, score 64/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -11998,7 +12048,7 @@
         "previous_quality": 48,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -12320,9 +12370,9 @@
         "flip": false,
         "bias_cycles": 2,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 63,
-        "previous_score": 68,
+        "new_candle": false,
+        "previous_conditions": 50,
+        "previous_score": 47,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 66,
         "confirmation_progress": "1/1",
@@ -12541,7 +12591,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 4/8 conditions (50%), consensus 55%, score 47/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -12553,14 +12603,14 @@
       "projected_levels": null,
       "setup_entry_plan": null,
       "trend_change": {
-        "state": "WEAKENING",
+        "state": "STABLE",
         "current_side": "BUY",
         "previous_side": "BUY",
         "quality": 64,
-        "previous_quality": 76,
-        "quality_delta": -12,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 64,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -13152,7 +13202,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 2/9 conditions (22%), consensus 20%, score 7/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -13171,7 +13221,7 @@
         "previous_quality": 42,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -13471,9 +13521,9 @@
         "flip": false,
         "bias_cycles": 13,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 67,
-        "previous_score": 85,
+        "new_candle": false,
+        "previous_conditions": 60,
+        "previous_score": 79,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 100,
         "confirmation_progress": "1/1",
@@ -13699,7 +13749,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 9/15 conditions (60%), consensus 64%, score 79/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -13731,14 +13781,14 @@
         "reason": "Prix trop étendu: attendre un retour dans la zone proposée avant toute exécution."
       },
       "trend_change": {
-        "state": "STRENGTHENING",
+        "state": "STABLE",
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 86,
-        "previous_quality": 80,
-        "quality_delta": 6,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 86,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -14375,7 +14425,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 10/16 conditions (63%), consensus 59%, score 74/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -14394,7 +14444,7 @@
         "previous_quality": 100,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -14722,9 +14772,9 @@
         "flip": false,
         "bias_cycles": 22,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 60,
-        "previous_score": 74,
+        "new_candle": false,
+        "previous_conditions": 27,
+        "previous_score": 41,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 76,
         "confirmation_progress": "1/1",
@@ -14950,7 +15000,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 4/15 conditions (27%), consensus 24%, score 41/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -14962,14 +15012,14 @@
       "projected_levels": null,
       "setup_entry_plan": null,
       "trend_change": {
-        "state": "WEAKENING",
+        "state": "STABLE",
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 60,
-        "previous_quality": 100,
-        "quality_delta": -40,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 60,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -15561,7 +15611,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 3/9 conditions (33%), consensus 28%, score 20/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -15580,7 +15630,7 @@
         "previous_quality": 58,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -15887,9 +15937,9 @@
         "flip": false,
         "bias_cycles": 0,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 50,
-        "previous_score": 30,
+        "new_candle": false,
+        "previous_conditions": 38,
+        "previous_score": 19,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 27,
         "confirmation_progress": "1/1",
@@ -16108,7 +16158,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 3/8 conditions (38%), consensus 31%, score 19/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -16120,14 +16170,14 @@
       "projected_levels": null,
       "setup_entry_plan": null,
       "trend_change": {
-        "state": "WEAKENING",
+        "state": "STABLE",
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 23,
-        "previous_quality": 34,
-        "quality_delta": -11,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 23,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -16712,7 +16762,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 4/9 conditions (44%), consensus 38%, score 24/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -16731,7 +16781,7 @@
         "previous_quality": 67,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -17045,9 +17095,9 @@
         "flip": false,
         "bias_cycles": 14,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 73,
-        "previous_score": 80,
+        "new_candle": false,
+        "previous_conditions": 47,
+        "previous_score": 62,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 85,
         "confirmation_progress": "1/1",
@@ -17273,7 +17323,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 7/15 conditions (47%), consensus 47%, score 62/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -17289,10 +17339,10 @@
         "current_side": "BUY",
         "previous_side": "BUY",
         "quality": 96,
-        "previous_quality": 100,
-        "quality_delta": -4,
+        "previous_quality": 96,
+        "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -17892,7 +17942,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions (56%), consensus 52%, score 35/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -17911,7 +17961,7 @@
         "previous_quality": 90,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.978Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -18232,7 +18282,7 @@
         "flip": false,
         "bias_cycles": 13,
         "bias_candle": 1793088000,
-        "new_candle": true,
+        "new_candle": false,
         "previous_conditions": 80,
         "previous_score": 91,
         "previous_execution_state": "WAIT_CONFIRMATION",
@@ -18460,7 +18510,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 12/15 conditions (80%), consensus 84%, score 91/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -18499,7 +18549,7 @@
         "previous_quality": 100,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -18630,25 +18680,41 @@
             "samples": 205
           },
           "chronos2": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "Chronos-2 small",
+            "direction": "BUY",
+            "confidence": 95.0,
+            "reference_price": 23117.624,
+            "forecast_price": 23168.78710938,
+            "expected_return_pct": 0.2213,
+            "volatility_threshold_pct": 0.0571,
+            "horizon_steps": 4,
+            "model_id": "autogluon/chronos-2-small"
           },
           "timesfm25": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "BUY",
+            "confidence": 73.7,
+            "reference_price": 23117.62304688,
+            "forecast_price": 23140.00585938,
+            "expected_return_pct": 0.0968,
+            "volatility_threshold_pct": 0.0571,
+            "horizon_steps": 4,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
           }
         },
         "ensemble": {
-          "direction": "SELL",
-          "consensus": 100.0,
+          "direction": "BUY",
+          "consensus": 74.1,
           "configured_models": 4,
           "connected_models": 4,
-          "available_models": 2,
-          "reliable_models": 2,
-          "directional_models": 1,
+          "available_models": 4,
+          "reliable_models": 4,
+          "directional_models": 3,
           "neutral_models": 1,
-          "mean_confidence": 56.5,
-          "buy_weight": 0.0,
+          "mean_confidence": 70.5,
+          "buy_weight": 1.687,
           "sell_weight": 0.591
         },
         "qwen_local": {
@@ -18656,9 +18722,9 @@
           "model": "Qwen3-0.6B-q4f16_1-MLC"
         }
       },
-      "model_ensemble_direction": "SELL",
-      "model_ensemble_consensus": 100.0,
-      "model_models_available": 2,
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 74.1,
+      "model_models_available": 4,
       "adaptive_evidence": {
         "version": "Sera Adaptive Evidence v1.0",
         "profile_key": "Crash 600 Index|day|BREAKOUT_CONTINUATION|TRENDING",
@@ -19135,7 +19201,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 9/16 conditions (56%), consensus 49%, score 23/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -19154,7 +19220,7 @@
         "previous_quality": 100,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -19482,9 +19548,9 @@
         "flip": false,
         "bias_cycles": 13,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 63,
-        "previous_score": 53,
+        "new_candle": false,
+        "previous_conditions": 73,
+        "previous_score": 84,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 85,
         "confirmation_progress": "1/1",
@@ -19710,7 +19776,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 11/15 conditions (73%), consensus 70%, score 84/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -19742,14 +19808,14 @@
         "reason": "Prix trop étendu: attendre un retour dans la zone proposée avant toute exécution."
       },
       "trend_change": {
-        "state": "STRENGTHENING",
+        "state": "STABLE",
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 100,
-        "previous_quality": 62,
-        "quality_delta": 38,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 100,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -19881,25 +19947,41 @@
             "samples": 205
           },
           "chronos2": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "Chronos-2 small",
+            "direction": "BUY",
+            "confidence": 66.5,
+            "reference_price": 16670.582,
+            "forecast_price": 16681.47070312,
+            "expected_return_pct": 0.0653,
+            "volatility_threshold_pct": 0.0555,
+            "horizon_steps": 4,
+            "model_id": "autogluon/chronos-2-small"
           },
           "timesfm25": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "BUY",
+            "confidence": 64.8,
+            "reference_price": 16670.58203125,
+            "forecast_price": 16680.359375,
+            "expected_return_pct": 0.0587,
+            "volatility_threshold_pct": 0.0555,
+            "horizon_steps": 4,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
           }
         },
         "ensemble": {
-          "direction": "NEUTRAL",
-          "consensus": null,
+          "direction": "BUY",
+          "consensus": 100.0,
           "configured_models": 4,
           "connected_models": 4,
-          "available_models": 1,
-          "reliable_models": 1,
-          "directional_models": 0,
+          "available_models": 3,
+          "reliable_models": 3,
+          "directional_models": 2,
           "neutral_models": 1,
-          "mean_confidence": 55.6,
-          "buy_weight": 0.0,
+          "mean_confidence": 62.3,
+          "buy_weight": 1.313,
           "sell_weight": 0.0
         },
         "qwen_local": {
@@ -19907,9 +19989,9 @@
           "model": "Qwen3-0.6B-q4f16_1-MLC"
         }
       },
-      "model_ensemble_direction": "NEUTRAL",
-      "model_ensemble_consensus": 0.0,
-      "model_models_available": 1,
+      "model_ensemble_direction": "BUY",
+      "model_ensemble_consensus": 100.0,
+      "model_models_available": 3,
       "adaptive_evidence": {
         "version": "Sera Adaptive Evidence v1.0",
         "profile_key": "Crash 900 Index|day|GENERIC|TRENDING",
@@ -20379,7 +20461,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/9 conditions (56%), consensus 50%, score 28/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -20398,7 +20480,7 @@
         "previous_quality": 88,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -20725,9 +20807,9 @@
         "flip": false,
         "bias_cycles": 13,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 44,
-        "previous_score": 60,
+        "new_candle": false,
+        "previous_conditions": 56,
+        "previous_score": 70,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 91,
         "confirmation_progress": "1/1",
@@ -20954,7 +21036,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 9/16 conditions (56%), consensus 59%, score 70/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -20986,14 +21068,14 @@
         "reason": "Prix trop étendu: attendre un retour dans la zone proposée avant toute exécution."
       },
       "trend_change": {
-        "state": "STRENGTHENING",
+        "state": "STABLE",
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 75,
-        "previous_quality": 64,
-        "quality_delta": 11,
-        "changed": true,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "previous_quality": 75,
+        "quality_delta": 0,
+        "changed": false,
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -21632,7 +21714,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 8/18 conditions (44%), consensus 47%, score 54/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -21651,7 +21733,7 @@
         "previous_quality": 73,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -21879,9 +21961,9 @@
         "atr": 0.2193056974571879,
         "swingHigh": 1006.655,
         "swingLow": 1005.795,
-        "adx": 28.757559760490704,
+        "adx": 28.75704827000538,
         "plusDI": 12.101179827404794,
-        "minusDI": 21.835765575804455,
+        "minusDI": 21.83607288586967,
         "dmiAligned": true,
         "macd": -0.13675402613694132,
         "macdSignal": -0.13431426089209894,
@@ -21979,7 +22061,7 @@
         "flip": false,
         "bias_cycles": 13,
         "bias_candle": 1793088000,
-        "new_candle": true,
+        "new_candle": false,
         "previous_conditions": 60,
         "previous_score": 70,
         "previous_execution_state": "WAIT_CONFIRMATION",
@@ -22207,7 +22289,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 9/15 conditions (60%), consensus 59%, score 70/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -22243,10 +22325,10 @@
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 76,
-        "previous_quality": 75,
-        "quality_delta": 1,
+        "previous_quality": 76,
+        "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -22885,7 +22967,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/18 conditions (33%), consensus 28%, score 29/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -22904,7 +22986,7 @@
         "previous_quality": 67,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -23132,9 +23214,9 @@
         "atr": 1345.3643581675842,
         "swingHigh": 930735.084,
         "swingLow": 925252.407,
-        "adx": 17.104794950624385,
+        "adx": 17.102682786702704,
         "plusDI": 14.5350209521536,
-        "minusDI": 24.492232008932614,
+        "minusDI": 24.49239980506239,
         "dmiAligned": true,
         "macd": -616.8682225921657,
         "macdSignal": -466.0086571673131,
@@ -23227,14 +23309,14 @@
       "trend_memory": {
         "previous_bias": "SELL",
         "current_bias": "SELL",
-        "previous_final": "SELL",
+        "previous_final": "ATTENDRE",
         "persistence": true,
         "flip": false,
         "bias_cycles": 13,
         "bias_candle": 1793088000,
-        "new_candle": true,
-        "previous_conditions": 88,
-        "previous_score": 82,
+        "new_candle": false,
+        "previous_conditions": 75,
+        "previous_score": 73,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 75,
         "confirmation_progress": "1/1",
@@ -23453,7 +23535,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 68%, score 73/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -23492,7 +23574,7 @@
         "previous_quality": 53,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -24129,7 +24211,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 10/18 conditions (56%), consensus 59%, score 77/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -24148,7 +24230,7 @@
         "previous_quality": 67,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -24476,7 +24558,7 @@
         "flip": false,
         "bias_cycles": 13,
         "bias_candle": 1793088000,
-        "new_candle": true,
+        "new_candle": false,
         "previous_conditions": 53,
         "previous_score": 61,
         "previous_execution_state": "WAIT_CONFIRMATION",
@@ -24704,7 +24786,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 8/15 conditions (53%), consensus 48%, score 61/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -24740,10 +24822,10 @@
         "current_side": "SELL",
         "previous_side": "SELL",
         "quality": 81,
-        "previous_quality": 84,
-        "quality_delta": -3,
+        "previous_quality": 81,
+        "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -25374,7 +25456,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/10 conditions (50%), consensus 44%, score 61/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -25393,7 +25475,7 @@
         "previous_quality": 47,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -25709,8 +25791,8 @@
         "bias_cycles": 1,
         "bias_candle": 1793088000,
         "new_candle": false,
-        "previous_conditions": 63,
-        "previous_score": 71,
+        "previous_conditions": 75,
+        "previous_score": 85,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 78,
         "confirmation_progress": "1/1",
@@ -25929,7 +26011,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 78%, score 85/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -25968,7 +26050,7 @@
         "previous_quality": 93,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -26098,12 +26180,28 @@
             "samples": 205
           },
           "chronos2": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "Chronos-2 small",
+            "direction": "NEUTRAL",
+            "confidence": 62.7,
+            "reference_price": 102.22,
+            "forecast_price": 101.93371582,
+            "expected_return_pct": -0.2801,
+            "volatility_threshold_pct": 0.3082,
+            "horizon_steps": 4,
+            "model_id": "autogluon/chronos-2-small"
           },
           "timesfm25": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 61.4,
+            "reference_price": 102.22000122,
+            "forecast_price": 101.96427917,
+            "expected_return_pct": -0.2502,
+            "volatility_threshold_pct": 0.3082,
+            "horizon_steps": 4,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
           }
         },
         "ensemble": {
@@ -26111,11 +26209,11 @@
           "consensus": 100.0,
           "configured_models": 4,
           "connected_models": 4,
-          "available_models": 1,
-          "reliable_models": 1,
+          "available_models": 3,
+          "reliable_models": 3,
           "directional_models": 1,
-          "neutral_models": 0,
-          "mean_confidence": 71.1,
+          "neutral_models": 2,
+          "mean_confidence": 65.1,
           "buy_weight": 0.0,
           "sell_weight": 0.64
         },
@@ -26126,7 +26224,7 @@
       },
       "model_ensemble_direction": "SELL",
       "model_ensemble_consensus": 100.0,
-      "model_models_available": 1,
+      "model_models_available": 3,
       "adaptive_evidence": {
         "version": "Sera Adaptive Evidence v1.0",
         "profile_key": "Jump 100 Index|day|GENERIC|TRANSITION",
@@ -26597,7 +26695,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 3/10 conditions (30%), consensus 26%, score 14/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -26616,7 +26714,7 @@
         "previous_quality": 58,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -26924,8 +27022,8 @@
         "bias_cycles": 1,
         "bias_candle": 1793088000,
         "new_candle": false,
-        "previous_conditions": 50,
-        "previous_score": 62,
+        "previous_conditions": 56,
+        "previous_score": 71,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 89,
         "confirmation_progress": "1/1",
@@ -27152,7 +27250,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 9/16 conditions (56%), consensus 59%, score 71/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -27191,7 +27289,7 @@
         "previous_quality": 76,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -27829,7 +27927,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 8/17 conditions (47%), consensus 48%, score 57/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -27848,7 +27946,7 @@
         "previous_quality": 73,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -28397,7 +28495,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 3/8 conditions (38%), consensus 36%, score 46/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -28416,7 +28514,7 @@
         "previous_quality": 33,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -29009,7 +29107,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/17 conditions (41%), consensus 36%, score 55/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -29028,7 +29126,7 @@
         "previous_quality": 58,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -29577,7 +29675,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 3/8 conditions (38%), consensus 31%, score 20/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -29596,7 +29694,7 @@
         "previous_quality": 40,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -30189,7 +30287,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 9/17 conditions (53%), consensus 56%, score 72/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -30208,7 +30306,7 @@
         "previous_quality": 53,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -30763,7 +30861,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 8/14 conditions (57%), consensus 56%, score 72/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -30802,7 +30900,7 @@
         "previous_quality": 81,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -31439,7 +31537,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/16 conditions (38%), consensus 34%, score 32/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -31458,7 +31556,7 @@
         "previous_quality": 92,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -32013,7 +32111,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/14 conditions (43%), consensus 35%, score 28/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -32032,7 +32130,7 @@
         "previous_quality": 64,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -32639,7 +32737,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/16 conditions (38%), consensus 32%, score 47/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -32658,7 +32756,7 @@
         "previous_quality": 58,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -33201,7 +33299,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 4/8 conditions (50%), consensus 44%, score 5/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -33220,7 +33318,7 @@
         "previous_quality": 24,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -33813,7 +33911,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/10 conditions (60%), consensus 51%, score 55/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -33832,7 +33930,7 @@
         "previous_quality": 22,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -34382,7 +34480,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 5/15 conditions (33%), consensus 26%, score 25/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -34401,7 +34499,7 @@
         "previous_quality": 49,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -35008,7 +35106,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/17 conditions (41%), consensus 41%, score 56/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -35027,7 +35125,7 @@
         "previous_quality": 73,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.749Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -35576,7 +35674,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 68%, score 75/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -35615,7 +35713,7 @@
         "previous_quality": 48,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -36244,7 +36342,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/10 conditions (50%), consensus 40%, score 32/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -36263,7 +36361,7 @@
         "previous_quality": 58,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -36813,7 +36911,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 8/16 conditions (50%), consensus 54%, score 70/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -36852,7 +36950,7 @@
         "previous_quality": 70,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -37490,7 +37588,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/17 conditions (41%), consensus 36%, score 52/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -37509,7 +37607,7 @@
         "previous_quality": 71,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -38058,7 +38156,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 68%, score 74/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -38097,7 +38195,7 @@
         "previous_quality": 60,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -38733,7 +38831,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/17 conditions (29%), consensus 24%, score 19/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -38752,7 +38850,7 @@
         "previous_quality": 33,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -39301,7 +39399,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 8/15 conditions (53%), consensus 47%, score 66/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -39340,7 +39438,7 @@
         "previous_quality": 87,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -39972,7 +40070,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/11 conditions (45%), consensus 44%, score 25/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -39991,7 +40089,7 @@
         "previous_quality": 87,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -40533,7 +40631,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 68%, score 77/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -40572,7 +40670,7 @@
         "previous_quality": 59,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -41201,7 +41299,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/10 conditions (60%), consensus 54%, score 67/100, confirmation 1/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -41220,7 +41318,7 @@
         "previous_quality": 62,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -41777,7 +41875,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 8/16 conditions (50%), consensus 56%, score 68/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -41816,7 +41914,7 @@
         "previous_quality": 78,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -42454,7 +42552,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/17 conditions (35%), consensus 32%, score 44/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -42473,7 +42571,7 @@
         "previous_quality": 69,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -43016,7 +43114,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 71%, score 80/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -43055,7 +43153,7 @@
         "previous_quality": 60,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -43185,12 +43283,28 @@
             "samples": 205
           },
           "chronos2": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "Chronos-2 small",
+            "direction": "NEUTRAL",
+            "confidence": 52.2,
+            "reference_price": 1087.56,
+            "forecast_price": 1088.04248047,
+            "expected_return_pct": 0.0444,
+            "volatility_threshold_pct": 0.2779,
+            "horizon_steps": 4,
+            "model_id": "autogluon/chronos-2-small"
           },
           "timesfm25": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 57.3,
+            "reference_price": 1087.56005859,
+            "forecast_price": 1089.12719727,
+            "expected_return_pct": 0.1441,
+            "volatility_threshold_pct": 0.2779,
+            "horizon_steps": 4,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
           }
         },
         "ensemble": {
@@ -43198,11 +43312,11 @@
           "consensus": null,
           "configured_models": 4,
           "connected_models": 4,
-          "available_models": 0,
-          "reliable_models": 0,
+          "available_models": 2,
+          "reliable_models": 2,
           "directional_models": 0,
-          "neutral_models": 0,
-          "mean_confidence": null,
+          "neutral_models": 2,
+          "mean_confidence": 54.8,
           "buy_weight": 0.0,
           "sell_weight": 0.0
         },
@@ -43213,7 +43327,7 @@
       },
       "model_ensemble_direction": "NEUTRAL",
       "model_ensemble_consensus": 0.0,
-      "model_models_available": 0,
+      "model_models_available": 2,
       "adaptive_evidence": {
         "version": "Sera Adaptive Evidence v1.0",
         "profile_key": "Volatility 100 (1s) Index|day|GENERIC|TRANSITION",
@@ -43691,7 +43805,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/17 conditions (41%), consensus 39%, score 58/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -43710,7 +43824,7 @@
         "previous_quality": 67,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -44266,7 +44380,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 7/15 conditions (47%), consensus 47%, score 58/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -44285,7 +44399,7 @@
         "previous_quality": 55,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -44893,7 +45007,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/17 conditions (35%), consensus 31%, score 53/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -44912,7 +45026,7 @@
         "previous_quality": 64,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -45462,7 +45576,7 @@
         "confirmation_gate": true,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 9/15 conditions (60%), consensus 61%, score 68/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -45501,7 +45615,7 @@
         "previous_quality": 81,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -46139,7 +46253,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/17 conditions (41%), consensus 35%, score 11/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -46158,7 +46272,7 @@
         "previous_quality": 100,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -46714,7 +46828,7 @@
         "confirmation_gate": true,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 12/15 conditions (80%), consensus 83%, score 83/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -46753,7 +46867,7 @@
         "previous_quality": 88,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -46884,12 +46998,28 @@
             "samples": 205
           },
           "chronos2": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "Chronos-2 small",
+            "direction": "NEUTRAL",
+            "confidence": 56.8,
+            "reference_price": 935610.42,
+            "forecast_price": 935886.3125,
+            "expected_return_pct": 0.0295,
+            "volatility_threshold_pct": 0.0607,
+            "horizon_steps": 4,
+            "model_id": "autogluon/chronos-2-small"
           },
           "timesfm25": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 60.1,
+            "reference_price": 935610.4375,
+            "forecast_price": 936020.5,
+            "expected_return_pct": 0.0438,
+            "volatility_threshold_pct": 0.0607,
+            "horizon_steps": 4,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
           }
         },
         "ensemble": {
@@ -46897,11 +47027,11 @@
           "consensus": null,
           "configured_models": 4,
           "connected_models": 4,
-          "available_models": 0,
-          "reliable_models": 0,
+          "available_models": 2,
+          "reliable_models": 2,
           "directional_models": 0,
-          "neutral_models": 0,
-          "mean_confidence": null,
+          "neutral_models": 2,
+          "mean_confidence": 58.5,
           "buy_weight": 0.0,
           "sell_weight": 0.0
         },
@@ -46912,7 +47042,7 @@
       },
       "model_ensemble_direction": "NEUTRAL",
       "model_ensemble_consensus": 0.0,
-      "model_models_available": 0,
+      "model_models_available": 2,
       "adaptive_evidence": {
         "version": "Sera Adaptive Evidence v1.0",
         "profile_key": "Volatility 25 (1s) Index|day|BREAKOUT_CONTINUATION|TRENDING",
@@ -47390,7 +47520,7 @@
         "confirmation_gate": true,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · BREAKOUT_CONTINUATION: 10/17 conditions (59%), consensus 67%, score 57/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -47409,7 +47539,7 @@
         "previous_quality": 84,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -47958,7 +48088,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 76%, score 57/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -47977,7 +48107,7 @@
         "previous_quality": 72,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -48576,7 +48706,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/10 conditions (50%), consensus 40%, score 34/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -48595,7 +48725,7 @@
         "previous_quality": 48,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -49145,7 +49275,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "SELL haute conviction · GENERIC: H1/H4/D1 alignés, confirmation 1/1, score 96/100, 88% des conditions et consensus 87%."
       },
       "risk": {
@@ -49184,7 +49314,7 @@
         "previous_quality": 77,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": {
         "unit": "Deriv synthetic normalized point",
@@ -49347,12 +49477,28 @@
             "samples": 205
           },
           "chronos2": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "Chronos-2 small",
+            "direction": "NEUTRAL",
+            "confidence": 61.7,
+            "reference_price": 6018.879,
+            "forecast_price": 6022.18945312,
+            "expected_return_pct": 0.055,
+            "volatility_threshold_pct": 0.0659,
+            "horizon_steps": 4,
+            "model_id": "autogluon/chronos-2-small"
           },
           "timesfm25": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 50.3,
+            "reference_price": 6018.87890625,
+            "forecast_price": 6018.95117188,
+            "expected_return_pct": 0.0012,
+            "volatility_threshold_pct": 0.0659,
+            "horizon_steps": 4,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
           }
         },
         "ensemble": {
@@ -49360,11 +49506,11 @@
           "consensus": 100.0,
           "configured_models": 4,
           "connected_models": 4,
-          "available_models": 2,
-          "reliable_models": 2,
+          "available_models": 4,
+          "reliable_models": 4,
           "directional_models": 2,
-          "neutral_models": 0,
-          "mean_confidence": 83.0,
+          "neutral_models": 2,
+          "mean_confidence": 69.5,
           "buy_weight": 1.424,
           "sell_weight": 0.0
         },
@@ -49375,7 +49521,7 @@
       },
       "model_ensemble_direction": "BUY",
       "model_ensemble_consensus": 100.0,
-      "model_models_available": 2,
+      "model_models_available": 4,
       "adaptive_evidence": {
         "version": "Sera Adaptive Evidence v1.0",
         "profile_key": "Volatility 30 (1s) Index|day|GENERIC|TRANSITION",
@@ -49846,7 +49992,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/10 conditions (70%), consensus 63%, score 74/100, confirmation 1/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -49865,7 +50011,7 @@
         "previous_quality": 79,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -50413,7 +50559,7 @@
         "confirmation_gate": false,
         "family_gate": false,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 4/8 conditions (50%), consensus 44%, score 22/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -50432,7 +50578,7 @@
         "previous_quality": 59,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -51025,7 +51171,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/10 conditions (50%), consensus 40%, score 34/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -51044,7 +51190,7 @@
         "previous_quality": 33,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -51593,7 +51739,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 9/15 conditions (60%), consensus 54%, score 70/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -51632,7 +51778,7 @@
         "previous_quality": 82,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -52263,7 +52409,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/10 conditions (70%), consensus 67%, score 83/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -52282,7 +52428,7 @@
         "previous_quality": 91,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -52383,35 +52529,51 @@
             "samples": 923
           },
           "chronos2": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "Chronos-2 small",
+            "direction": "SELL",
+            "confidence": 66.2,
+            "reference_price": 84.2599,
+            "forecast_price": 83.95465851,
+            "expected_return_pct": -0.3623,
+            "volatility_threshold_pct": 0.3136,
+            "horizon_steps": 6,
+            "model_id": "autogluon/chronos-2-small"
           },
           "timesfm25": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "SELL",
+            "confidence": 74.9,
+            "reference_price": 84.25990295,
+            "forecast_price": 83.79051208,
+            "expected_return_pct": -0.5571,
+            "volatility_threshold_pct": 0.3136,
+            "horizon_steps": 6,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
           }
         },
         "ensemble": {
-          "direction": "BUY",
-          "consensus": 100.0,
+          "direction": "SELL",
+          "consensus": 71.2,
           "configured_models": 4,
           "connected_models": 4,
-          "available_models": 1,
-          "reliable_models": 1,
-          "directional_models": 1,
+          "available_models": 3,
+          "reliable_models": 3,
+          "directional_models": 3,
           "neutral_models": 0,
-          "mean_confidence": 59.4,
+          "mean_confidence": 66.8,
           "buy_weight": 0.571,
-          "sell_weight": 0.0
+          "sell_weight": 1.411
         },
         "qwen_local": {
           "status": "browser_optional",
           "model": "Qwen3-0.6B-q4f16_1-MLC"
         }
       },
-      "model_ensemble_direction": "BUY",
-      "model_ensemble_consensus": 100.0,
-      "model_models_available": 1,
+      "model_ensemble_direction": "SELL",
+      "model_ensemble_consensus": 71.2,
+      "model_models_available": 3,
       "adaptive_evidence": {
         "version": "Sera Adaptive Evidence v1.0",
         "profile_key": "Volatility 50 Index|swing|GENERIC|TRANSITION",
@@ -52830,7 +52992,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 68%, score 74/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -52869,7 +53031,7 @@
         "previous_quality": 58,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -53498,7 +53660,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 4/10 conditions (40%), consensus 32%, score 28/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -53517,7 +53679,7 @@
         "previous_quality": 39,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -54059,7 +54221,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 7/15 conditions (47%), consensus 41%, score 33/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -54078,7 +54240,7 @@
         "previous_quality": 61,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -54686,7 +54848,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 8/17 conditions (47%), consensus 49%, score 56/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -54705,7 +54867,7 @@
         "previous_quality": 69,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -55254,7 +55416,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 4,
+        "candle_age_minutes": 10,
         "summary": "ATTENDRE autonome · GENERIC: 6/8 conditions (75%), consensus 71%, score 81/100. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -55293,7 +55455,7 @@
         "previous_quality": 54,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": {
@@ -55423,25 +55585,41 @@
             "samples": 205
           },
           "chronos2": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "Chronos-2 small",
+            "direction": "BUY",
+            "confidence": 67.3,
+            "reference_price": 29311.767,
+            "forecast_price": 29384.34179688,
+            "expected_return_pct": 0.2476,
+            "volatility_threshold_pct": 0.2009,
+            "horizon_steps": 4,
+            "model_id": "autogluon/chronos-2-small"
           },
           "timesfm25": {
-            "status": "pending",
-            "direction": "NEUTRAL"
+            "status": "ok",
+            "model": "TimesFM 2.5",
+            "direction": "NEUTRAL",
+            "confidence": 50.5,
+            "reference_price": 29311.76757812,
+            "forecast_price": 29309.56835938,
+            "expected_return_pct": -0.0075,
+            "volatility_threshold_pct": 0.2009,
+            "horizon_steps": 4,
+            "model_id": "google/timesfm-2.5-200m-pytorch"
           }
         },
         "ensemble": {
-          "direction": "SELL",
-          "consensus": 100.0,
+          "direction": "NEUTRAL",
+          "consensus": 52.1,
           "configured_models": 4,
           "connected_models": 4,
-          "available_models": 2,
-          "reliable_models": 2,
-          "directional_models": 1,
-          "neutral_models": 1,
-          "mean_confidence": 57.7,
-          "buy_weight": 0.0,
+          "available_models": 4,
+          "reliable_models": 4,
+          "directional_models": 2,
+          "neutral_models": 2,
+          "mean_confidence": 58.3,
+          "buy_weight": 0.673,
           "sell_weight": 0.619
         },
         "qwen_local": {
@@ -55449,9 +55627,9 @@
           "model": "Qwen3-0.6B-q4f16_1-MLC"
         }
       },
-      "model_ensemble_direction": "SELL",
-      "model_ensemble_consensus": 100.0,
-      "model_models_available": 2,
+      "model_ensemble_direction": "NEUTRAL",
+      "model_ensemble_consensus": 52.1,
+      "model_models_available": 4,
       "adaptive_evidence": {
         "version": "Sera Adaptive Evidence v1.0",
         "profile_key": "Volatility 90 (1s) Index|day|GENERIC|TRANSITION",
@@ -55922,7 +56100,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/10 conditions (70%), consensus 63%, score 56/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -55941,7 +56119,7 @@
         "previous_quality": 82,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -56968,7 +57146,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 4/16 conditions (25%), consensus 19%, score 0/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -56987,7 +57165,7 @@
         "previous_quality": 85,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -58001,7 +58179,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 4/10 conditions (40%), consensus 37%, score 47/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -58020,7 +58198,7 @@
         "previous_quality": 26,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -59022,7 +59200,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 3/10 conditions (30%), consensus 26%, score 17/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -59041,7 +59219,7 @@
         "previous_quality": 36,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -60048,8 +60226,8 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": false,
-        "candle_age_minutes": 562,
-        "summary": "ATTENDRE · données non fraîches: dernière bougie H1 clôturée il y a 562 min (marché fermé ou flux interrompu)."
+        "candle_age_minutes": 567,
+        "summary": "ATTENDRE · données non fraîches: dernière bougie H1 clôturée il y a 567 min (marché fermé ou flux interrompu)."
       },
       "risk": {
         "risk_reward": 3.6,
@@ -60067,7 +60245,7 @@
         "previous_quality": 58,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -60126,7 +60304,7 @@
       "score_type": "setup_readiness",
       "ai_verdict": "INDISPONIBLE",
       "ai_confidence": 0,
-      "ai_summary": "ATTENDRE · données non fraîches: dernière bougie H1 clôturée il y a 562 min (marché fermé ou flux interrompu). Exécution: WAIT_CONFIRMATION. Biais intéressant, mais confirmation 0/2: attendre le prochain cycle cohérent.",
+      "ai_summary": "ATTENDRE · données non fraîches: dernière bougie H1 clôturée il y a 567 min (marché fermé ou flux interrompu). Exécution: WAIT_CONFIRMATION. Biais intéressant, mais confirmation 0/2: attendre le prochain cycle cohérent.",
       "ai_confirmations": [
         "Stratégie locale: Volatility control",
         "Stratégie locale: No H4/D1 exhaustion",
@@ -61095,7 +61273,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/16 conditions (38%), consensus 41%, score 41/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -61114,7 +61292,7 @@
         "previous_quality": 42,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -62136,7 +62314,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 8/16 conditions (50%), consensus 54%, score 69/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -62155,7 +62333,7 @@
         "previous_quality": 62,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -63183,7 +63361,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 9/16 conditions (56%), consensus 59%, score 69/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -63202,7 +63380,7 @@
         "previous_quality": 65,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -64231,7 +64409,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 9/17 conditions (53%), consensus 60%, score 77/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -64250,7 +64428,7 @@
         "previous_quality": 96,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -65279,7 +65457,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 10/17 conditions (59%), consensus 66%, score 78/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -65298,7 +65476,7 @@
         "previous_quality": 87,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -66327,7 +66505,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 8/17 conditions (47%), consensus 52%, score 56/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -66346,7 +66524,7 @@
         "previous_quality": 90,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -67147,7 +67325,7 @@
         "bias_candle": 1793084400,
         "new_candle": false,
         "previous_conditions": 31,
-        "previous_score": 42,
+        "previous_score": 45,
         "previous_execution_state": "WAIT_CONFIRMATION",
         "candidate_score": 77,
         "confirmation_progress": "1/2",
@@ -67374,7 +67552,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/16 conditions (31%), consensus 25%, score 45/100, confirmation 1/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -67393,7 +67571,7 @@
         "previous_quality": 71,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -68415,7 +68593,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/17 conditions (29%), consensus 28%, score 23/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -68434,7 +68612,7 @@
         "previous_quality": 72,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -69448,7 +69626,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/9 conditions (67%), consensus 65%, score 61/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -69467,7 +69645,7 @@
         "previous_quality": 38,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -70476,7 +70654,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 2/10 conditions (20%), consensus 19%, score 12/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -70495,7 +70673,7 @@
         "previous_quality": 21,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -71495,7 +71673,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/16 conditions (44%), consensus 40%, score 56/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -71514,7 +71692,7 @@
         "previous_quality": 73,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -72536,7 +72714,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 9/16 conditions (56%), consensus 61%, score 63/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -72555,7 +72733,7 @@
         "previous_quality": 87,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -73583,7 +73761,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 5/16 conditions (31%), consensus 31%, score 22/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -73602,7 +73780,7 @@
         "previous_quality": 50,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -74617,7 +74795,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/16 conditions (44%), consensus 41%, score 57/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -74636,7 +74814,7 @@
         "previous_quality": 80,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -75665,7 +75843,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 8/17 conditions (47%), consensus 54%, score 64/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -75684,7 +75862,7 @@
         "previous_quality": 53,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -76707,7 +76885,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · PULLBACK_CONTINUATION: 9/17 conditions (53%), consensus 55%, score 53/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -76726,7 +76904,7 @@
         "previous_quality": 58,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -77741,7 +77919,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 3/9 conditions (33%), consensus 28%, score 25/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -77760,7 +77938,7 @@
         "previous_quality": 53,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -78768,7 +78946,7 @@
         "confirmation_gate": true,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 9/17 conditions (53%), consensus 60%, score 73/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -78787,7 +78965,7 @@
         "previous_quality": 79,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -79815,7 +79993,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 6/16 conditions (38%), consensus 34%, score 31/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -79834,7 +80012,7 @@
         "previous_quality": 80,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -80849,7 +81027,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 4/9 conditions (44%), consensus 36%, score 17/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -80868,7 +81046,7 @@
         "previous_quality": 14,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.979Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -81883,7 +82061,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 9/17 conditions (53%), consensus 60%, score 79/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -81902,7 +82080,7 @@
         "previous_quality": 91,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.980Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -82924,7 +83102,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 7/10 conditions (70%), consensus 68%, score 79/100, confirmation 2/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -82943,7 +83121,7 @@
         "previous_quality": 76,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.980Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -83963,7 +84141,7 @@
         "confirmation_gate": false,
         "family_gate": true,
         "freshness_gate": true,
-        "candle_age_minutes": 19,
+        "candle_age_minutes": 25,
         "summary": "ATTENDRE autonome · GENERIC: 4/9 conditions (44%), consensus 36%, score 29/100, confirmation 0/2. Seuils swing: 84/100, consensus 72%, 80% des conditions, H1/H4/D1 alignés et 2 cycles."
       },
       "risk": {
@@ -83982,7 +84160,7 @@
         "previous_quality": 40,
         "quality_delta": 0,
         "changed": false,
-        "checked_at": "2026-10-27T08:19:20.750Z"
+        "checked_at": "2026-10-27T08:24:48.980Z"
       },
       "swing_distance": null,
       "projected_swing_distance": null,
@@ -84169,12 +84347,12 @@
       "TimesFM 2.5 200M"
     ],
     "browser_advisor": "Qwen3-0.6B via WebLLM",
-    "foundation_ran": false,
+    "foundation_ran": true,
     "connection_mode": "core_every_cycle_foundation_top_candidates",
     "configured_models": 4,
     "policy": "Core models assess every market; foundation models refresh the strongest candidates. Only fresh, reliable votes enter consensus."
   },
-  "model_ensemble_updated_at": "2026-10-27T08:21:32.116083Z",
+  "model_ensemble_updated_at": "2026-10-27T08:27:09.612158Z",
   "adaptive_learning": {
     "version": "Sera Adaptive Evidence v1.0",
     "records": 600,
