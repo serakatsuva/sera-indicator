@@ -1,52 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-28T03:02:27.959999Z",
+  "updated_at": "2026-10-28T03:06:40.166162Z",
   "records": [
-    {
-      "key": "R_75:day|1792883700|SELL",
-      "id": "R_75:day",
-      "market": "Volatility 75 Index",
-      "symbol": "R_75",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1792883700,
-      "setup_type": "BREAKOUT_CONTINUATION",
-      "regime": "TRENDING",
-      "confidence": 96,
-      "execution_score": 85.0,
-      "active_strategies": [
-        "Trend following",
-        "SMC structure",
-        "Breakout + impulse",
-        "Momentum",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "ADX / DMI trend strength",
-        "MACD momentum alignment",
-        "Donchian breakout",
-        "Bollinger squeeze release",
-        "Trend efficiency ratio",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 37019.1779,
-        "sl": 38558.7621,
-        "tp1": 34709.801600000006,
-        "tp2": 33324.17582000001,
-        "tp3": 31476.674780000012,
-        "tp4": 29629.173740000013,
-        "tp5": 27781.672700000017
-      },
-      "status": "resolved",
-      "created_at": "2026-10-24T23:34:27.681482Z",
-      "max_stage": 2,
-      "last_epoch": 1793055600,
-      "result": "TIMEOUT_TP2",
-      "r": 2.4,
-      "resolved_epoch": 1793056500
-    },
     {
       "key": "R_100:day|1792884600|SELL",
       "id": "R_100:day",
@@ -24098,7 +24053,9 @@
         "tp5": 4745.247000000004
       },
       "status": "open",
-      "created_at": "2026-10-28T03:02:27.904196Z"
+      "created_at": "2026-10-28T03:02:27.904196Z",
+      "max_stage": 0,
+      "last_epoch": 1793155500
     },
     {
       "key": "R_75:day|1793155500|SELL",
@@ -24137,19 +24094,45 @@
         "tp5": 25897.238900000004
       },
       "status": "open",
-      "created_at": "2026-10-28T03:02:27.904254Z"
+      "created_at": "2026-10-28T03:02:27.904254Z",
+      "max_stage": 0,
+      "last_epoch": 1793155500
+    },
+    {
+      "key": "JD100:day|1793155500|SELL",
+      "id": "JD100:day",
+      "market": "Jump 100 Index",
+      "symbol": "JD100",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1793155500,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 95,
+      "execution_score": 77.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation"
+      ],
+      "levels": {
+        "entry": 99.98,
+        "sl": 104.48,
+        "tp1": 93.23,
+        "tp2": 89.18,
+        "tp3": 83.78,
+        "tp4": 78.38000000000001,
+        "tp5": 72.98
+      },
+      "status": "open",
+      "created_at": "2026-10-28T03:06:40.076358Z"
     }
   ],
   "profiles": {
-    "Volatility 75 Index|day|BREAKOUT_CONTINUATION|TRENDING": {
-      "samples": 21,
-      "decisive_samples": 12,
-      "win_rate": 50.0,
-      "avg_r": 0.529,
-      "losses": 6,
-      "breakeven_or_flat": 9,
-      "wins": 6
-    },
     "Volatility 100 Index|day|GENERIC|TRENDING": {
       "samples": 1,
       "decisive_samples": 1,
@@ -24230,6 +24213,15 @@
       "losses": 3,
       "breakeven_or_flat": 3,
       "wins": 0
+    },
+    "Volatility 75 Index|day|BREAKOUT_CONTINUATION|TRENDING": {
+      "samples": 20,
+      "decisive_samples": 11,
+      "win_rate": 45.5,
+      "avg_r": 0.435,
+      "losses": 6,
+      "breakeven_or_flat": 9,
+      "wins": 5
     },
     "Jump 100 Index|day|GENERIC|TRANSITION": {
       "samples": 1,
@@ -25034,12 +25026,6 @@
     }
   },
   "strategy_profiles": {
-    "Trend following": {
-      "samples": 150,
-      "decisive_samples": 94,
-      "win_rate": 11.7,
-      "avg_r": -0.375
-    },
     "SMC structure": {
       "samples": 150,
       "decisive_samples": 89,
@@ -25049,14 +25035,20 @@
     "Breakout + impulse": {
       "samples": 150,
       "decisive_samples": 89,
-      "win_rate": 7.9,
-      "avg_r": -0.465
+      "win_rate": 6.7,
+      "avg_r": -0.487
     },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 94,
       "win_rate": 19.1,
       "avg_r": -0.213
+    },
+    "FVG / Order Block": {
+      "samples": 150,
+      "decisive_samples": 96,
+      "win_rate": 15.6,
+      "avg_r": -0.294
     },
     "Trend memory": {
       "samples": 150,
@@ -25085,32 +25077,20 @@
     "ADX / DMI trend strength": {
       "samples": 150,
       "decisive_samples": 85,
-      "win_rate": 4.7,
-      "avg_r": -0.494
+      "win_rate": 3.5,
+      "avg_r": -0.517
     },
     "MACD momentum alignment": {
       "samples": 150,
       "decisive_samples": 84,
-      "win_rate": 8.3,
-      "avg_r": -0.431
-    },
-    "Donchian breakout": {
-      "samples": 150,
-      "decisive_samples": 86,
-      "win_rate": 8.1,
-      "avg_r": -0.445
-    },
-    "Bollinger squeeze release": {
-      "samples": 108,
-      "decisive_samples": 70,
-      "win_rate": 8.6,
+      "win_rate": 7.1,
       "avg_r": -0.454
     },
     "Trend efficiency ratio": {
-      "samples": 148,
-      "decisive_samples": 88,
-      "win_rate": 4.5,
-      "avg_r": -0.486
+      "samples": 147,
+      "decisive_samples": 87,
+      "win_rate": 3.4,
+      "avg_r": -0.506
     },
     "HH/HL or LH/LL structure": {
       "samples": 150,
@@ -25118,11 +25098,23 @@
       "win_rate": 18.1,
       "avg_r": -0.235
     },
-    "FVG / Order Block": {
+    "Donchian breakout": {
       "samples": 150,
-      "decisive_samples": 96,
-      "win_rate": 15.6,
-      "avg_r": -0.294
+      "decisive_samples": 85,
+      "win_rate": 7.1,
+      "avg_r": -0.461
+    },
+    "Trend following": {
+      "samples": 150,
+      "decisive_samples": 94,
+      "win_rate": 11.7,
+      "avg_r": -0.381
+    },
+    "Bollinger squeeze release": {
+      "samples": 107,
+      "decisive_samples": 69,
+      "win_rate": 7.2,
+      "avg_r": -0.48
     },
     "Macro D1 alignment": {
       "samples": 1,
