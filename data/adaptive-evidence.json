@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-10-28T15:04:09.895712Z",
+  "updated_at": "2026-10-28T15:10:31.365151Z",
   "records": [
-    {
-      "key": "R_25:day|1792947600|SELL",
-      "id": "R_25:day",
-      "market": "Volatility 25 Index",
-      "symbol": "R_25",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1792947600,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 94,
-      "execution_score": 89.0,
-      "active_strategies": [
-        "SMC structure",
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation"
-      ],
-      "levels": {
-        "entry": 2770.765,
-        "sl": 2788.705,
-        "tp1": 2743.8549999999996,
-        "tp2": 2727.709,
-        "tp3": 2706.1809999999996,
-        "tp4": 2684.653,
-        "tp5": 2663.1249999999995
-      },
-      "status": "resolved",
-      "created_at": "2026-10-25T17:19:49.924735Z",
-      "max_stage": 2,
-      "last_epoch": 1793046600,
-      "result": "LOCKED_TP1",
-      "r": 1.5,
-      "resolved_epoch": 1793047500
-    },
     {
       "key": "R_50:day|1792947600|SELL",
       "id": "R_50:day",
@@ -23864,7 +23826,9 @@
         "tp5": 843.81
       },
       "status": "open",
-      "created_at": "2026-10-28T15:04:09.785421Z"
+      "created_at": "2026-10-28T15:04:09.785421Z",
+      "max_stage": 0,
+      "last_epoch": 1793198700
     },
     {
       "key": "1HZ25V:day|1793198700|SELL",
@@ -23897,19 +23861,45 @@
         "tp5": 891748.6600000005
       },
       "status": "open",
-      "created_at": "2026-10-28T15:04:09.785458Z"
+      "created_at": "2026-10-28T15:04:09.785458Z",
+      "max_stage": 0,
+      "last_epoch": 1793198700
+    },
+    {
+      "key": "WLDXAU:day|1793198700|SELL",
+      "id": "WLDXAU:day",
+      "market": "Gold Basket",
+      "symbol": "WLDXAU",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1793198700,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 88,
+      "execution_score": 88.0,
+      "active_strategies": [
+        "SMC structure",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 936281.679,
+        "sl": 940332.702,
+        "tp1": 930205.1444999999,
+        "tp2": 926559.2237999999,
+        "tp3": 921697.9961999998,
+        "tp4": 916836.7685999998,
+        "tp5": 911975.5409999997
+      },
+      "status": "open",
+      "created_at": "2026-10-28T15:10:31.268115Z"
     }
   ],
   "profiles": {
-    "Volatility 25 Index|day|GENERIC|TRANSITION": {
-      "samples": 2,
-      "decisive_samples": 2,
-      "win_rate": 50.0,
-      "avg_r": 0.25,
-      "losses": 1,
-      "breakeven_or_flat": 0,
-      "wins": 1
-    },
     "Volatility 50 Index|day|GENERIC|TRANSITION": {
       "samples": 5,
       "decisive_samples": 5,
@@ -24639,6 +24629,15 @@
       "breakeven_or_flat": 0,
       "wins": 0
     },
+    "Volatility 25 Index|day|GENERIC|TRANSITION": {
+      "samples": 1,
+      "decisive_samples": 1,
+      "win_rate": 0.0,
+      "avg_r": -1.0,
+      "losses": 1,
+      "breakeven_or_flat": 0,
+      "wins": 0
+    },
     "Gold Basket|day|GENERIC|TRANSITION": {
       "samples": 7,
       "decisive_samples": 7,
@@ -24809,12 +24808,6 @@
       "win_rate": 18.5,
       "avg_r": -0.264
     },
-    "Momentum": {
-      "samples": 150,
-      "decisive_samples": 101,
-      "win_rate": 17.8,
-      "avg_r": -0.315
-    },
     "FVG / Order Block": {
       "samples": 150,
       "decisive_samples": 97,
@@ -24862,6 +24855,12 @@
       "decisive_samples": 110,
       "win_rate": 10.0,
       "avg_r": -0.538
+    },
+    "Momentum": {
+      "samples": 150,
+      "decisive_samples": 101,
+      "win_rate": 17.8,
+      "avg_r": -0.315
     },
     "ADX / DMI trend strength": {
       "samples": 150,
