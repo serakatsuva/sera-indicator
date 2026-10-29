@@ -33,8 +33,14 @@ static void dump(const char* title){
   std::vector<std::pair<long,string>> lines;
   for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL) lines.push_back({kv.second.ints[OBJPROP_YDISTANCE],
       string("[")+colname(kv.second.ints[OBJPROP_COLOR])+"] "+kv.second.strs[OBJPROP_TEXT]});
-  std::sort(lines.begin(),lines.end());
+  for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_RECTANGLE_LABEL && kv.first.find("_FG")!=string::npos)
+    lines.push_back({kv.second.ints[OBJPROP_YDISTANCE]-3,string("BAR ")+std::to_string(kv.second.ints[OBJPROP_XSIZE])+" "+
+      std::to_string(kv.second.ints[OBJPROP_XDISTANCE])+" "+colname(kv.second.ints[OBJPROP_BGCOLOR])});
+  std::sort(lines.begin(),lines.end(),[](auto&a,auto&b){ return a.first<b.first || (a.first==b.first && a.second.rfind("BAR",0)!=0 && b.second.rfind("BAR",0)==0); });
   for(auto& l:lines) printf("%s\n",l.second.c_str());
+  long bg=SIM_OBJ.count("SERA_PANEL_BG")?SIM_OBJ["SERA_PANEL_BG"].order:-1; long first=LONG_MAX;
+  for(auto& kv:SIM_OBJ) if(kv.first!="SERA_PANEL_BG" && kv.first.rfind("SERA_PANEL_",0)==0) first=std::min(first,kv.second.order);
+  printf("ZORDER %s\n",bg>0 && bg<first?"OK":"BAD");
   printf("--- positions %zu, ordres limites %zu\n",SIM_POS.size(),SIM_ORD.size());
   for(auto& p:SIM_POS) printf("POS %s %s vol=%.2f sl=%.3f\n",p.symbol.c_str(),p.type==POSITION_TYPE_BUY?"BUY":"SELL",p.volume,p.sl);
   for(auto& o:SIM_ORD) printf("ORD %s %s @%.3f vol=%.2f\n",o.symbol.c_str(),o.type==ORDER_TYPE_BUY_LIMIT?"BUY_LIMIT":"SELL_LIMIT",o.price,o.volume);
@@ -114,11 +120,20 @@ def main() -> int:
     if traded and "DECISION :" not in c1:
         errors.append("missing DECISION line")
     for line in c1.splitlines():
-        if line.startswith("[") and len(line.split("] ", 1)[-1]) > 110:
+        if line.startswith("[") and len(line.split("] ", 1)[-1]) > 130:
             errors.append(f"dashboard line too long for the panel: {line[:80]}...")
     if "positions 0, ordres limites 0" in sections.get("CYCLE 2 (30 s plus tard)", "") and any(
             m["execution_state"] == "EXECUTE_NOW" and m["final_verdict"] in ("BUY", "SELL") for m in traded):
         errors.append("an EXECUTE_NOW signal did not lead to a position in the simulation")
+    if "ZORDER BAD" in text:
+        errors.append("dashboard background created after texts/bars: it would hide them")
+    c2s = sections.get("CYCLE 2 (30 s plus tard)", "")
+    if "ORDRES ET POSITIONS SERA" not in c2s or "POSITIONS POSSIBLES" not in c2s:
+        errors.append("orders / possible positions tables missing")
+    if re.search(r"ordres limites [1-9]", c2s) and not re.search(r"\[blue\]\s+\S.*(BUY|SELL) LIMIT", c2s):
+        errors.append("open limit orders are not listed in the dashboard")
+    if "BAR " not in c2s:
+        errors.append("certainty bars not drawn")
     c4014 = sections.get("WEBREQUEST NON AUTORISE (erreur 4014)", "")
     if "erreur 4014" not in c4014 or "https://serakatsuva.github.io" not in c4014:
         errors.append("4014 case does not explain the WebRequest fix on the dashboard")

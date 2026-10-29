@@ -20,7 +20,7 @@ enum ENUM_POSITION_TYPE{POSITION_TYPE_BUY,POSITION_TYPE_SELL};
 enum ENUM_ORDER_TYPE_TIME{ORDER_TIME_SPECIFIED};
 enum ENUM_DEAL_ENTRY{DEAL_ENTRY_IN,DEAL_ENTRY_OUT,DEAL_ENTRY_OUT_BY};
 enum E_INT{POSITION_MAGIC,POSITION_TYPE,POSITION_TIME,POSITION_TICKET,ORDER_MAGIC,ORDER_TYPE,DEAL_MAGIC,DEAL_ENTRY,SYMBOL_DIGITS,SYMBOL_TRADE_STOPS_LEVEL,ACCOUNT_TRADE_MODE,ACCOUNT_TRADE_MODE_DEMO,TERMINAL_TRADE_ALLOWED,MQL_TRADE_ALLOWED};
-enum E_DBL{POSITION_PRICE_OPEN,POSITION_SL,POSITION_TP,POSITION_VOLUME,POSITION_PROFIT,POSITION_SWAP,ORDER_PRICE_OPEN,DEAL_PROFIT,DEAL_SWAP,DEAL_COMMISSION,
+enum E_DBL{POSITION_PRICE_OPEN,POSITION_SL,POSITION_TP,POSITION_VOLUME,POSITION_PROFIT,POSITION_SWAP,ORDER_PRICE_OPEN,ORDER_SL,ORDER_TP,ORDER_VOLUME_CURRENT,DEAL_PROFIT,DEAL_SWAP,DEAL_COMMISSION,
   SYMBOL_POINT,SYMBOL_TRADE_TICK_SIZE,SYMBOL_TRADE_TICK_VALUE_LOSS,SYMBOL_VOLUME_MIN,SYMBOL_VOLUME_MAX,SYMBOL_VOLUME_STEP,ACCOUNT_BALANCE,ACCOUNT_EQUITY,ACCOUNT_MARGIN_FREE,ACCOUNT_MARGIN};
 enum E_STR{POSITION_SYMBOL,ORDER_SYMBOL};
 const int INIT_SUCCEEDED=0; const double EMPTY_VALUE=1e308; const int WHOLE_ARRAY=-1; const int CP_UTF8=65001;
@@ -44,7 +44,8 @@ struct SimPos{ulong ticket;string symbol;long type;double open,sl,tp,volume;date
 struct SimOrd{ulong ticket;string symbol;ENUM_ORDER_TYPE type;double price,sl,tp,volume;long magic;};
 std::vector<SimPos> SIM_POS; std::vector<SimOrd> SIM_ORD; ulong SIM_TICKET=1000; int SIM_SEL_POS=-1, SIM_SEL_ORD=-1;
 std::map<string,double> SIM_GV;
-struct SimObj{int type; std::map<int,long> ints; std::map<int,string> strs;};
+struct SimObj{int type; long order=0; std::map<int,long> ints; std::map<int,string> strs;};
+long SIM_OBJ_SEQ=0;
 std::map<string,SimObj> SIM_OBJ;
 std::vector<string> SIM_LOG;
 string _Symbol="Volatility 75 Index";
@@ -101,13 +102,15 @@ bool PositionSelect(const string& s){ for(int i=0;i<(int)SIM_POS.size();i++) if(
 long PositionGetInteger(E_INT p){ if(SIM_SEL_POS<0||SIM_SEL_POS>=(int)SIM_POS.size()) return 0; auto& x=SIM_POS[SIM_SEL_POS];
   switch(p){ case POSITION_MAGIC: return x.magic; case POSITION_TYPE: return x.type; case POSITION_TIME: return x.time; case POSITION_TICKET: return (long)x.ticket; default: return 0; } }
 double PositionGetDouble(E_DBL p){ if(SIM_SEL_POS<0||SIM_SEL_POS>=(int)SIM_POS.size()) return 0; auto& x=SIM_POS[SIM_SEL_POS];
-  switch(p){ case POSITION_PRICE_OPEN: return x.open; case POSITION_SL: return x.sl; case POSITION_TP: return x.tp; case POSITION_VOLUME: return x.volume; default: return 0; } }
+  switch(p){ case POSITION_PRICE_OPEN: return x.open; case POSITION_SL: return x.sl; case POSITION_TP: return x.tp; case POSITION_VOLUME: return x.volume;
+    case POSITION_PROFIT: { double px=SIM_PRICE[x.symbol]; return (x.type==POSITION_TYPE_BUY?px-x.open:x.open-px)*x.volume; } default: return 0; } }
 string PositionGetString(E_STR){ return SIM_SEL_POS>=0&&SIM_SEL_POS<(int)SIM_POS.size()?SIM_POS[SIM_SEL_POS].symbol:""; }
 int OrdersTotal(){ return (int)SIM_ORD.size(); }
 ulong OrderGetTicket(int i){ if(i<0||i>=(int)SIM_ORD.size()) return 0; SIM_SEL_ORD=i; return SIM_ORD[i].ticket; }
 long OrderGetInteger(E_INT p){ if(SIM_SEL_ORD<0||SIM_SEL_ORD>=(int)SIM_ORD.size()) return 0; auto& o=SIM_ORD[SIM_SEL_ORD]; return p==ORDER_MAGIC?o.magic:p==ORDER_TYPE?(long)o.type:0; }
 string OrderGetString(E_STR){ return SIM_SEL_ORD>=0&&SIM_SEL_ORD<(int)SIM_ORD.size()?SIM_ORD[SIM_SEL_ORD].symbol:""; }
-double OrderGetDouble(E_DBL p){ return SIM_SEL_ORD>=0&&SIM_SEL_ORD<(int)SIM_ORD.size()&&p==ORDER_PRICE_OPEN?SIM_ORD[SIM_SEL_ORD].price:0; }
+double OrderGetDouble(E_DBL p){ if(SIM_SEL_ORD<0||SIM_SEL_ORD>=(int)SIM_ORD.size()) return 0; auto& o=SIM_ORD[SIM_SEL_ORD];
+  switch(p){ case ORDER_PRICE_OPEN: return o.price; case ORDER_SL: return o.sl; case ORDER_TP: return o.tp; case ORDER_VOLUME_CURRENT: return o.volume; default: return 0; } }
 bool OrderCalcMargin(ENUM_ORDER_TYPE,const string&,double v,double px,double& m){ m=v*px*0.01; return true; }
 bool HistorySelect(datetime,datetime){ return false; } int HistoryDealsTotal(){ return 0; }
 ulong HistoryDealGetTicket(int){ return 0; } long HistoryDealGetInteger(ulong,E_INT){ return 0; } double HistoryDealGetDouble(ulong,E_DBL){ return 0; }
@@ -136,7 +139,7 @@ int g_last_error=0; int GetLastError(){ return g_last_error; } void ResetLastErr
 double NormalizeDouble(double v,int d){ double f=std::pow(10.0,d); return std::round(v*f)/f; }
 int WebRequest(const string&,const string&,const string&,const string&,int,const std::vector<char>&,int,std::vector<char>&,string&){ g_last_error=4014; return -1; }
 
-bool ObjectCreate(long,const string& n,ENUM_OBJECT t,int,datetime,double){ SIM_OBJ[n].type=t; return true; }
+bool ObjectCreate(long,const string& n,ENUM_OBJECT t,int,datetime,double){ SIM_OBJ[n].type=t; SIM_OBJ[n].order=++SIM_OBJ_SEQ; return true; }
 bool ObjectSetInteger(long,const string& n,ENUM_OBJECT_PROPERTY_INTEGER p,long v){ SIM_OBJ[n].ints[p]=v; return true; }
 bool ObjectSetString(long,const string& n,ENUM_OBJECT_PROPERTY_STRING p,const string& v){ SIM_OBJ[n].strs[p]=v; return true; }
 int ObjectFind(long,const string& n){ return SIM_OBJ.count(n)?0:-1; }

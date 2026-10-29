@@ -40,6 +40,8 @@ def compact_row(row: dict) -> dict:
         "final_verdict": row.get("final_verdict") or "ATTENDRE",
         "final_confidence": number(row.get("final_confidence")),
         "condition_pass_percent": number(engine.get("condition_pass_percent")),
+        "engine_score": number(engine.get("score")),
+        "engine_minimum_score": number(engine.get("minimum_score")),
         "execution_state": row.get("execution_state") or "WAIT_CONFIRMATION",
         "execution_score": number(row.get("execution_score")),
         "setup_detected": 1 if row.get("setup_detected") else 0,
