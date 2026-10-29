@@ -138,7 +138,9 @@ jobs:
         run: |
           python scripts/build_ea_feed.py --self-test
           python scripts/build_ea_feed.py
-          python scripts/qa_ea_parser.py
+          # Problem markets are already neutralized above; parser mismatches only warn here
+          # (the strict check runs in "Sera QA Agents") so one market never blocks every signal.
+          python scripts/qa_ea_parser.py --warn-only
 
       - name: Send Gmail Swing alerts
         env:
@@ -185,6 +187,14 @@ jobs:
 
           echo "Unable to push signals after 3 retries."
           exit 1
+
+      - name: Redeploy the site so the EA gets the new signals
+        # Pushes made with GITHUB_TOKEN do not trigger other workflows: without this step
+        # serakatsuva.github.io (read by the EA) kept serving signals that were hours old.
+        if: success() && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main -R "$GITHUB_REPOSITORY"
 
       - name: Chain next cycle (near real-time)
         # Runs even if this cycle failed, so one bad cycle never stops the analysis.

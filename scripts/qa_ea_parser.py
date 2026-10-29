@@ -6,6 +6,7 @@ otherwise only show up as wrong trades in MT5."""
 from __future__ import annotations
 
 import json
+import sys
 import math
 from pathlib import Path
 
@@ -149,8 +150,10 @@ def main() -> int:
             errors += found
             print(f"{path}: {'OK' if not found else str(len(found)) + ' error(s)'}")
     if errors:
-        print("\n".join("ERROR: " + e for e in errors[:30]))
-        return 1
+        warn_only = "--warn-only" in sys.argv
+        for e in errors[:30]:
+            print(f"::{'warning' if warn_only else 'error'} title=EA parser QA::{e}")
+        return 0 if warn_only else 1
     print("EA parser QA passed")
     return 0
 

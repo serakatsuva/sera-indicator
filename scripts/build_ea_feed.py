@@ -15,6 +15,8 @@ import math
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 SOURCE = Path("data/signals.json")
 TARGET = Path("data/ea-signals.json")
 LEVEL_KEYS = ("entry", "sl", "tp1", "tp2", "tp3", "tp4", "tp5")
@@ -79,26 +81,68 @@ def build(signals: dict) -> dict:
     return {k: v for k, v in feed.items() if v is not None}
 
 
+def market_problem(m: dict) -> str:
+    """Why the EA must not trade this market from the feed ('' when fine)."""
+    if m["final_verdict"] in ("BUY", "SELL"):
+        lv = m.get("levels")
+        if not lv:
+            return f"confirmed {m['final_verdict']} without usable levels (missing, non-finite or <= 0)"
+        tps = [lv[f"tp{i}"] for i in range(1, 6)]
+        ordered = (lv["sl"] < lv["entry"] < tps[0] < tps[1] < tps[2] < tps[3] < tps[4]) if m["final_verdict"] == "BUY" \
+            else (lv["sl"] > lv["entry"] > tps[0] > tps[1] > tps[2] > tps[3] > tps[4])
+        if not ordered:
+            return f"levels not ordered for {m['final_verdict']}"
+    if m["execution_state"] == "EXECUTE_NOW" and m["final_verdict"] not in ("BUY", "SELL"):
+        return "EXECUTE_NOW without final verdict"
+    return ""
+
+
+def neutralize(m: dict, reason: str) -> None:
+    """Keep the market visible but make it untradable: safe whatever the cause."""
+    m["final_verdict"] = "ATTENDRE"
+    m["execution_state"] = "WAIT_CONFIRMATION"
+    m["execution_score"] = 0
+    m.pop("levels", None)
+    m.pop("setup_entry_plan", None)
+    m["excluded_reason"] = reason[:120].replace('"', "'")
+
+
+def sanitize(feed: dict) -> list[str]:
+    """Neutralize every market the EA could misread or mistrade. Returns warnings."""
+    from qa_ea_parser import ea_markets, json_string  # same readers as the MQL5 EA
+    warnings = []
+    for m in feed["markets"]:
+        reason = market_problem(m)
+        if reason:
+            neutralize(m, reason)
+            warnings.append(f"{m['id']}: {reason}")
+    # Replay the EA's own JSON readers: a market read back differently is neutralized too.
+    text = json.dumps(feed, separators=(",", ":"), ensure_ascii=False)
+    by_id = {m["id"]: m for m in feed["markets"]}
+    for obj in ea_markets(text):
+        m = by_id.get(json_string(obj, "id"))
+        if m is None:
+            continue
+        for key in ("mode", "final_verdict", "execution_state", "market", "symbol"):
+            if json_string(obj, key) != (m.get(key) or ""):
+                neutralize(m, f"EA parser reads {key} differently")
+                warnings.append(f"{m['id']}: EA parser reads {key} differently")
+                break
+    feed["confirmed_signals"] = sum(1 for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL"))
+    return warnings
+
+
 def validate(feed: dict) -> list[str]:
+    """Structural problems that make the whole feed unusable (these block publication)."""
     errors = []
     text = json.dumps(feed, separators=(",", ":"))
     if not text.startswith('{"status":'):
         errors.append("status must be the first key")
-    if "null" in text:
+    if ":null" in text:
         errors.append("feed must not contain null values")
-    for m in feed["markets"]:
-        if m["final_verdict"] in ("BUY", "SELL"):
-            lv = m.get("levels")
-            if not lv:
-                errors.append(f"{m['id']}: confirmed {m['final_verdict']} without levels")
-                continue
-            tps = [lv[f"tp{i}"] for i in range(1, 6)]
-            ordered = (lv["sl"] < lv["entry"] < tps[0] < tps[1] < tps[2] < tps[3] < tps[4]) if m["final_verdict"] == "BUY" \
-                else (lv["sl"] > lv["entry"] > tps[0] > tps[1] > tps[2] > tps[3] > tps[4])
-            if not ordered:
-                errors.append(f"{m['id']}: levels not ordered for {m['final_verdict']}")
-        if m["execution_state"] == "EXECUTE_NOW" and m["final_verdict"] not in ("BUY", "SELL"):
-            errors.append(f"{m['id']}: EXECUTE_NOW without final verdict")
+    if not feed.get("markets"):
+        errors.append("no markets")
+    errors += [f"{m['id']}: {market_problem(m)}" for m in feed["markets"] if market_problem(m)]
     return errors
 
 
@@ -114,7 +158,15 @@ def self_test() -> None:
          "decision_engine": {"freshness_gate": False}, "levels": None, "entry_tf": None},
     ]}
     feed = build(sample)
-    assert not validate(feed), validate(feed)
+    assert not sanitize(feed) and not validate(feed), validate(feed)
+    # A confirmed SELL whose far target went negative must be neutralized, not block the feed.
+    bad = json.loads(json.dumps(sample))
+    bad["markets"][0].update(final_verdict="SELL", levels={"entry": 1.0, "sl": 1.2, "tp1": 0.7, "tp2": 0.5, "tp3": 0.3, "tp4": 0.1, "tp5": -0.1})
+    broken = build(bad)
+    warnings = sanitize(broken)
+    assert warnings and not validate(broken), (warnings, validate(broken))
+    assert broken["markets"][0]["final_verdict"] == "ATTENDRE" and "levels" not in broken["markets"][0]
+    assert broken["confirmed_signals"] == 0
     text = json.dumps(feed, separators=(",", ":"))
     assert '"condition_pass_percent":85' in text and '"freshness_gate":false' in text
     assert "setup_entry_plan" not in text and '"levels":null' not in text
@@ -126,9 +178,13 @@ def main() -> int:
         self_test()
         return 0
     feed = build(json.loads(SOURCE.read_text(encoding="utf-8")))
+    for w in sanitize(feed):
+        # Visible in the Actions run summary; the market is published as untradable (ATTENDRE).
+        print(f"::warning title=EA feed: market neutralized::{w}")
     errors = validate(feed)
     if errors:
-        print("\n".join("ERROR: " + e for e in errors))
+        for e in errors:
+            print(f"::error title=EA feed::{e}")
         return 1
     TARGET.write_text(json.dumps(feed, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
     print(f"EA feed written: {len(feed['markets'])} markets, {feed['confirmed_signals']} confirmed, {TARGET.stat().st_size} bytes")

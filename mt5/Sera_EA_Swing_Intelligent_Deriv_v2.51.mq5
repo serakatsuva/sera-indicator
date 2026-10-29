@@ -1,11 +1,12 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.50"
+#property version   "2.51"
 #property strict
 
 #include <Trade/Trade.mqh>
 
 input string SignalsUrl="https://serakatsuva.github.io/sera-indicator/data/ea-signals.json";   // flux compact dédié à l'EA (~60 Ko)
-input string FallbackSignalsUrl="https://serakatsuva.github.io/sera-indicator/data/signals.json"; // flux complet si le flux EA est indisponible
+input string FallbackSignalsUrl="https://raw.githubusercontent.com/serakatsuva/sera-indicator/main/data/ea-signals.json"; // 2e source, mise a jour des la publication (autoriser aussi https://raw.githubusercontent.com dans WebRequest)
+input int SwitchSourceAfterMinutes=8;       // si la 1re source a plus de X min, l'EA compare avec la 2e et garde la plus recente
 input bool EnableTrendWatch=true;
 input bool EnableTerminalAlert=true;
 input bool EnablePushNotification=false;
@@ -83,7 +84,7 @@ input int MaximumSwingHoldingHours=240;      // 10 jours maximum pour un Swing
 input int MaximumDayHoldingHours=48;
 input bool AvoidForexWeekendGap=true;        // pas de nouvelle entrée Forex du vendredi soir au dimanche
 
-// --- v2.50 : nombre de positions selon la balance et les profits
+// --- v2.51 : nombre de positions selon la balance et les profits
 input bool EnableBalanceScaling=true;          // remplace les limites fixes 1 position / 2 trades par jour
 input int MaximumOpenPositionsCap=0;           // 0 = pas de plafond : une position par marché ayant un signal
 input double BalancePerPositionUSD=0.0;        // 0 = pas de limite par balance : ce sont les signaux qui décident
@@ -91,10 +92,10 @@ input double MaximumTotalOpenRiskPercent=10.0; // somme des pertes possibles jus
 input double DailyLossPercentLimit=5.0;        // perte journalière max en % de la balance (au moins MaximumDailyLossUSD)
 input bool OnePositionPerSymbol=true;          // une seule position Sera par marché
 
-// --- v2.50 : coupure en cas de retournement du marché
+// --- v2.51 : coupure en cas de retournement du marché
 input bool CutOnMarketReversal=true;           // fermer dès qu'un retournement est confirmé
 
-// --- v2.50 : robustesse
+// --- v2.51 : robustesse
 input double PartialCloseAtTP1Percent=50.0;    // encaisser cette part de la position à TP1 (0 = désactivé)
 input double EmergencyEquityStopPercent=15.0;  // fermer toutes les positions Sera si l'équité chute de X % sous la balance (0 = désactivé)
 input int ReversalStructureBars=24;            // cassure du plus bas / plus haut des N dernières bougies H1 (24 = 1 jour)
@@ -199,7 +200,7 @@ string ResolveTradeSymbol(const string market_name,const string deriv_code)
 }
 
 // ===================================================================================
-//  TABLEAU DE BORD (v2.50) : etat du bot, flux de signaux et controles avant chaque entree
+//  TABLEAU DE BORD (v2.51) : etat du bot, flux de signaux et controles avant chaque entree
 // ===================================================================================
 #define SERA_GATES 11
 #define DASH_BAR_COLUMN 114
@@ -224,6 +225,7 @@ int      g_markets_seen=0,g_setups_seen=0,g_signals_seen=0;
 string   g_trade_block="";
 datetime g_last_feed_ok=0;
 bool     g_4014_logged=false;
+string   g_feed_source="";
 
 bool FetchUrl(const string url,string &json)
 {
@@ -234,8 +236,8 @@ bool FetchUrl(const string url,string &json)
    int error=GetLastError();
    if(code==-1 && error==4014)
    {
-      g_feed_status="BLOQUES par MT5 (erreur 4014) : Outils > Options > Expert Advisors > WebRequest : ajouter https://serakatsuva.github.io";
-      if(!g_4014_logged) Print("Sera: WebRequest refuse. Ajoutez https://serakatsuva.github.io dans Outils > Options > Expert Advisors > Autoriser WebRequest.");
+      g_feed_status="BLOQUES par MT5 (erreur 4014) : Outils > Options > Expert Advisors > WebRequest : ajouter https://serakatsuva.github.io et https://raw.githubusercontent.com";
+      if(!g_4014_logged) Print("Sera: WebRequest refuse pour ",url,". Ajoutez https://serakatsuva.github.io et https://raw.githubusercontent.com dans Outils > Options > Expert Advisors > Autoriser WebRequest.");
       g_4014_logged=true;
       return false;
    }
@@ -250,10 +252,29 @@ bool FetchUrl(const string url,string &json)
    return StringLen(json)>50 && StringFind(json,"\"markets\"")>=0;
 }
 
+datetime FeedTime(const string json){ return ParseIsoUtc(JsonString(json,"updated_at")); }
+
+// Deux sources (site GitHub Pages et fichier GitHub brut) : l'EA garde toujours la plus recente.
 bool FetchSignals(string &json)
 {
-   if(FetchUrl(SignalsUrl,json)) return true;
-   return FetchUrl(FallbackSignalsUrl,json);
+   string primary="",secondary="";
+   bool okPrimary=FetchUrl(SignalsUrl,primary);
+   string primaryStatus=g_feed_status;
+   bool fresh=okPrimary && TimeGMT()-FeedTime(primary)<=SwitchSourceAfterMinutes*60;
+   if(fresh){ json=primary; g_feed_source="site"; return true; }
+   string url=FallbackSignalsUrl;
+   if(StringFind(url,"raw.githubusercontent.com")>=0) // contourne le cache
+   {
+      string sep="?";
+      if(StringFind(url,"?")>=0) sep="&";
+      url=url+sep+"t="+IntegerToString((long)TimeGMT());
+   }
+   bool okSecondary=FetchUrl(url,secondary);
+   if(okPrimary && okSecondary){ json=FeedTime(secondary)>FeedTime(primary)?secondary:primary; g_feed_source=FeedTime(secondary)>FeedTime(primary)?"GitHub direct":"site"; return true; }
+   if(okSecondary){ json=secondary; g_feed_source="GitHub direct"; return true; }
+   if(okPrimary){ json=primary; g_feed_source="site"; return true; }
+   if(primaryStatus!="" && StringFind(g_feed_status,"4014")<0) g_feed_status=primaryStatus;
+   return false;
 }
 
 int OpenSeraPositions()
@@ -633,8 +654,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.50")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.50");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.51")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.51");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -719,7 +740,7 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    return MathMax(min_lot,MathMin(volume,max_lot));
 }
 
-// ---------- v2.50 : mise à l'échelle selon la balance et les profits ----------
+// ---------- v2.51 : mise à l'échelle selon la balance et les profits ----------
 
 // Perte possible (devise du compte) si le SL d'une position est touché. Une position déjà
 // protégée au point mort ou mieux compte pour 0.
@@ -1503,7 +1524,7 @@ void RenderDashboard()
 
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.50",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.51",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -1511,7 +1532,7 @@ void RenderDashboard()
    else PanelText(line++,"BOT EN PAUSE  |  trading automatique desactive dans les parametres",red);
 
    if(g_feed_ok)
-      PanelText(line++,"Signaux : recus il y a "+IntegerToString(MathMax(0,g_feed_age_min))+" min  |  "+IntegerToString(g_markets_seen)+
+      PanelText(line++,"Signaux : recus il y a "+IntegerToString(MathMax(0,g_feed_age_min))+" min ("+g_feed_source+")  |  "+IntegerToString(g_markets_seen)+
                 " analyses  |  "+IntegerToString(g_setups_seen)+" setups  |  "+IntegerToString(g_signals_seen)+" signaux",green);
    else
    {
@@ -1802,7 +1823,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.50"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.50");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.51"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.51");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -1856,7 +1877,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.50: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.51: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
