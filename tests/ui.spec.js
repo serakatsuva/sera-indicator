@@ -479,8 +479,9 @@ test('Forex prices and chart update in real time from Deriv ticks', async ({ pag
   });
   // WebSocket routes only apply to pages loaded after they are installed.
   await page.reload();
-  await dismissWelcome(page);
   await page.waitForSelector('#results');
+  // The welcome overlay comes back after a reload; remove it instead of racing its animation.
+  await page.evaluate(() => document.getElementById('welcomePopup')?.remove());
   await page.locator('#forexFilter').click();
   const card = page.locator('.result-card[data-live-market="EUR/USD"]');
   await expect(card.locator('[data-live-source]')).toHaveText('LIVE', { timeout: 8000 });
