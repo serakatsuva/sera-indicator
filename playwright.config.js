@@ -6,7 +6,10 @@ export default defineConfig({
   expect: { timeout: 8_000 },
   fullyParallel: false,
   retries: 1,
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
+  // 'github' turns failures into Actions annotations (readable from the run summary/API).
+  reporter: process.env.CI
+    ? [['github'], ['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]]
+    : [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   use: {
     baseURL: 'http://127.0.0.1:4173',
     trace: 'retain-on-failure',
