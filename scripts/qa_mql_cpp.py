@@ -18,7 +18,7 @@ def to_cpp(src: str) -> str:
     src = re.sub(rf"\b{TYPES}\s+((?:\w+\[\]\s*,\s*)*\w+\[\])\s*;",
                  lambda m: f"std::vector<{m.group(1)}> " + ", ".join(x.strip()[:-2] for x in m.group(2).split(",")) + ";", src)
     src = re.sub(rf"const {TYPES} &(\w+)\[\]", lambda m: f"const std::vector<{m.group(1)}> &{m.group(2)}", src)
-    return src.replace("const string ", "const string& ")
+    return src.replace("const string &", "const string ").replace("const string ", "const string& ")
 
 
 def main() -> int:

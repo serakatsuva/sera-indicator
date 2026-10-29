@@ -30,9 +30,10 @@ static void dump(const char* title){
   std::vector<std::pair<long,string>> lines;
   for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL) lines.push_back({kv.second.ints[OBJPROP_YDISTANCE],
       string("[")+colname(kv.second.ints[OBJPROP_COLOR])+"] "+kv.second.strs[OBJPROP_TEXT]});
+  for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_BUTTON) lines.push_back({kv.second.ints[OBJPROP_YDISTANCE]+1,string("BTN ")+kv.second.strs[OBJPROP_TEXT]});
   for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_RECTANGLE_LABEL && kv.first.find("_FG")!=string::npos)
     lines.push_back({kv.second.ints[OBJPROP_YDISTANCE]-3,string("BAR ")+std::to_string(kv.second.ints[OBJPROP_XSIZE])});
-  std::sort(lines.begin(),lines.end(),[](auto&a,auto&b){ return a.first<b.first || (a.first==b.first && a.second.rfind("BAR",0)!=0 && b.second.rfind("BAR",0)==0); });
+  std::sort(lines.begin(),lines.end(),[](auto&a,auto&b){ return a.first<b.first || (a.first==b.first && a.second.rfind("[",0)==0 && b.second.rfind("[",0)!=0); });
   for(auto& l:lines) printf("%s\n",l.second.c_str());
   long bg=SIM_OBJ.count("SWX_PANEL_BG")?SIM_OBJ["SWX_PANEL_BG"].order:-1; long first=LONG_MAX;
   for(auto& kv:SIM_OBJ) if(kv.first!="SWX_PANEL_BG" && kv.first.rfind("SWX_PANEL_",0)==0) first=std::min(first,kv.second.order);
@@ -54,6 +55,7 @@ static void force(const string& name,const string& side,const string& state){
   d.zoneEntry=px-dir*dist*0.4; d.barTime=iTime(d.symbol,PERIOD_H1,1);
   g_lastBar[i]=d.barTime;
 }
+static void click(const char* name){ long l=0; double d=0; string s=string("SWX_PANEL_BTN_")+name; OnChartEvent(CHARTEVENT_OBJECT_CLICK,l,d,s); }
 int main(int argc,char** argv){
   const char* names[]={"GainX 800","PainX 800","GainX 1200","PainX 600","FX Vol 20","SFX Vol 40","SwitchX 600","BreakX 1200","EURUSD"};
   int trend=1; for(auto n:names){ SIM_PRICE[n]=trend>0?50000:1000; SIM_TREND[n]=trend; trend=-trend; }
@@ -71,6 +73,8 @@ int main(int argc,char** argv){
   dump("CYCLE SUIVANT (30 s plus tard)");
   SIM_NOW+=30; OnTimer();
   dump("CYCLE 3 (entree rapide)");
+  click("MINUS"); click("MINUS"); dump("BOUTON - (liste repliee)");
+  click("PLUS"); dump("BOUTON + (liste depliee)");
   printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
   return 0;
 }
@@ -133,6 +137,14 @@ def main() -> int:
     if "positions 2, ordres limites 1" not in fast:
         errors.append("expected 2 positions (immediate + fast entry, one market entry per cycle) and 1 limit order, "
                       "and no second trade on the same signal")
+    folded = sections.get("BOUTON - (liste repliee)", "")
+    unfolded = sections.get("BOUTON + (liste depliee)", "")
+    if "BTN +" not in after or "BTN -" not in after:
+        errors.append("+ / - buttons not drawn")
+    if "affiches 0" not in folded or "bouton + pour les afficher" not in folded:
+        errors.append("button - did not fold the possible positions list")
+    if "affiches 0" in unfolded or not re.search(r"\[cyan\]   \S", unfolded):
+        errors.append("button + did not show the markets again")
     if "ZORDER BAD" in text:
         errors.append("dashboard background created after texts/bars: it would hide them")
     if errors:

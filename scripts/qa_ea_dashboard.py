@@ -33,10 +33,11 @@ static void dump(const char* title){
   std::vector<std::pair<long,string>> lines;
   for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL) lines.push_back({kv.second.ints[OBJPROP_YDISTANCE],
       string("[")+colname(kv.second.ints[OBJPROP_COLOR])+"] "+kv.second.strs[OBJPROP_TEXT]});
+  for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_BUTTON) lines.push_back({kv.second.ints[OBJPROP_YDISTANCE]+1,string("BTN ")+kv.second.strs[OBJPROP_TEXT]});
   for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_RECTANGLE_LABEL && kv.first.find("_FG")!=string::npos)
     lines.push_back({kv.second.ints[OBJPROP_YDISTANCE]-3,string("BAR ")+std::to_string(kv.second.ints[OBJPROP_XSIZE])+" "+
       std::to_string(kv.second.ints[OBJPROP_XDISTANCE])+" "+colname(kv.second.ints[OBJPROP_BGCOLOR])});
-  std::sort(lines.begin(),lines.end(),[](auto&a,auto&b){ return a.first<b.first || (a.first==b.first && a.second.rfind("BAR",0)!=0 && b.second.rfind("BAR",0)==0); });
+  std::sort(lines.begin(),lines.end(),[](auto&a,auto&b){ return a.first<b.first || (a.first==b.first && a.second.rfind("[",0)==0 && b.second.rfind("[",0)!=0); });
   for(auto& l:lines) printf("%s\n",l.second.c_str());
   long bg=SIM_OBJ.count("SERA_PANEL_BG")?SIM_OBJ["SERA_PANEL_BG"].order:-1; long first=LONG_MAX;
   for(auto& kv:SIM_OBJ) if(kv.first!="SERA_PANEL_BG" && kv.first.rfind("SERA_PANEL_",0)==0) first=std::min(first,kv.second.order);
@@ -45,6 +46,7 @@ static void dump(const char* title){
   for(auto& p:SIM_POS) printf("POS %s %s vol=%.2f sl=%.3f\n",p.symbol.c_str(),p.type==POSITION_TYPE_BUY?"BUY":"SELL",p.volume,p.sl);
   for(auto& o:SIM_ORD) printf("ORD %s %s @%.3f vol=%.2f\n",o.symbol.c_str(),o.type==ORDER_TYPE_BUY_LIMIT?"BUY_LIMIT":"SELL_LIMIT",o.price,o.volume);
 }
+static void click(const char* name){ long l=0; double d=0; string s=string("SERA_PANEL_BTN_")+name; OnChartEvent(CHARTEVENT_OBJECT_CLICK,l,d,s); }
 int main(int argc,char** argv){
   std::ifstream w(argv[2]); string sym; double px; int tr;
   while(w>>std::quoted(sym)>>px>>tr){ SIM_PRICE[sym]=px; SIM_TREND[sym]=tr; }
@@ -55,6 +57,9 @@ int main(int argc,char** argv){
   dump("CYCLE 1 (flux publie)");
   SIM_NOW+=30; Evaluate(json);
   dump("CYCLE 2 (30 s plus tard)");
+  click("PLUS"); dump("BOUTON + (5 marches de plus)");
+  click("MINUS"); click("MINUS"); click("MINUS"); dump("BOUTON - (liste repliee)");
+  click("PLUS"); click("PLUS");
   SIM_OBJ.clear(); OnTimer();
   dump("WEBREQUEST NON AUTORISE (erreur 4014)");
   printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
@@ -134,6 +139,16 @@ def main() -> int:
         errors.append("open limit orders are not listed in the dashboard")
     if "BAR " not in c2s:
         errors.append("certainty bars not drawn")
+    def possible_rows(sec: str) -> int:
+        part = sec.split("POSITIONS POSSIBLES", 1)[-1].split("\n[grey] \n", 1)[0]
+        return len(re.findall(r"^\[(white|cyan)\]   \S", part, re.M))
+    plus, minus = sections.get("BOUTON + (5 marches de plus)", ""), sections.get("BOUTON - (liste repliee)", "")
+    if "BTN +" not in c2s or "BTN -" not in c2s:
+        errors.append("+ / - buttons not drawn on the possible positions table")
+    if possible_rows(plus) <= possible_rows(c2s) and "autre(s)" in c2s:
+        errors.append(f"button + did not show more markets ({possible_rows(c2s)} -> {possible_rows(plus)})")
+    if possible_rows(minus) != 0 or "bouton + pour les afficher" not in minus:
+        errors.append(f"button - did not fold the list ({possible_rows(minus)} rows left)")
     c4014 = sections.get("WEBREQUEST NON AUTORISE (erreur 4014)", "")
     if "erreur 4014" not in c4014 or "https://serakatsuva.github.io" not in c4014:
         errors.append("4014 case does not explain the WebRequest fix on the dashboard")

@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "1.30"
+#property version   "1.40"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -1115,7 +1115,7 @@ void Decide(const string symbol,SwxDecision &d)
 //  SCANNER, EXÉCUTION ET TABLEAU DE BORD
 // ===================================================================================
 
-// ---------- Tableau de bord (v1.30) : etat du bot, analyses et controles avant chaque entree ----------
+// ---------- Tableau de bord (v1.40) : etat du bot, analyses et controles avant chaque entree ----------
 #define SWX_GATES 12
 #define SWX_BAR_COLUMN 114
 string g_gate_names[SWX_GATES]={"Tendance alignee H1/H4/D1","Qualite des 3 unites de temps","Confirmation H4/D1 (ADX, DMI)",
@@ -1135,6 +1135,8 @@ struct PanelRow
 PanelRow g_rows[];
 string   g_trade_block="";
 datetime g_last_analysis=0;
+bool     g_dash_can_trade=false;
+string   g_dash_mode="";
 
 string F0(const double v){ return DoubleToString(v,0); }
 
@@ -1308,7 +1310,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.30"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.30");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.40"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.40");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -1404,6 +1406,46 @@ void PanelBackground(const int lines)
 }
 
 void PanelClear(){ ObjectsDeleteAll(0,"SWX_PANEL_"); }
+
+// Boutons + / - du tableau : nombre de positions possibles affichees (memorise dans MT5 par EA).
+#define PANEL_STEP 5
+string PanelShownKey(){ return "SWX_PANEL_SHOWN_"+IntegerToString((long)MagicNumber); }
+
+int PanelSetupsShown()
+{
+   if(GlobalVariableCheck(PanelShownKey())) return (int)GlobalVariableGet(PanelShownKey());
+   return (int)MathMax(0,DashboardMaxSetups);
+}
+
+void PanelButton(const string name,const string text,const int x,const int line)
+{
+   if(ObjectFind(0,name)<0)
+   {
+      ObjectCreate(0,name,OBJ_BUTTON,0,0,0);
+      ObjectSetInteger(0,name,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+      ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
+      ObjectSetInteger(0,name,OBJPROP_HIDDEN,true);
+      ObjectSetString(0,name,OBJPROP_FONT,"Consolas");
+      ObjectSetInteger(0,name,OBJPROP_FONTSIZE,10);
+   }
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY+8+line*16-1);
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,28);
+   ObjectSetInteger(0,name,OBJPROP_YSIZE,17);
+   ObjectSetInteger(0,name,OBJPROP_BGCOLOR,Rgb(32,60,92));
+   ObjectSetInteger(0,name,OBJPROP_COLOR,Rgb(220,232,245));
+   ObjectSetInteger(0,name,OBJPROP_STATE,false);
+   ObjectSetString(0,name,OBJPROP_TEXT,text);
+}
+
+// [-] [+] sur la ligne de titre des positions possibles, dans la colonne des barres.
+void PanelSetupButtons(const int line)
+{
+   int x=DashboardX+10+SWX_BAR_COLUMN*7;
+   PanelButton("SWX_PANEL_BTN_MINUS","-",x,line);
+   PanelButton("SWX_PANEL_BTN_PLUS","+",x+34,line);
+}
+
 
 string Pad(const string text,const int width)
 {
@@ -1550,7 +1592,9 @@ int RenderPossible(int line)
    for(int i=0;i<ArraySize(g_rows);i++)
       if(g_rows[i].valid && FindSeraPendingOrder(g_rows[i].symbol)==0 && !HasSeraPositionOn(g_rows[i].symbol)) count++;
    PanelText(line++,"",grey);
-   PanelText(line++,"POSITIONS POSSIBLES ("+IntegerToString(count)+") : indices analyses, les plus avances d'abord",Rgb(255,190,80));
+   int limit=PanelSetupsShown();
+   PanelSetupButtons(line);
+   PanelText(line++,"POSITIONS POSSIBLES ("+IntegerToString(count)+") : indices analyses, les plus avances d'abord  |  affiches "+IntegerToString((int)MathMin(limit,count)),Rgb(255,190,80));
    if(count==0){ PanelText(line++,"  Aucun indice analyse sans ordre pour le moment.",grey); return line; }
    PanelText(line++,"  "+Pad("Indice",23)+Pad("Sens",12)+Pad("Etat",19)+Pad("Conditions",11)+Pad("Consensus",10)+Pad("Ce qu'il manque",24)+"Score / 84",grey);
    int order[];
@@ -1560,7 +1604,7 @@ int RenderPossible(int line)
       for(int b=a+1;b<ArraySize(order);b++)
          if(RowRank(g_rows[order[b]])>RowRank(g_rows[order[a]])){ int t=order[a]; order[a]=order[b]; order[b]=t; }
    int shown=0;
-   for(int k=0;k<ArraySize(order) && shown<DashboardMaxSetups;k++)
+   for(int k=0;k<ArraySize(order) && shown<limit;k++)
    {
       PanelRow r=g_rows[order[k]];
       if(!r.valid || FindSeraPendingOrder(r.symbol)>0 || HasSeraPositionOn(r.symbol)) continue;
@@ -1572,7 +1616,7 @@ int RenderPossible(int line)
       PanelBar(line,progress,progress>=100?Rgb(56,232,187):progress>=90?Rgb(77,163,255):Rgb(255,190,80));
       line++; shown++;
    }
-   if(count>shown) PanelText(line++,"  ... et "+IntegerToString(count-shown)+" autre(s)",grey);
+   if(count>shown) PanelText(line++,"  ... et "+IntegerToString(count-shown)+" autre(s) : bouton + pour les afficher",grey);
    return line;
 }
 
@@ -1602,7 +1646,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.30",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.40",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -1656,8 +1700,8 @@ void RenderDashboard(const bool can_trade,const string mode_label)
       PanelText(line++,"DECISION : "+r.decision,r.opened?green:(StringFind(r.decision,"LIMITE")>=0?blue:amber),10);
    }
    PanelBackground(line);
-   for(int k=line;k<120;k++){ string name="SWX_PANEL_L"+IntegerToString(k); if(ObjectFind(0,name)>=0) ObjectDelete(0,name); }
-   for(int k=g_bar_count;k<120;k++)
+   for(int k=line;k<400;k++){ string name="SWX_PANEL_L"+IntegerToString(k); if(ObjectFind(0,name)>=0) ObjectDelete(0,name); }
+   for(int k=g_bar_count;k<400;k++)
    {
       string bg="SWX_PANEL_B"+IntegerToString(k)+"_BG",fg="SWX_PANEL_B"+IntegerToString(k)+"_FG";
       if(ObjectFind(0,bg)>=0) ObjectDelete(0,bg);
@@ -1719,6 +1763,7 @@ void ScanAndTrade()
       }
       ProcessDecision(i,can_trade,entered);
    }
+   g_dash_can_trade=can_trade; g_dash_mode=mode_label;
    RenderDashboard(can_trade,mode_label);
 }
 
@@ -1727,7 +1772,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v1.30: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v1.40: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)
@@ -1744,4 +1789,18 @@ void OnTimer()
    ManageAllSeraPositions();
    CutReversedPositions();
    ScanAndTrade();
+}
+
+void RedrawDashboard(){ RenderDashboard(g_dash_can_trade,g_dash_mode); }
+
+void OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
+{
+   if(id!=CHARTEVENT_OBJECT_CLICK) return;
+   if(sparam!="SWX_PANEL_BTN_PLUS" && sparam!="SWX_PANEL_BTN_MINUS") return;
+   int shown=PanelSetupsShown();
+   if(sparam=="SWX_PANEL_BTN_PLUS") shown=(int)MathMin(shown+PANEL_STEP,MathMax(PANEL_STEP,ArraySize(g_rows)));
+   else shown=(int)MathMax(0,shown-PANEL_STEP);
+   GlobalVariableSet(PanelShownKey(),shown);
+   ObjectSetInteger(0,sparam,OBJPROP_STATE,false);
+   RedrawDashboard();
 }
