@@ -141,9 +141,9 @@ def main() -> int:
     unfolded = sections.get("BOUTON + (liste depliee)", "")
     if "BTN +" not in after or "BTN -" not in after:
         errors.append("+ / - buttons not drawn")
-    if "affiches 0" not in folded or "bouton + pour les afficher" not in folded:
+    if "liste repliee" not in folded or "bouton + pour les afficher" not in folded:
         errors.append("button - did not fold the possible positions list")
-    if "affiches 0" in unfolded or not re.search(r"\[cyan\]   \S", unfolded):
+    if "page 1/" not in unfolded or not re.search(r"\[cyan\]   \S", unfolded):
         errors.append("button + did not show the markets again")
     if "ZORDER BAD" in text:
         errors.append("dashboard background created after texts/bars: it would hide them")

@@ -60,6 +60,10 @@ int main(int argc,char** argv){
   click("PLUS"); dump("BOUTON + (5 marches de plus)");
   click("MINUS"); click("MINUS"); click("MINUS"); dump("BOUTON - (liste repliee)");
   click("PLUS"); click("PLUS");
+  SIM_CHART_H=720; click("PLUS"); dump("PAGE 1 (graphique de 720 px)");
+  click("NEXT"); dump("PAGE 2 (bouton >)");
+  click("NEXT"); click("PREV"); dump("PAGE 2 (boutons > puis <)");
+  SIM_CHART_H=0;
   SIM_OBJ.clear(); OnTimer();
   dump("WEBREQUEST NON AUTORISE (erreur 4014)");
   printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
@@ -149,6 +153,21 @@ def main() -> int:
         errors.append(f"button + did not show more markets ({possible_rows(c2s)} -> {possible_rows(plus)})")
     if possible_rows(minus) != 0 or "bouton + pour les afficher" not in minus:
         errors.append(f"button - did not fold the list ({possible_rows(minus)} rows left)")
+    p1, p2, p2b = (sections.get(k, "") for k in ("PAGE 1 (graphique de 720 px)", "PAGE 2 (bouton >)", "PAGE 2 (boutons > puis <)"))
+    def first_market(sec: str) -> str:
+        part = sec.split("POSITIONS POSSIBLES", 1)[-1]
+        mm = re.search(r"^\[(?:white|cyan)\]   (.{27})", part, re.M)
+        return mm.group(1).strip() if mm else ""
+    def lowest_label(sec: str) -> int:
+        return max((int(y) for y in re.findall(r"^Y(\d+)", sec, re.M)), default=0)
+    if "BTN <" not in p1 or "BTN >" not in p1:
+        errors.append("page buttons < > not drawn")
+    if "page 1/" not in p1 or "page 2/" not in p2 or "page 2/" not in p2b:
+        errors.append("page navigation does not work (< / > buttons)")
+    if first_market(p1) == first_market(p2) or not first_market(p2):
+        errors.append("page 2 shows the same markets as page 1")
+    if possible_rows(p1) > 30:
+        errors.append(f"the list does not fit a 720 px chart ({possible_rows(p1)} rows)")
     c4014 = sections.get("WEBREQUEST NON AUTORISE (erreur 4014)", "")
     if "erreur 4014" not in c4014 or "https://serakatsuva.github.io" not in c4014:
         errors.append("4014 case does not explain the WebRequest fix on the dashboard")

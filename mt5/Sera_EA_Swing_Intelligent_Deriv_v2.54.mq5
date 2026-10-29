@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.53"
+#property version   "2.54"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -24,9 +24,9 @@ input double EquityGrowthStepPercent=5.0;
 input double RiskIncreasePerEquityStep=0.05;
 input double DailyProfitBoostThresholdUSD=2.00;
 input double DailyProfitRiskBoost=0.05;
-input int MinimumConfidence=70;                     // v2.53 : plus souple (75 avant)
-input int MinimumAutonomousConditionsPercent=75;    // v2.53 : plus souple (80 avant)
-input int MinimumExecutionScore=72;                 // v2.53 : plus souple (78 avant)
+input int MinimumConfidence=70;                     // v2.54 : plus souple (75 avant)
+input int MinimumAutonomousConditionsPercent=75;    // v2.54 : plus souple (80 avant)
+input int MinimumExecutionScore=72;                 // v2.54 : plus souple (78 avant)
 input bool RequireExecuteNow=true;
 // --- Entree rapide : signal confirme et tres confiant, prix pas etendu -> entree au marche sans attendre EXECUTE_NOW
 input bool EnableFastEntry=true;
@@ -50,8 +50,8 @@ input double MinimumFreeMarginPercent=25.0;
 input bool EnforceBrokerStopsLevel=true;
 input bool EnableSmartPendingLimits=true;
 input int PendingExpirationHours=8;
-input int MinimumPendingExecutionScore=68;          // v2.53 : plus souple (72 avant)
-input int MinimumPendingConditionsPercent=75;       // v2.53 : plus souple (80 avant)
+input int MinimumPendingExecutionScore=68;          // v2.54 : plus souple (72 avant)
+input int MinimumPendingConditionsPercent=75;       // v2.54 : plus souple (80 avant)
 input int PollEverySeconds=30;
 input long MagicNumber=26091801;
 input int DeviationPoints=30;
@@ -84,13 +84,13 @@ input int DashboardMaxSetups=8;             // lignes max. pour les positions po
 input bool ShowEntryChecks=true;            // detail des 11 controles du signal suivi
 input bool TradeDaySignals=true;             // prendre aussi les signaux Day M15/H1 (plus fréquents, plus courts)
 input bool UseBrokerConfirmation=true;       // tendance du broker alignée avec le signal
-input bool BrokerConfirmationH4Only=true;     // v2.53 : seule la tendance H4 compte (le H1 peut etre en repli)
+input bool BrokerConfirmationH4Only=true;     // v2.54 : seule la tendance H4 compte (le H1 peut etre en repli)
 input bool CloseOnSignalReversal=true;       // fermer si le serveur inverse le signal de ce setup
 input int MaximumSwingHoldingHours=240;      // 10 jours maximum pour un Swing
 input int MaximumDayHoldingHours=48;
 input bool AvoidForexWeekendGap=true;        // pas de nouvelle entrée Forex du vendredi soir au dimanche
 
-// --- v2.53 : nombre de positions selon la balance et les profits
+// --- v2.54 : nombre de positions selon la balance et les profits
 input bool EnableBalanceScaling=true;          // remplace les limites fixes 1 position / 2 trades par jour
 input int MaximumOpenPositionsCap=0;           // 0 = pas de plafond : une position par marché ayant un signal
 input double BalancePerPositionUSD=0.0;        // 0 = pas de limite par balance : ce sont les signaux qui décident
@@ -98,10 +98,10 @@ input double MaximumTotalOpenRiskPercent=10.0; // somme des pertes possibles jus
 input double DailyLossPercentLimit=5.0;        // perte journalière max en % de la balance (au moins MaximumDailyLossUSD)
 input bool OnePositionPerSymbol=true;          // une seule position Sera par marché
 
-// --- v2.53 : coupure en cas de retournement du marché
+// --- v2.54 : coupure en cas de retournement du marché
 input bool CutOnMarketReversal=true;           // fermer dès qu'un retournement est confirmé
 
-// --- v2.53 : robustesse
+// --- v2.54 : robustesse
 input double PartialCloseAtTP1Percent=50.0;    // encaisser cette part de la position à TP1 (0 = désactivé)
 input double EmergencyEquityStopPercent=15.0;  // fermer toutes les positions Sera si l'équité chute de X % sous la balance (0 = désactivé)
 input int ReversalStructureBars=24;            // cassure du plus bas / plus haut des N dernières bougies H1 (24 = 1 jour)
@@ -206,7 +206,7 @@ string ResolveTradeSymbol(const string market_name,const string deriv_code)
 }
 
 // ===================================================================================
-//  TABLEAU DE BORD (v2.53) : etat du bot, flux de signaux et controles avant chaque entree
+//  TABLEAU DE BORD (v2.54) : etat du bot, flux de signaux et controles avant chaque entree
 // ===================================================================================
 #define SERA_GATES 11
 #define DASH_BAR_COLUMN 114
@@ -660,8 +660,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.53")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.53");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.54")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.54");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -746,7 +746,7 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    return MathMax(min_lot,MathMin(volume,max_lot));
 }
 
-// ---------- v2.53 : mise à l'échelle selon la balance et les profits ----------
+// ---------- v2.54 : mise à l'échelle selon la balance et les profits ----------
 
 // Perte possible (devise du compte) si le SL d'une position est touché. Une position déjà
 // protégée au point mort ou mieux compte pour 0.
@@ -1352,12 +1352,49 @@ void PanelButton(const string name,const string text,const int x,const int line)
    ObjectSetString(0,name,OBJPROP_TEXT,text);
 }
 
-// [-] [+] sur la ligne de titre des positions possibles, dans la colonne des barres.
+// [-] [+] (lignes par page) et [<] [>] (pages) sur la ligne de titre des positions possibles.
 void PanelSetupButtons(const int line)
 {
    int x=DashboardX+10+DASH_BAR_COLUMN*7;
    PanelButton("SERA_PANEL_BTN_MINUS","-",x,line);
    PanelButton("SERA_PANEL_BTN_PLUS","+",x+34,line);
+   PanelButton("SERA_PANEL_BTN_PREV","<",x+76,line);
+   PanelButton("SERA_PANEL_BTN_NEXT",">",x+110,line);
+   if(DASH_BAR_COLUMN+22>g_panel_maxlen) g_panel_maxlen=DASH_BAR_COLUMN+22;
+}
+
+string PanelPageKey(){ return "SERA_PANEL_PAGE_"+IntegerToString((long)MagicNumber); }
+
+int PanelPage()
+{
+   if(GlobalVariableCheck(PanelPageKey())) return (int)MathMax(0,GlobalVariableGet(PanelPageKey()));
+   return 0;
+}
+
+// MT5 ne fait pas defiler les objets du graphique : la liste est limitee a ce qui tient a l'ecran.
+int PanelFitRows(const int line_now)
+{
+   long height=ChartGetInteger(0,CHART_HEIGHT_IN_PIXELS);
+   if(height<=0) return 1000;
+   int total=(int)((height-DashboardY-8)/16);
+   int reserve=ShowEntryChecks?19:2;          // ligne "autres pages" + detail des controles
+   return (int)MathMax(3,total-line_now-reserve);
+}
+
+// Page affichee (bornee au nombre de pages) et texte du titre.
+int PanelClampPage(const int limit,const int count)
+{
+   int pages=limit>0?(count+limit-1)/limit:1;
+   int page=(int)MathMin(PanelPage(),MathMax(0,pages-1));
+   if(page!=PanelPage()) GlobalVariableSet(PanelPageKey(),page);
+   return page;
+}
+
+string PanelPageText(const int limit,const int count,const int page)
+{
+   if(limit<=0) return "liste repliee (bouton +)";
+   int pages=(count+limit-1)/limit;
+   return "page "+IntegerToString(page+1)+"/"+IntegerToString((int)MathMax(1,pages))+" ("+IntegerToString(limit)+" par page)";
 }
 
 
@@ -1532,9 +1569,11 @@ int RenderPossible(int line)
    for(int i=0;i<ArraySize(g_rows);i++)
       if(g_rows[i].symbol=="" || (FindSeraPendingOrder(g_rows[i].symbol)==0 && !HasSeraPositionOn(g_rows[i].symbol))) count++;
    PanelText(line++,"",grey);
-   int limit=PanelSetupsShown();
+   int limit=(int)MathMin(PanelSetupsShown(),PanelFitRows(line+3));
+   int page=PanelClampPage(limit,count);
+   int skip=page*limit;
    PanelSetupButtons(line);
-   PanelText(line++,"POSITIONS POSSIBLES ("+IntegerToString(count)+") : marches analyses, les plus avances d'abord  |  affiches "+IntegerToString((int)MathMin(limit,count)),Rgb(255,190,80));
+   PanelText(line++,"POSITIONS POSSIBLES ("+IntegerToString(count)+") : marches analyses, les plus avances d'abord  |  "+PanelPageText(limit,count,page),Rgb(255,190,80));
    if(count==0){ PanelText(line++,g_feed_ok?"  Aucun setup en preparation pour le moment.":"  En attente de signaux frais.",grey); return line; }
    PanelText(line++,"  "+Pad("Marche",27)+Pad("Horizon",8)+Pad("Sens",6)+Pad("Etat",19)+Pad("Conditions",11)+Pad("Ce qu'il manque",24)+"Score / seuil",grey);
    // les plus avances d'abord
@@ -1549,6 +1588,7 @@ int RenderPossible(int line)
    {
       PanelRow r=g_rows[order[k]];
       if(r.symbol!="" && (FindSeraPendingOrder(r.symbol)>0 || HasSeraPositionOn(r.symbol))) continue;
+      if(skip>0){ skip--; continue; }
       bool signal=r.verdict=="BUY" || r.verdict=="SELL";
       string side=signal?r.verdict:(r.setup_side=="BUY"||r.setup_side=="SELL"?r.setup_side:"-");
       double score=r.engine_score>0?r.engine_score:r.confidence;
@@ -1560,7 +1600,8 @@ int RenderPossible(int line)
       PanelBar(line,progress,progress>=100?Rgb(56,232,187):progress>=90?Rgb(77,163,255):Rgb(255,190,80));
       line++; shown++;
    }
-   if(count>shown) PanelText(line++,"  ... et "+IntegerToString(count-shown)+" autre(s) : bouton + pour les afficher",grey);
+   if(count>shown)
+      PanelText(line++,"  ... et "+IntegerToString(count-shown)+" autre(s)"+(limit<=0?" : bouton + pour les afficher":" sur les autres pages : boutons < et >"),grey);
    return line;
 }
 
@@ -1580,7 +1621,7 @@ void RenderDashboard()
 
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.53",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.54",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -1882,7 +1923,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.53"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.53");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.54"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.54");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -1937,7 +1978,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.53: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.54: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
@@ -1962,11 +2003,17 @@ void RedrawDashboard(){ RenderDashboard(); }
 void OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
 {
    if(id!=CHARTEVENT_OBJECT_CLICK) return;
-   if(sparam!="SERA_PANEL_BTN_PLUS" && sparam!="SERA_PANEL_BTN_MINUS") return;
-   int shown=PanelSetupsShown();
-   if(sparam=="SERA_PANEL_BTN_PLUS") shown=(int)MathMin(shown+PANEL_STEP,MathMax(PANEL_STEP,ArraySize(g_rows)));
-   else shown=(int)MathMax(0,shown-PANEL_STEP);
-   GlobalVariableSet(PanelShownKey(),shown);
+   if(StringFind(sparam,"SERA_PANEL_BTN_")!=0) return;
+   if(sparam=="SERA_PANEL_BTN_NEXT") GlobalVariableSet(PanelPageKey(),PanelPage()+1);
+   else if(sparam=="SERA_PANEL_BTN_PREV") GlobalVariableSet(PanelPageKey(),MathMax(0,PanelPage()-1));
+   else
+   {
+      int shown=PanelSetupsShown();
+      if(sparam=="SERA_PANEL_BTN_PLUS") shown=(int)MathMin(shown+PANEL_STEP,MathMax(PANEL_STEP,ArraySize(g_rows)));
+      else shown=(int)MathMax(0,shown-PANEL_STEP);
+      GlobalVariableSet(PanelShownKey(),shown);
+      GlobalVariableSet(PanelPageKey(),0);
+   }
    ObjectSetInteger(0,sparam,OBJPROP_STATE,false);
    RedrawDashboard();
 }
