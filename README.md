@@ -17,7 +17,9 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 ## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.31
 
-Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade.mq5`.
+Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv_v2.31.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade_v1.10.mq5`.
+
+**Nom des fichiers** : la version fait partie du nom (`…_Deriv_vX.YY.mq5`, `…_Weltrade_vX.YY.mq5`). À chaque amélioration, le fichier est renommé avec la nouvelle version ; `scripts/ea_files.py` vérifie que la version du nom, celle du code (`#property version`) et le lien de téléchargement de l’application correspondent.
 
 L’EA prend **automatiquement** les Swing publiés par le moteur : ordre au marché sur `EXECUTE_NOW`, ordre limite dans la zone d’entrée sur `WAIT_RETRACE`, puis gestion TP1–TP5.
 
@@ -85,7 +87,7 @@ GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le termi
 
 ## Sera EA Swing Intelligent Weltrade — indices synthétiques Weltrade
 
-`mt5/Sera_EA_Swing_Intelligent_Weltrade.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ni GitHub.
+`mt5/Sera_EA_Swing_Intelligent_Weltrade_v1.10.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ni GitHub.
 
 **Indices détectés automatiquement** (ou liste manuelle dans `SymbolsList`) :
 

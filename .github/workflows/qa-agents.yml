@@ -62,9 +62,9 @@ jobs:
       - name: Replay EA JSON parser on published feeds
         run: python scripts/qa_ea_parser.py
       - name: Static MQL5 checks (both EAs)
-        run: python scripts/qa_mql_static.py mt5/Sera_EA_Swing_Intelligent_Deriv.mq5 mt5/Sera_EA_Swing_Intelligent_Weltrade.mq5
+        run: python scripts/qa_mql_static.py $(python scripts/ea_files.py --paths)
       - name: Compile both EAs as C++ against MT5 API stubs
-        run: python scripts/qa_mql_cpp.py mt5/Sera_EA_Swing_Intelligent_Deriv.mq5 mt5/Sera_EA_Swing_Intelligent_Weltrade.mq5
+        run: python scripts/qa_mql_cpp.py $(python scripts/ea_files.py --paths)
       - uses: actions/setup-node@v4
         with:
           node-version: '24'

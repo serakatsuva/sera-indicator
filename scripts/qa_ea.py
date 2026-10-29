@@ -2,8 +2,13 @@
 from pathlib import Path
 import re
 
-text = Path("mt5/Sera_EA_Swing_Intelligent_Deriv.mq5").read_text(encoding="utf-8")
-errors = []
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ea_files import check as check_ea_files, ea_path
+
+deriv_path = ea_path("Deriv")
+text = deriv_path.read_text(encoding="utf-8")
+errors = list(check_ea_files())
 
 version = re.search(r'#property\s+version\s+"([^"]+)"', text)
 if not version:
@@ -87,9 +92,9 @@ for opening, closing in ("()", "{}", "[]"):
 
 executor = Path("mt5/Sera_Swing_Executor.mq5")
 if executor.exists() and executor.read_text(encoding="utf-8") != text:
-    errors.append("mt5/Sera_Swing_Executor.mq5 differs from Sera_EA_Swing_Intelligent_Deriv.mq5 (keep both copies identical)")
+    errors.append("mt5/Sera_Swing_Executor.mq5 differs from the Deriv EA (keep both copies identical)")
 
-swx_path = Path("mt5/Sera_EA_Swing_Intelligent_Weltrade.mq5")
+swx_path = ea_path("Weltrade")
 if swx_path.exists():
     swx = swx_path.read_text(encoding="utf-8")
     for name, token in {
