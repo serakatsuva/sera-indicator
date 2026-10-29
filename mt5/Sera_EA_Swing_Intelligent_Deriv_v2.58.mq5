@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.57"
+#property version   "2.58"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -35,6 +35,7 @@ input int FastEntryMinimumExecutionScore=72;
 input bool FastEntrySwing=false;                    // Swing : garder la confirmation sur 2 bougies H1
 input bool UseOpenSourceModelGuard=true;
 input int MinimumModelConsensus=67;
+input int ModelVetoBelowConfidence=90;      // v2.58 : le veto des modeles IA ne bloque que les signaux de confiance < 90 % (100 = toujours)
 input bool EnableSmartPositionManagement=true;
 input bool DynamicFinalTarget=true;
 input int MaximumEntryChaseRiskPercent=35;
@@ -672,8 +673,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.57")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.57");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.58")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.58");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -1633,7 +1634,7 @@ void RenderDashboard()
 
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.57",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.58",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -1645,7 +1646,7 @@ void RenderDashboard()
                 " analyses  |  "+IntegerToString(g_setups_seen)+" setups  |  "+IntegerToString(g_signals_seen)+" signaux",green);
    if(g_feed_ok && g_raw_blocked)
       PanelText(line++,"  -> source de secours bloquee : ajoutez https://raw.githubusercontent.com dans Outils > Options > Expert Advisors > WebRequest",amber);
-   else
+   if(!g_feed_ok)
    {
       int cut=StringFind(g_feed_status," : ");
       PanelText(line++,"Signaux : "+(cut>0?StringSubstr(g_feed_status,0,cut):g_feed_status),red);
@@ -1780,7 +1781,7 @@ void Evaluate(const string json)
          // Le veto des modeles ne concerne qu'un vrai signal BUY/SELL (pas les marches en ATTENDRE),
          // et il n'est ecrit qu'une fois par signal dans le journal (pas toutes les 30 s).
          if(UseOpenSourceModelGuard && (verdict=="BUY" || verdict=="SELL") && models_available>=2
-            && model_direction==opposite && model_consensus>=MinimumModelConsensus)
+            && model_direction==opposite && model_consensus>=MinimumModelConsensus && confidence<ModelVetoBelowConfidence)
          {
             model_guard_ok=false;
             int veto_id=(int)SeraHash(verdict+model_direction);
@@ -1969,7 +1970,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.57"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.57");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.58"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.58");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -2025,7 +2026,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.57: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.58: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),

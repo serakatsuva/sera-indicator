@@ -122,6 +122,8 @@ def main() -> int:
         errors.append("dashboard not drawn on cycle 1")
     if "[green] BOT ACTIF" not in c1:
         errors.append("bot should be shown ACTIVE with algo trading allowed")
+    if "[red] Signaux :" in c1:
+        errors.append("a red 'Signaux' line is shown although the feed is fine")
     if "[green] Signaux : recus" not in c1:
         errors.append("fresh feed should be shown as received")
     traded = [m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and (m["mode"] == "swing" or m["mode"] == "day")]
@@ -199,9 +201,16 @@ def main() -> int:
         if out2.returncode != 0 or "POSITION " + target["final_verdict"] + " OUVERTE" not in c or "POS " + target["market"] not in c:
             errors.append(f"EXECUTE_NOW on {target['market']} did not open a market position")
 
-        # Scenario: same EXECUTE_NOW signal, but the AI models strongly disagree -> no position.
+        # Scenario: very confident signal (>= ModelVetoBelowConfidence = 90 %) -> the AI models cannot veto it.
         opposite = "SELL" if target["final_verdict"] == "BUY" else "BUY"
-        target.update(model_ensemble_direction=opposite, model_ensemble_consensus=100, model_models_available=4)
+        target.update(model_ensemble_direction=opposite, model_ensemble_consensus=100, model_models_available=4, final_confidence=95)
+        forced_path.write_text(json.dumps(forced, separators=(",", ":")), encoding="utf-8")
+        out6 = subprocess.run([str(exe), str(forced_path), str(world(forced)), str(now)], capture_output=True, text=True, timeout=120)
+        if "POS " + target["market"] not in out6.stdout.split("=== CYCLE 2")[0]:
+            errors.append(f"a 95 % signal on {target['market']} was vetoed by the AI models (veto only below 90 %)")
+
+        # Scenario: same EXECUTE_NOW signal at 85 % confidence, AI models strongly disagree -> no position.
+        target.update(final_confidence=85)
         forced_path.write_text(json.dumps(forced, separators=(",", ":")), encoding="utf-8")
         out3 = subprocess.run([str(exe), str(forced_path), str(world(forced)), str(now)], capture_output=True, text=True, timeout=120)
         c3 = out3.stdout.split("=== CYCLE 2")[0]
