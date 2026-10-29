@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "1.20"
+#property version   "1.30"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -28,7 +28,11 @@ input bool EnableTrendWatch=true;            // alerte a chaque nouveau signal c
 input bool EnableTerminalAlert=false;
 input bool EnablePushNotification=false;     // notifications sur l'appli MT5 du telephone (MetaQuotes ID)
 input bool DynamicFinalTarget=true;          // TP4 au lieu de TP3 si score >= 88
-input bool EnableSmartPendingLimits=true;    // ordre limite sur l'EMA20 H1 si le prix est trop etendu
+input bool EnableSmartPendingLimits=true;
+// --- Entree rapide : signal confirme (2 bougies H1 deja exigees) et tres confiant, prix pas etendu -> au marche sans attendre EXECUTE_NOW
+input bool EnableFastEntry=true;
+input int FastEntryMinimumConfidence=85;
+input int FastEntryMinimumExecutionScore=72;    // ordre limite sur l'EMA20 H1 si le prix est trop etendu
 input int PendingExpirationHours=8;
 input int MaximumEntryChaseRiskPercent=35;
 input int MaximumSpreadRiskPercent=12;
@@ -1111,7 +1115,7 @@ void Decide(const string symbol,SwxDecision &d)
 //  SCANNER, EXÉCUTION ET TABLEAU DE BORD
 // ===================================================================================
 
-// ---------- Tableau de bord (v1.20) : etat du bot, analyses et controles avant chaque entree ----------
+// ---------- Tableau de bord (v1.30) : etat du bot, analyses et controles avant chaque entree ----------
 #define SWX_GATES 12
 #define SWX_BAR_COLUMN 114
 string g_gate_names[SWX_GATES]={"Tendance alignee H1/H4/D1","Qualite des 3 unites de temps","Confirmation H4/D1 (ADX, DMI)",
@@ -1160,6 +1164,12 @@ string PanelFirstBlock(const PanelRow &r)
 
 bool IsSignal(const string verdict){ return verdict=="BUY" || verdict=="SELL"; }
 
+bool FastEntryOk(const SwxDecision &d)
+{
+   return EnableFastEntry && IsSignal(d.verdict) && d.state=="WAIT_CONFIRMATION"
+      && d.confidence>=FastEntryMinimumConfidence && d.execScore>=FastEntryMinimumExecutionScore;
+}
+
 // Les 8 controles de l'analyse (moteur Sera v4.1 dans MT5) et l'etat d'execution.
 void PanelFromDecision(PanelRow &r,const SwxDecision &d)
 {
@@ -1180,7 +1190,8 @@ void PanelFromDecision(PanelRow &r,const SwxDecision &d)
    {
       bool exec=d.state=="EXECUTE_NOW";
       bool limit=d.state=="WAIT_RETRACE" && EnableSmartPendingLimits;
-      PanelGate(r,8,exec||limit,d.state+" score "+F0(d.execScore)+(exec?" : entree immediate":limit?" : ordre limite EMA20 H1":""));
+      bool fast=FastEntryOk(d);
+      PanelGate(r,8,exec||limit||fast,d.state+" score "+F0(d.execScore)+(exec?" : entree immediate":fast?" : entree rapide":limit?" : ordre limite EMA20 H1":""));
    }
 }
 
@@ -1256,7 +1267,8 @@ void AnalysisReversalExit(const SwxDecision &d)
 
 bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
 {
-   if(!can_trade || d.state!="EXECUTE_NOW" || !IsSignal(d.verdict)) return false;
+   bool fast=d.state!="EXECUTE_NOW" && FastEntryOk(d);
+   if(!can_trade || !IsSignal(d.verdict) || (d.state!="EXECUTE_NOW" && !fast)) return false;
    if(StoredLevel("SWX_TRADEDBAR_",d.symbol)==(double)d.barTime)   // un trade par signal
    { if(r.decision=="") r.decision="SIGNAL DEJA TRADE : une seule entree par bougie H1 de signal"; return false; }
    bool on_symbol=OnePositionPerSymbol && HasSeraPositionOn(d.symbol);
@@ -1296,7 +1308,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.20"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.20");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.30"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.30");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -1307,7 +1319,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    StoreLevel("SWX_CONF_",d.symbol,d.confidence);
    StoreTradeLevels(d.symbol,d.symbol,d.entry,d.tp1,d.tp2,d.tp3,d.tp4,d.tp5,final_tp,"swing");
    r.opened=true;
-   r.decision="POSITION "+d.verdict+" OUVERTE : lot "+DoubleToString(volume,2)+"  SL "+FormatPrice(d.symbol,d.sl)+"  TP "+FormatPrice(d.symbol,final_tp);
+   r.decision="POSITION "+d.verdict+" OUVERTE"+(fast?" (entree rapide)":"")+" : lot "+DoubleToString(volume,2)+"  SL "+FormatPrice(d.symbol,d.sl)+"  TP "+FormatPrice(d.symbol,final_tp);
    SendSwxAlert("SyntX: "+d.verdict+" "+d.symbol+" "+DoubleToString(volume,2)+" lot · SL "+FormatPrice(d.symbol,d.sl)+" · score "+DoubleToString(d.score,0));
    return true;
 }
@@ -1590,7 +1602,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.20",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.30",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -1662,7 +1674,7 @@ void ProcessDecision(const int i,const bool can_trade,bool &entered)
    bool signal=IsSignal(g_decisions[i].verdict);
    ManagePendingEntry(g_decisions[i],can_trade,g_rows[i]);
    if(!entered) entered=TryMarketEntry(g_decisions[i],can_trade,g_rows[i]);
-   else if(signal && g_decisions[i].state=="EXECUTE_NOW" && g_rows[i].decision=="")
+   else if(signal && (g_decisions[i].state=="EXECUTE_NOW" || FastEntryOk(g_decisions[i])) && g_rows[i].decision=="")
       g_rows[i].decision="ENTREE AU PROCHAIN CYCLE (une entree au marche par cycle)";
    if(g_rows[i].decision!="") return;
    if(HasSeraPositionOn(g_rows[i].symbol)) g_rows[i].decision="POSITION SERA OUVERTE : geree (TP1, break-even, coupure si retournement)";
@@ -1715,7 +1727,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v1.20: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v1.30: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)

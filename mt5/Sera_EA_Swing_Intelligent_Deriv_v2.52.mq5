@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.51"
+#property version   "2.52"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -24,10 +24,15 @@ input double EquityGrowthStepPercent=5.0;
 input double RiskIncreasePerEquityStep=0.05;
 input double DailyProfitBoostThresholdUSD=2.00;
 input double DailyProfitRiskBoost=0.05;
-input int MinimumConfidence=75;
-input int MinimumAutonomousConditionsPercent=80;
-input int MinimumExecutionScore=78;
+input int MinimumConfidence=70;                     // v2.52 : plus souple (75 avant)
+input int MinimumAutonomousConditionsPercent=75;    // v2.52 : plus souple (80 avant)
+input int MinimumExecutionScore=72;                 // v2.52 : plus souple (78 avant)
 input bool RequireExecuteNow=true;
+// --- Entree rapide : signal confirme et tres confiant, prix pas etendu -> entree au marche sans attendre EXECUTE_NOW
+input bool EnableFastEntry=true;
+input int FastEntryMinimumConfidence=85;
+input int FastEntryMinimumExecutionScore=72;
+input bool FastEntrySwing=false;                    // Swing : garder la confirmation sur 2 bougies H1
 input bool UseOpenSourceModelGuard=true;
 input int MinimumModelConsensus=67;
 input bool EnableSmartPositionManagement=true;
@@ -45,8 +50,8 @@ input double MinimumFreeMarginPercent=25.0;
 input bool EnforceBrokerStopsLevel=true;
 input bool EnableSmartPendingLimits=true;
 input int PendingExpirationHours=8;
-input int MinimumPendingExecutionScore=72;
-input int MinimumPendingConditionsPercent=80;
+input int MinimumPendingExecutionScore=68;          // v2.52 : plus souple (72 avant)
+input int MinimumPendingConditionsPercent=75;       // v2.52 : plus souple (80 avant)
 input int PollEverySeconds=30;
 input long MagicNumber=26091801;
 input int DeviationPoints=30;
@@ -78,13 +83,14 @@ input int DashboardMaxOrders=15;            // lignes max. pour les ordres et po
 input int DashboardMaxSetups=8;             // lignes max. pour les positions possibles
 input bool ShowEntryChecks=true;            // detail des 11 controles du signal suivi
 input bool TradeDaySignals=true;             // prendre aussi les signaux Day M15/H1 (plus fréquents, plus courts)
-input bool UseBrokerConfirmation=true;       // tendance H1/H4 du broker alignée avec le signal
+input bool UseBrokerConfirmation=true;       // tendance du broker alignée avec le signal
+input bool BrokerConfirmationH4Only=true;     // v2.52 : seule la tendance H4 compte (le H1 peut etre en repli)
 input bool CloseOnSignalReversal=true;       // fermer si le serveur inverse le signal de ce setup
 input int MaximumSwingHoldingHours=240;      // 10 jours maximum pour un Swing
 input int MaximumDayHoldingHours=48;
 input bool AvoidForexWeekendGap=true;        // pas de nouvelle entrée Forex du vendredi soir au dimanche
 
-// --- v2.51 : nombre de positions selon la balance et les profits
+// --- v2.52 : nombre de positions selon la balance et les profits
 input bool EnableBalanceScaling=true;          // remplace les limites fixes 1 position / 2 trades par jour
 input int MaximumOpenPositionsCap=0;           // 0 = pas de plafond : une position par marché ayant un signal
 input double BalancePerPositionUSD=0.0;        // 0 = pas de limite par balance : ce sont les signaux qui décident
@@ -92,10 +98,10 @@ input double MaximumTotalOpenRiskPercent=10.0; // somme des pertes possibles jus
 input double DailyLossPercentLimit=5.0;        // perte journalière max en % de la balance (au moins MaximumDailyLossUSD)
 input bool OnePositionPerSymbol=true;          // une seule position Sera par marché
 
-// --- v2.51 : coupure en cas de retournement du marché
+// --- v2.52 : coupure en cas de retournement du marché
 input bool CutOnMarketReversal=true;           // fermer dès qu'un retournement est confirmé
 
-// --- v2.51 : robustesse
+// --- v2.52 : robustesse
 input double PartialCloseAtTP1Percent=50.0;    // encaisser cette part de la position à TP1 (0 = désactivé)
 input double EmergencyEquityStopPercent=15.0;  // fermer toutes les positions Sera si l'équité chute de X % sous la balance (0 = désactivé)
 input int ReversalStructureBars=24;            // cassure du plus bas / plus haut des N dernières bougies H1 (24 = 1 jour)
@@ -200,7 +206,7 @@ string ResolveTradeSymbol(const string market_name,const string deriv_code)
 }
 
 // ===================================================================================
-//  TABLEAU DE BORD (v2.51) : etat du bot, flux de signaux et controles avant chaque entree
+//  TABLEAU DE BORD (v2.52) : etat du bot, flux de signaux et controles avant chaque entree
 // ===================================================================================
 #define SERA_GATES 11
 #define DASH_BAR_COLUMN 114
@@ -654,8 +660,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.51")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.51");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.52")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.52");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -740,7 +746,7 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    return MathMax(min_lot,MathMin(volume,max_lot));
 }
 
-// ---------- v2.51 : mise à l'échelle selon la balance et les profits ----------
+// ---------- v2.52 : mise à l'échelle selon la balance et les profits ----------
 
 // Perte possible (devise du compte) si le SL d'une position est touché. Une position déjà
 // protégée au point mort ou mieux compte pour 0.
@@ -1026,8 +1032,15 @@ bool BrokerConfirms(const string symbol,const string verdict,string &reason)
       reason="historique H1/H4 du broker en cours de chargement";
       return false;
    }
-   bool aligned=verdict=="BUY" ? (h1Fast>h1Slow && h4Fast>h4Slow) : (h1Fast<h1Slow && h4Fast<h4Slow);
-   if(!aligned){ reason="tendance H1/H4 du broker non alignee avec "+verdict; return false; }
+   bool h4=verdict=="BUY" ? h4Fast>h4Slow : h4Fast<h4Slow;
+   bool h1=verdict=="BUY" ? h1Fast>h1Slow : h1Fast<h1Slow;
+   if(BrokerConfirmationH4Only)
+   {
+      if(!h4){ reason="tendance H4 du broker non alignee avec "+verdict; return false; }
+      reason=h1?"tendance H1/H4 du broker alignee":"tendance H4 du broker alignee (H1 en repli)";
+      return true;
+   }
+   if(!(h1 && h4)){ reason="tendance H1/H4 du broker non alignee avec "+verdict; return false; }
    reason="tendance H1/H4 du broker alignee";
    return true;
 }
@@ -1524,7 +1537,7 @@ void RenderDashboard()
 
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.51",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.52",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -1671,11 +1684,14 @@ void Evaluate(const string json)
             model_guard_ok=false;
             Print("Sera: execution bloquee par ensemble open-source ",model_direction," ",DoubleToString(model_consensus,0),"% contre ",verdict);
          }
-         bool execution_ready=((!RequireExecuteNow)||(execution_state=="EXECUTE_NOW"&&execution_score>=MinimumExecutionScore)) && model_guard_ok;
-         PanelGate(pr,4,model_guard_ok,models_available>=2?(model_direction+" "+DoubleToString(model_consensus,0)+"%"):"moins de 2 modeles disponibles");
          bool exec_ok=execution_state=="EXECUTE_NOW"&&execution_score>=MinimumExecutionScore;
+         // Entree rapide : signal confirme, confiance elevee, prix pas etendu (sinon WAIT_RETRACE) -> au marche maintenant.
+         bool fast_ok=EnableFastEntry && (mode=="day" || FastEntrySwing) && state!=0 && execution_state=="WAIT_CONFIRMATION"
+            && confidence>=FastEntryMinimumConfidence && execution_score>=FastEntryMinimumExecutionScore;
+         bool execution_ready=((!RequireExecuteNow)||exec_ok||fast_ok) && model_guard_ok;
+         PanelGate(pr,4,model_guard_ok,models_available>=2?(model_direction+" "+DoubleToString(model_consensus,0)+"%"):"moins de 2 modeles disponibles");
          bool limit_ok=execution_state=="WAIT_RETRACE"&&execution_score>=MinimumPendingExecutionScore;
-         PanelGate(pr,3,exec_ok||limit_ok,execution_state+" score "+DoubleToString(execution_score,0)+(exec_ok?" : entree immediate":limit_ok?" : ordre limite":""));
+         PanelGate(pr,3,exec_ok||limit_ok||fast_ok,execution_state+" score "+DoubleToString(execution_score,0)+(exec_ok?" : entree immediate":fast_ok?" : entree rapide":limit_ok?" : ordre limite":""));
          bool capacity_ok=OpenSeraPositions()<AllowedOpenPositions() && TradesToday()<AllowedTradesPerDay() && (symbol=="" || !OnePositionPerSymbol || !HasSeraPositionOn(symbol));
          PanelGate(pr,7,capacity_ok,symbol!="" && OnePositionPerSymbol && HasSeraPositionOn(symbol)?"deja une position Sera sur ce marche":"");
          int alert_state=state*10+(execution_ready?1:0);
@@ -1823,7 +1839,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.51"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.51");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.52"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.52");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -1832,10 +1848,10 @@ void Evaluate(const string json)
                         Print("Sera: ",verdict," ",symbol," volume=",volume," SL=",sl," final TP=",final_tp," management TP1-TP5 actif");
                         pr.opened=true;
                         StoreLevel("SERA_CONF_",symbol,confidence);
-                        pr.decision="POSITION "+verdict+" OUVERTE : lot "+DoubleToString(volume,2)+", SL "+DoubleToString(sl,(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS));
+                        pr.decision="POSITION "+verdict+" OUVERTE"+(fast_ok && !exec_ok?" (entree rapide)":"")+" : lot "+DoubleToString(volume,2)+", SL "+DoubleToString(sl,(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS));
                         opened_this_cycle=true;
                      }
-                     Print("Sera: ordre refuse: ",trade.ResultRetcodeDescription());
+                     else Print("Sera: ordre refuse: ",trade.ResultRetcodeDescription());
                      if(!pr.opened) pr.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
                   }
                   else if(broker_why!="skip") Print("Sera: volume nul ou entree bloquee par les gardes spread/chase/niveaux pour ",symbol);
@@ -1877,7 +1893,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.51: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.52: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),

@@ -175,6 +175,23 @@ def main() -> int:
             print("\n".join(l for l in c3.splitlines() if "DECISION" in l or "Consensus" in l))
         if "POS " + target["market"] in c3 or "[NON] Consensus des modeles IA" not in c3:
             errors.append(f"AI veto on {target['market']} did not block the entry")
+    # Scenario: fast entry — a confirmed, very confident Day signal still in WAIT_CONFIRMATION enters at market.
+    day_rows = [m for m in feed["markets"] if m["mode"] == "day" and m["final_verdict"] in ("BUY", "SELL") and m.get("levels")]
+    if day_rows:
+        fast = json.loads(json.dumps(feed))
+        target = next(m for m in fast["markets"] if m["id"] == day_rows[0]["id"])
+        target.update(execution_state="WAIT_CONFIRMATION", execution_score=76, final_confidence=max(90, target["final_confidence"]),
+                      condition_pass_percent=max(80, target["condition_pass_percent"]),
+                      model_ensemble_direction=target["final_verdict"], model_ensemble_consensus=80, model_models_available=4)
+        fast_path = BUILD / "ea-signals-fast-entry.json"
+        fast_path.write_text(json.dumps(fast, separators=(",", ":")), encoding="utf-8")
+        out4 = subprocess.run([str(exe), str(fast_path), str(world(fast)), str(now)], capture_output=True, text=True, timeout=120)
+        c4 = out4.stdout.split("=== CYCLE 2")[0]
+        if not quiet:
+            print("=== SCENARIO ENTREE RAPIDE (" + target["market"] + ", Day WAIT_CONFIRMATION) ===")
+            print("\n".join(l for l in c4.splitlines() if "DECISION" in l or l.startswith("POS ")))
+        if out4.returncode != 0 or "POS " + target["market"] not in c4 or "(entree rapide)" not in c4:
+            errors.append(f"fast entry on {target['market']} did not open a market position")
     if errors:
         print("\n".join("ERROR: " + e for e in errors))
         return 1

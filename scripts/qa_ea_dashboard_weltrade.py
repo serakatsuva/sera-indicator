@@ -3,6 +3,7 @@
 simulator tests/mql/mt5sim.h) and checks:
   - the indices are detected and analysed, the dashboard is drawn and every line fits the panel,
   - an EXECUTE_NOW signal opens a market position, a WAIT_RETRACE signal places a limit order,
+  - a confident WAIT_CONFIRMATION signal opens through the fast entry (one market entry per cycle),
   - orders, possible positions, certainty bars and the 12 entry checks are shown,
 and prints the dashboard as it would appear on the MT5 chart.
 Usage: qa_ea_dashboard_weltrade.py [--quiet]"""
@@ -47,7 +48,7 @@ static void force(const string& name,const string& side,const string& state){
   SwxDecision& d=g_decisions[i]; double px=SIM_PRICE[d.symbol], dir=side=="BUY"?1:-1, dist=px*0.01;
   d.valid=true; d.verdict=side; d.side=side; d.state=state; d.setupType="BREAKOUT_CONTINUATION";
   d.entrySide=side; d.confSide=side; d.dailySide=side; d.confTrendStrong=true; d.cycles=3; d.conditionPct=88;
-  d.score=89; d.consensus=0.81; d.execScore=state=="EXECUTE_NOW"?90:70; d.confidence=89; d.qH1=80; d.qH4=82; d.qD1=74;
+  d.score=89; d.consensus=0.81; d.execScore=state=="EXECUTE_NOW"?90:state=="WAIT_CONFIRMATION"?76:70; d.confidence=89; d.qH1=80; d.qH4=82; d.qD1=74;
   d.gAligned=d.gQuality=d.gConfirm=d.gSetup=d.gStructure=d.gRisk=d.gScore=true;
   d.entry=px; d.sl=px-dir*dist; d.tp1=px+dir*dist*1.5; d.tp2=px+dir*dist*2.4; d.tp3=px+dir*dist*3.6; d.tp4=px+dir*dist*4.8; d.tp5=px+dir*dist*6;
   d.zoneEntry=px-dir*dist*0.4; d.barTime=iTime(d.symbol,PERIOD_H1,1);
@@ -63,10 +64,13 @@ int main(int argc,char** argv){
   for(int i=0;i<ArraySize(g_symbols);i++) printf("SYM %s valid=%d verdict=%s state=%s score=%.0f\n",g_symbols[i].c_str(),g_decisions[i].valid,g_decisions[i].verdict.c_str(),g_decisions[i].state.c_str(),g_decisions[i].score);
   force("GainX 800","SELL","EXECUTE_NOW");
   force("PainX 800","BUY","WAIT_RETRACE");
+  force("SFX Vol 40","SELL","WAIT_CONFIRMATION");
   SIM_NOW+=30; OnTimer();
   dump("CYCLE AVEC SIGNAUX (GainX 800 EXECUTE_NOW, PainX 800 WAIT_RETRACE)");
   SIM_NOW+=30; OnTimer();
   dump("CYCLE SUIVANT (30 s plus tard)");
+  SIM_NOW+=30; OnTimer();
+  dump("CYCLE 3 (entree rapide)");
   printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
   return 0;
 }
@@ -121,8 +125,14 @@ def main() -> int:
         errors.append("possible positions table or certainty bars missing")
     if "[OK]  Tendance alignee H1/H4/D1" not in signal and "[OK]  Tendance alignee H1/H4/D1" not in after:
         errors.append("entry checks not shown")
-    if "positions 1, ordres limites 1" not in after:
-        errors.append("the next cycle must keep exactly the position and the limit order (one trade per signal)")
+    fast = next((v for k, v in sections.items() if k.startswith("CYCLE 3")), "")
+    if "POS SFX Vol 40 SELL" not in fast:
+        errors.append("fast entry (confirmed signal, WAIT_CONFIRMATION, confidence >= 85) did not open a position")
+    if "POSITION SELL OUVERTE (entree rapide)" not in after + fast:
+        errors.append("fast entry decision not shown on the dashboard")
+    if "positions 2, ordres limites 1" not in fast:
+        errors.append("expected 2 positions (immediate + fast entry, one market entry per cycle) and 1 limit order, "
+                      "and no second trade on the same signal")
     if "ZORDER BAD" in text:
         errors.append("dashboard background created after texts/bars: it would hide them")
     if errors:
