@@ -15,9 +15,9 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 `USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
-## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.55
+## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.56
 
-Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv_v2.55.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade_v1.50.mq5`.
+Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv_v2.56.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade_v1.50.mq5`.
 
 **Nom des fichiers** : la version fait partie du nom (`…_Deriv_vX.YY.mq5`, `…_Weltrade_vX.YY.mq5`). À chaque amélioration, le fichier est renommé avec la nouvelle version ; `scripts/ea_files.py` vérifie que la version du nom, celle du code (`#property version`) et le lien de téléchargement de l’application correspondent.
 
@@ -36,6 +36,10 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - **Symboles Forex reconnus chez tous les brokers** : `EUR/USD`, `EURUSD-STD`, `EURUSD`, `EURUSD.m`, `frxEURUSD`…
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
+
+### v2.56 (Deriv) — source de secours bloquée : un seul message
+
+Si `https://raw.githubusercontent.com` n’est pas autorisée dans WebRequest, l’EA continue avec le site et l’écrit **une seule fois** dans l’onglet Experts ; le tableau de bord affiche l’adresse à ajouter.
 
 ### v2.55 (Deriv) — journal plus propre
 
@@ -76,7 +80,7 @@ Le tableau de bord affiche maintenant :
 
 Nombre de lignes : `DashboardMaxOrders`, `DashboardMaxSetups`. Le flux `ea-signals.json` publie désormais `engine_score` et `engine_minimum_score`.
 
-**Fichiers .set** : `mt5/Sera_EA_Swing_Intelligent_Deriv_v2.55.set` et `mt5/Sera_EA_Swing_Intelligent_Weltrade_v1.50.set` contiennent les réglages par défaut de chaque version. Dans MT5 : clic droit sur l’EA > *Propriétés* > onglet *Paramètres* > *Charger*. Ils sont générés depuis le code par `scripts/build_ea_set.py` et la QA vérifie qu’ils sont à jour.
+**Fichiers .set** : `mt5/Sera_EA_Swing_Intelligent_Deriv_v2.56.set` et `mt5/Sera_EA_Swing_Intelligent_Weltrade_v1.50.set` contiennent les réglages par défaut de chaque version. Dans MT5 : clic droit sur l’EA > *Propriétés* > onglet *Paramètres* > *Charger*. Ils sont générés depuis le code par `scripts/build_ea_set.py` et la QA vérifie qu’ils sont à jour.
 
 ### v2.40 (Deriv) — tableau de bord sur le graphique
 

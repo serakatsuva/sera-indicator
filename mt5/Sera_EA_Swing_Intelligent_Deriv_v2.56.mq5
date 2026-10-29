@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.55"
+#property version   "2.56"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -24,9 +24,9 @@ input double EquityGrowthStepPercent=5.0;
 input double RiskIncreasePerEquityStep=0.05;
 input double DailyProfitBoostThresholdUSD=2.00;
 input double DailyProfitRiskBoost=0.05;
-input int MinimumConfidence=70;                     // v2.55 : plus souple (75 avant)
-input int MinimumAutonomousConditionsPercent=75;    // v2.55 : plus souple (80 avant)
-input int MinimumExecutionScore=72;                 // v2.55 : plus souple (78 avant)
+input int MinimumConfidence=70;                     // v2.56 : plus souple (75 avant)
+input int MinimumAutonomousConditionsPercent=75;    // v2.56 : plus souple (80 avant)
+input int MinimumExecutionScore=72;                 // v2.56 : plus souple (78 avant)
 input bool RequireExecuteNow=true;
 // --- Entree rapide : signal confirme et tres confiant, prix pas etendu -> entree au marche sans attendre EXECUTE_NOW
 input bool EnableFastEntry=true;
@@ -50,8 +50,8 @@ input double MinimumFreeMarginPercent=25.0;
 input bool EnforceBrokerStopsLevel=true;
 input bool EnableSmartPendingLimits=true;
 input int PendingExpirationHours=8;
-input int MinimumPendingExecutionScore=68;          // v2.55 : plus souple (72 avant)
-input int MinimumPendingConditionsPercent=75;       // v2.55 : plus souple (80 avant)
+input int MinimumPendingExecutionScore=68;          // v2.56 : plus souple (72 avant)
+input int MinimumPendingConditionsPercent=75;       // v2.56 : plus souple (80 avant)
 input int PollEverySeconds=30;
 input long MagicNumber=26091801;
 input int DeviationPoints=30;
@@ -84,13 +84,13 @@ input int DashboardMaxSetups=8;             // lignes max. pour les positions po
 input bool ShowEntryChecks=true;            // detail des 11 controles du signal suivi
 input bool TradeDaySignals=true;             // prendre aussi les signaux Day M15/H1 (plus fréquents, plus courts)
 input bool UseBrokerConfirmation=true;       // tendance du broker alignée avec le signal
-input bool BrokerConfirmationH4Only=true;     // v2.55 : seule la tendance H4 compte (le H1 peut etre en repli)
+input bool BrokerConfirmationH4Only=true;     // v2.56 : seule la tendance H4 compte (le H1 peut etre en repli)
 input bool CloseOnSignalReversal=true;       // fermer si le serveur inverse le signal de ce setup
 input int MaximumSwingHoldingHours=240;      // 10 jours maximum pour un Swing
 input int MaximumDayHoldingHours=48;
 input bool AvoidForexWeekendGap=true;        // pas de nouvelle entrée Forex du vendredi soir au dimanche
 
-// --- v2.55 : nombre de positions selon la balance et les profits
+// --- v2.56 : nombre de positions selon la balance et les profits
 input bool EnableBalanceScaling=true;          // remplace les limites fixes 1 position / 2 trades par jour
 input int MaximumOpenPositionsCap=0;           // 0 = pas de plafond : une position par marché ayant un signal
 input double BalancePerPositionUSD=0.0;        // 0 = pas de limite par balance : ce sont les signaux qui décident
@@ -98,10 +98,10 @@ input double MaximumTotalOpenRiskPercent=10.0; // somme des pertes possibles jus
 input double DailyLossPercentLimit=5.0;        // perte journalière max en % de la balance (au moins MaximumDailyLossUSD)
 input bool OnePositionPerSymbol=true;          // une seule position Sera par marché
 
-// --- v2.55 : coupure en cas de retournement du marché
+// --- v2.56 : coupure en cas de retournement du marché
 input bool CutOnMarketReversal=true;           // fermer dès qu'un retournement est confirmé
 
-// --- v2.55 : robustesse
+// --- v2.56 : robustesse
 input double PartialCloseAtTP1Percent=50.0;    // encaisser cette part de la position à TP1 (0 = désactivé)
 input double EmergencyEquityStopPercent=15.0;  // fermer toutes les positions Sera si l'équité chute de X % sous la balance (0 = désactivé)
 input int ReversalStructureBars=24;            // cassure du plus bas / plus haut des N dernières bougies H1 (24 = 1 jour)
@@ -206,7 +206,7 @@ string ResolveTradeSymbol(const string market_name,const string deriv_code)
 }
 
 // ===================================================================================
-//  TABLEAU DE BORD (v2.55) : etat du bot, flux de signaux et controles avant chaque entree
+//  TABLEAU DE BORD (v2.56) : etat du bot, flux de signaux et controles avant chaque entree
 // ===================================================================================
 #define SERA_GATES 11
 #define DASH_BAR_COLUMN 114
@@ -230,7 +230,8 @@ int      g_feed_age_min=-1;
 int      g_markets_seen=0,g_setups_seen=0,g_signals_seen=0;
 string   g_trade_block="";
 datetime g_last_feed_ok=0;
-bool     g_4014_logged=false;
+string   g_4014_hosts="";        // adresses deja signalees comme bloquees (un seul message par adresse)
+bool     g_raw_blocked=false;    // 2e source (raw.githubusercontent.com) non autorisee dans WebRequest
 string   g_feed_source="";
 
 bool FetchUrl(const string url,string &json)
@@ -242,9 +243,16 @@ bool FetchUrl(const string url,string &json)
    int error=GetLastError();
    if(code==-1 && error==4014)
    {
+      bool raw=StringFind(url,"raw.githubusercontent.com")>=0;
+      string host=raw?"https://raw.githubusercontent.com":"https://serakatsuva.github.io";
+      if(raw) g_raw_blocked=true;
       g_feed_status="BLOQUES par MT5 (erreur 4014) : Outils > Options > Expert Advisors > WebRequest : ajouter https://serakatsuva.github.io et https://raw.githubusercontent.com";
-      if(!g_4014_logged) Print("Sera: WebRequest refuse pour ",url,". Ajoutez https://serakatsuva.github.io et https://raw.githubusercontent.com dans Outils > Options > Expert Advisors > Autoriser WebRequest.");
-      g_4014_logged=true;
+      if(StringFind(g_4014_hosts,host)<0)
+      {
+         Print("Sera: WebRequest refuse pour ",host,". Ajoutez cette adresse dans Outils > Options > Expert Advisors > Autoriser WebRequest",
+               raw?" (2e source de secours : l'EA continue avec le site).":".");
+         g_4014_hosts+=host+";";
+      }
       return false;
    }
    if(code!=200)
@@ -253,7 +261,7 @@ bool FetchUrl(const string url,string &json)
       Print("Sera: telechargement impossible ",url," HTTP=",code," erreur=",error);
       return false;
    }
-   g_4014_logged=false;
+   if(StringFind(url,"raw.githubusercontent.com")>=0) g_raw_blocked=false;
    json=CharArrayToString(response,0,WHOLE_ARRAY,CP_UTF8);
    return StringLen(json)>50 && StringFind(json,"\"markets\"")>=0;
 }
@@ -660,8 +668,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.55")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.55");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.56")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.56");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -746,7 +754,7 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    return MathMax(min_lot,MathMin(volume,max_lot));
 }
 
-// ---------- v2.55 : mise à l'échelle selon la balance et les profits ----------
+// ---------- v2.56 : mise à l'échelle selon la balance et les profits ----------
 
 // Perte possible (devise du compte) si le SL d'une position est touché. Une position déjà
 // protégée au point mort ou mieux compte pour 0.
@@ -1621,7 +1629,7 @@ void RenderDashboard()
 
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.55",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.56",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -1631,6 +1639,8 @@ void RenderDashboard()
    if(g_feed_ok)
       PanelText(line++,"Signaux : recus il y a "+IntegerToString(MathMax(0,g_feed_age_min))+" min ("+g_feed_source+")  |  "+IntegerToString(g_markets_seen)+
                 " analyses  |  "+IntegerToString(g_setups_seen)+" setups  |  "+IntegerToString(g_signals_seen)+" signaux",green);
+   if(g_feed_ok && g_raw_blocked)
+      PanelText(line++,"  -> source de secours bloquee : ajoutez https://raw.githubusercontent.com dans Outils > Options > Expert Advisors > WebRequest",amber);
    else
    {
       int cut=StringFind(g_feed_status," : ");
@@ -1932,7 +1942,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.55"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.55");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.56"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.56");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -1987,7 +1997,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.55: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.56: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
