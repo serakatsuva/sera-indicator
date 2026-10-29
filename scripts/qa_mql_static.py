@@ -16,10 +16,11 @@ HistoryDealsTotal HistoryDealGetTicket HistoryDealGetInteger HistoryDealGetDoubl
 GlobalVariableSet TimeCurrent TimeGMT TimeToStruct StructToTime iTime EventSetTimer EventKillTimer GetLastError
 ResetLastError TerminalInfoInteger MQLInfoInteger WebRequest NormalizeDouble IndicatorRelease iMA iRSI iATR iADX iMACD
 Buy Sell BuyLimit SellLimit PositionClose PositionClosePartial PositionModify OrderDelete SetExpertMagicNumber
-SetDeviationInPoints SetAsyncMode ResultRetcodeDescription""".split())
+SetDeviationInPoints SetAsyncMode ResultRetcodeDescription ObjectCreate ObjectSetInteger ObjectSetString ObjectFind
+ObjectDelete ObjectsDeleteAll ChartRedraw""".split())
 KEYWORDS = set("if for while return else switch case break continue sizeof new delete void bool int long ulong uint "
                "double string datetime char ushort short".split())
-KNOWN_TYPES = {"CTrade", "MqlTick", "MqlRates", "MqlDateTime", "Trade"}
+KNOWN_TYPES = {"CTrade", "MqlTick", "MqlRates", "MqlDateTime", "Trade", "PanelRow"}
 
 
 def strip(text: str) -> str:

@@ -46,3 +46,12 @@ int WebRequest(const string&,const string&,const string&,const string&,int,const
 extern string _Symbol; const long ACCOUNT_TRADE_MODE_REAL=2;
 // Forward use already present in the original v1.80 code (MQL5 allows it, C++ needs prototypes):
 double StoredLevel(const string&,const string&); void StoreLevel(const string&,const string&,const double); double AdaptiveRiskPercent(); double SafeVolume(const string&,const double,const double);
+// Chart objects (dashboard)
+typedef unsigned int color;
+enum ENUM_OBJECT{OBJ_LABEL,OBJ_RECTANGLE_LABEL};
+enum ENUM_OBJECT_PROPERTY_INTEGER{OBJPROP_CORNER,OBJPROP_SELECTABLE,OBJPROP_HIDDEN,OBJPROP_XDISTANCE,OBJPROP_YDISTANCE,OBJPROP_FONTSIZE,OBJPROP_COLOR,OBJPROP_BORDER_TYPE,OBJPROP_XSIZE,OBJPROP_YSIZE,OBJPROP_BGCOLOR};
+enum ENUM_OBJECT_PROPERTY_STRING{OBJPROP_FONT,OBJPROP_TEXT};
+const long CORNER_LEFT_UPPER=0; const long BORDER_FLAT=0;
+bool ObjectCreate(long,const string&,ENUM_OBJECT,int,datetime,double); bool ObjectSetInteger(long,const string&,ENUM_OBJECT_PROPERTY_INTEGER,long);
+bool ObjectSetString(long,const string&,ENUM_OBJECT_PROPERTY_STRING,const string&); int ObjectFind(long,const string&); bool ObjectDelete(long,const string&);
+int ObjectsDeleteAll(long,const string&); void ChartRedraw(long);

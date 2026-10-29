@@ -70,6 +70,8 @@ jobs:
           node-version: '24'
       - name: Weltrade SyntX engine == production engine (compiled with g++)
         run: python scripts/qa_swx_engine.py
+      - name: Run the Deriv EA decision loop + dashboard on the published feed (MT5 simulator)
+        run: python scripts/qa_ea_dashboard.py
 
   intelligence-agent:
     name: Agent Intelligence
