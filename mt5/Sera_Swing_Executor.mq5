@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.30"
+#property version   "2.31"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -70,14 +70,14 @@ input double ProfitLockR=0.35;
 input double ATRTrailMultiplier=1.60;
 
 // --- v1.90 : exécution plus intelligente
-input bool TradeDaySignals=false;            // prendre aussi les signaux Day M15/H1
+input bool TradeDaySignals=true;             // prendre aussi les signaux Day M15/H1 (plus fréquents, plus courts)
 input bool UseBrokerConfirmation=true;       // tendance H1/H4 du broker alignée avec le signal
 input bool CloseOnSignalReversal=true;       // fermer si le serveur inverse le signal de ce setup
 input int MaximumSwingHoldingHours=240;      // 10 jours maximum pour un Swing
 input int MaximumDayHoldingHours=48;
 input bool AvoidForexWeekendGap=true;        // pas de nouvelle entrée Forex du vendredi soir au dimanche
 
-// --- v2.30 : nombre de positions selon la balance et les profits
+// --- v2.31 : nombre de positions selon la balance et les profits
 input bool EnableBalanceScaling=true;          // remplace les limites fixes 1 position / 2 trades par jour
 input int MaximumOpenPositionsCap=0;           // 0 = pas de plafond : une position par marché ayant un signal
 input double BalancePerPositionUSD=0.0;        // 0 = pas de limite par balance : ce sont les signaux qui décident
@@ -85,10 +85,10 @@ input double MaximumTotalOpenRiskPercent=10.0; // somme des pertes possibles jus
 input double DailyLossPercentLimit=5.0;        // perte journalière max en % de la balance (au moins MaximumDailyLossUSD)
 input bool OnePositionPerSymbol=true;          // une seule position Sera par marché
 
-// --- v2.30 : coupure en cas de retournement du marché
+// --- v2.31 : coupure en cas de retournement du marché
 input bool CutOnMarketReversal=true;           // fermer dès qu'un retournement est confirmé
 
-// --- v2.30 : robustesse
+// --- v2.31 : robustesse
 input double PartialCloseAtTP1Percent=50.0;    // encaisser cette part de la position à TP1 (0 = désactivé)
 input double EmergencyEquityStopPercent=15.0;  // fermer toutes les positions Sera si l'équité chute de X % sous la balance (0 = désactivé)
 input int ReversalStructureBars=24;            // cassure du plus bas / plus haut des N dernières bougies H1 (24 = 1 jour)
@@ -553,7 +553,7 @@ void RunLocalSwingIntelligence()
    string side; double score=0.0,atr=0.0;
    if(!LocalSwingDecision(symbol,side,score,atr)) return;
 
-   Comment("Sera EA Swing Intelligent v2.30 | ",AssetProfileName(symbol),
+   Comment("Sera EA Swing Intelligent v2.31 | ",AssetProfileName(symbol),
            " | Local Swing H1/H4: ",side," ",DoubleToString(score,0),"%",
            " | Risk ",DoubleToString(AdaptiveRiskPercent()*AssetRiskFactor(symbol),2),"%");
 
@@ -589,8 +589,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.30")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.30");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.31")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.31");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -675,7 +675,7 @@ double SafeVolume(const string symbol,const double entry,const double sl)
    return MathMax(min_lot,MathMin(volume,max_lot));
 }
 
-// ---------- v2.30 : mise à l'échelle selon la balance et les profits ----------
+// ---------- v2.31 : mise à l'échelle selon la balance et les profits ----------
 
 // Perte possible (devise du compte) si le SL d'une position est touché. Une position déjà
 // protégée au point mort ou mieux compte pour 0.
@@ -868,10 +868,10 @@ int VerdictState(const string verdict)
    return 0;
 }
 
-void SendTrendAlert(const string market,const string verdict,const double confidence,const string execution_state)
+void SendTrendAlert(const string market,const string verdict,const double confidence,const string execution_state,const string mode)
 {
    if(!EnableTrendWatch) return;
-   string message="Sera Trend Watch: "+market+" "+verdict+" Swing H1/H4 "+execution_state+" a "+DoubleToString(confidence,0)+"%";
+   string message="Sera Trend Watch: "+market+" "+verdict+(mode=="day"?" Day M15/H1 ":" Swing H1/H4/D1 ")+execution_state+" a "+DoubleToString(confidence,0)+"%";
    if(EnableTerminalAlert) Alert(message);
    if(EnablePushNotification)
    {
@@ -1243,7 +1243,7 @@ void Evaluate(const string json)
          int alert_state=state*10+(execution_ready?1:0);
 
          int previous_alert_state=StoredState("SERA_ALERTSTATE_",setup_id);
-         if(directional_confirmed && alert_state!=previous_alert_state) SendTrendAlert(market_name,verdict,confidence,execution_state);
+         if(directional_confirmed && alert_state!=previous_alert_state) SendTrendAlert(market_name,verdict,confidence,execution_state,mode);
          if(alert_state!=previous_alert_state) StoreState("SERA_ALERTSTATE_",setup_id,alert_state);
 
          int previous_trade_state=StoredState("SERA_TRADESTATE_",setup_id);
@@ -1370,7 +1370,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.30"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.30");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.31"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.31");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -1397,8 +1397,8 @@ int OnInit()
    EventSetTimer(MathMax(15,PollEverySeconds));
    long trade_mode=AccountInfoInteger(ACCOUNT_TRADE_MODE);
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
-   Comment("Sera EA Swing Intelligent Deriv v2.30 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
-   Print("Sera EA Swing Intelligent Deriv v2.30: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Comment("Sera EA Swing Intelligent Deriv v2.31 — "+mode+" — "+AssetProfileName(_Symbol)+" — H1/H4 Adaptive Swing");
+   Print("Sera EA Swing Intelligent Deriv v2.31: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),

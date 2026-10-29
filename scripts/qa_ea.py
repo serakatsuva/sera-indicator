@@ -19,6 +19,7 @@ required = {
     "no fixed position cap (signals + risk budget decide)": "MaximumOpenPositionsCap=0",
     "balance-proportional lots (no USD cap)": "MaximumLossUSD=0.0",
     "minimum lot fallback": "UseMinimumLotWhenRiskTooSmall=true",
+    "Day M15/H1 signals traded by default": "TradeDaySignals=true",
     "total open risk budget": "TotalRiskAllows(",
     "one position per symbol": "HasSeraPositionOn(symbol)",
     "signals decide (no profit-based sizing)": "BalancePerPositionUSD=0.0",

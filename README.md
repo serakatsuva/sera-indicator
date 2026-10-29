@@ -15,7 +15,7 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 `USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
-## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.30
+## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.31
 
 Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade.mq5`.
 
@@ -33,7 +33,7 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - **Pas de nouvelle entrée Forex/CFD du vendredi 19:00 UTC au dimanche 22:00 UTC** (`AvoidForexWeekendGap`), pour éviter les gaps du week-end. Les indices synthétiques (24/7) ne sont pas concernés.
 - **Symboles Forex reconnus chez tous les brokers** : `EUR/USD`, `EURUSD-STD`, `EURUSD`, `EURUSD.m`, `frxEURUSD`…
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
-- Option `TradeDaySignals` (désactivée par défaut) pour prendre aussi les signaux Day M15/H1.
+- `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
 
 ### v2.30 (Deriv) / v1.10 (Weltrade) — lots et positions selon la balance
 
