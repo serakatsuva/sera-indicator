@@ -135,8 +135,10 @@ def main() -> int:
     if rows:
         forced = json.loads(json.dumps(feed))
         target = next(m for m in forced["markets"] if m["id"] == rows[0]["id"])
+        # The open-source models must agree, otherwise the EA rightly refuses (checked separately below).
         target.update(execution_state="EXECUTE_NOW", execution_score=92, final_confidence=max(90, target["final_confidence"]),
-                      condition_pass_percent=max(85, target["condition_pass_percent"]))
+                      condition_pass_percent=max(85, target["condition_pass_percent"]),
+                      model_ensemble_direction=target["final_verdict"], model_ensemble_consensus=80, model_models_available=4)
         forced_path = BUILD / "ea-signals-execute-now.json"
         forced_path.write_text(json.dumps(forced, separators=(",", ":")), encoding="utf-8")
         out2 = subprocess.run([str(exe), str(forced_path), str(world(forced)), str(now)], capture_output=True, text=True, timeout=120)
@@ -146,6 +148,18 @@ def main() -> int:
             print("\n".join(l for l in c.splitlines() if "DECISION" in l or l.startswith("POS ") or "SIGNAL SUIVI" in l or "positions" in l))
         if out2.returncode != 0 or "POSITION " + target["final_verdict"] + " OUVERTE" not in c or "POS " + target["market"] not in c:
             errors.append(f"EXECUTE_NOW on {target['market']} did not open a market position")
+
+        # Scenario: same EXECUTE_NOW signal, but the AI models strongly disagree -> no position.
+        opposite = "SELL" if target["final_verdict"] == "BUY" else "BUY"
+        target.update(model_ensemble_direction=opposite, model_ensemble_consensus=100, model_models_available=4)
+        forced_path.write_text(json.dumps(forced, separators=(",", ":")), encoding="utf-8")
+        out3 = subprocess.run([str(exe), str(forced_path), str(world(forced)), str(now)], capture_output=True, text=True, timeout=120)
+        c3 = out3.stdout.split("=== CYCLE 2")[0]
+        if not quiet:
+            print("=== SCENARIO VETO IA (" + target["market"] + ", modeles " + opposite + " 100%) ===")
+            print("\n".join(l for l in c3.splitlines() if "DECISION" in l or "Consensus" in l))
+        if "POS " + target["market"] in c3 or "[NON] Consensus des modeles IA" not in c3:
+            errors.append(f"AI veto on {target['market']} did not block the entry")
     if errors:
         print("\n".join("ERROR: " + e for e in errors))
         return 1
