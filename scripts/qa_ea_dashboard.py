@@ -226,6 +226,12 @@ def main() -> int:
             print("\n".join(l for l in c4.splitlines() if "DECISION" in l or l.startswith("POS ")))
         if out4.returncode != 0 or "POS " + target["market"] not in c4 or "(entree rapide)" not in c4:
             errors.append(f"fast entry on {target['market']} did not open a market position")
+    log = text.split("=== LOG ===")[-1]
+    if "contre ATTENDRE" in log:
+        errors.append("model veto logged for markets without a signal (ATTENDRE)")
+    vetoes = re.findall(r"non execute - les modeles IA", log)
+    if len(vetoes) > len(set(re.findall(r"Sera: (.+?) (?:BUY|SELL) non execute", log))):
+        errors.append("the same model veto is logged on every cycle")
     if errors:
         print("\n".join("ERROR: " + e for e in errors))
         return 1
