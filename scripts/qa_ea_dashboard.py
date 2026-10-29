@@ -217,7 +217,8 @@ def main() -> int:
         if not quiet:
             print("=== SCENARIO VETO IA (" + target["market"] + ", modeles " + opposite + " 100%) ===")
             print("\n".join(l for l in c3.splitlines() if "DECISION" in l or "Consensus" in l))
-        if "POS " + target["market"] in c3 or "[NON] Consensus des modeles IA" not in c3:
+        log3 = out3.stdout.split("=== LOG ===")[-1]
+        if "POS " + target["market"] in c3 or f"{target['market']} {target['final_verdict']} non execute - les modeles IA" not in log3:
             errors.append(f"AI veto on {target['market']} did not block the entry")
     # Scenario: fast entry — a confirmed, very confident Day signal still in WAIT_CONFIRMATION enters at market.
     day_rows = [m for m in feed["markets"] if m["mode"] == "day" and m["final_verdict"] in ("BUY", "SELL") and m.get("levels")]
