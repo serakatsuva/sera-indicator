@@ -15,9 +15,12 @@ test('mobile layout reaches signal cards quickly', async ({ page }, testInfo) =>
   expect(eaBox?.height || 999).toBeLessThan(150);
   expect(watchBox?.height || 999).toBeLessThan(110);
 
-  const firstCard = page.locator('.result-card').first();
-  await firstCard.scrollIntoViewIfNeeded();
-  await expect(firstCard).toBeVisible();
+  // Cards are rebuilt when live data arrives: retry if the card is replaced mid-scroll.
+  await expect(async () => {
+    const firstCard = page.locator('.result-card').first();
+    await firstCard.scrollIntoViewIfNeeded({ timeout: 2000 });
+    await expect(firstCard).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
 });
 
 test('mobile compact metadata remains one horizontal strip', async ({ page }, testInfo) => {
