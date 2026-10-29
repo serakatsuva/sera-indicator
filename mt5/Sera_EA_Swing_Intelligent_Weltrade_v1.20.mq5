@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "1.10"
+#property version   "1.20"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -14,7 +14,12 @@ input bool TradeFlipX=false;                 // FlipX : marche sans tendance (50
 input bool TradeProgressionX=false;          // PlusX / FiboX / QuadX : progressions mathematiques
 input int MaximumScannedSymbols=60;
 input int AnalysisBars=1000;                 // bougies cloturees analysees par unite de temps (1000 = EMA200 exacte)
-input int DashboardRows=10;
+input bool ShowDashboard=true;              // tableau de bord sur le graphique
+input int DashboardX=10;
+input int DashboardY=22;
+input int DashboardMaxOrders=15;            // lignes max. pour les ordres et positions
+input int DashboardMaxSetups=10;            // lignes max. pour les positions possibles
+input bool ShowEntryChecks=true;            // detail des 12 controles de l'indice suivi
 
 // --- Execution
 input bool EnableAutomaticTrading=true;
@@ -82,7 +87,7 @@ double AssetRiskFactor(const string symbol)
 }
 
 // ===================================================================================
-//  MODULES PARTAGES — repris a l'identique de Sera EA Swing Intelligent Deriv v2.30
+//  MODULES PARTAGES — repris a l'identique de Sera EA Swing Intelligent Deriv v2.51
 //  (risque, ordres, gestion TP1-TP5, sortie partielle, coupure, arret d'urgence)
 // ===================================================================================
 
@@ -698,6 +703,10 @@ struct SwxDecision
    double   score,consensus,execScore,confidence;
    double   entry,sl,tp1,tp2,tp3,tp4,tp5,zoneEntry;
    datetime barTime;
+   // controles affiches sur le tableau de bord
+   bool     gAligned,gQuality,gConfirm,gSetup,gStructure,gRisk,gScore;
+   string   dailySide;
+   double   qH1,qH4,qD1;
 };
 
 double Clamp(const double v,const double lo,const double hi){ return MathMax(lo,MathMin(hi,v)); }
@@ -980,10 +989,13 @@ void Decide(const string symbol,SwxDecision &d)
    d.state="WAIT_CONFIRMATION"; d.setupType="GENERIC"; d.entrySide=""; d.confSide=""; d.confTrendStrong=false;
    d.cycles=0; d.conditionPct=0; d.score=0; d.consensus=0; d.execScore=0; d.confidence=0;
    d.entry=0; d.sl=0; d.tp1=0; d.tp2=0; d.tp3=0; d.tp4=0; d.tp5=0; d.zoneEntry=0; d.barTime=0;
+   d.gAligned=false; d.gQuality=false; d.gConfirm=false; d.gSetup=false; d.gStructure=false; d.gRisk=false; d.gScore=false;
+   d.dailySide=""; d.qH1=0; d.qH4=0; d.qD1=0;
 
    TfInfo e,cf,dd;
    if(!InspectTf(symbol,PERIOD_H1,e) || !InspectTf(symbol,PERIOD_H4,cf) || !InspectTf(symbol,PERIOD_D1,dd)) return;
    d.valid=true; d.barTime=e.barTime; d.entrySide=e.side; d.confSide=cf.side; d.confTrendStrong=cf.trendStrong;
+   d.dailySide=dd.side; d.qH1=e.quality; d.qH4=cf.quality; d.qD1=dd.quality;
 
    string side=e.side;
    bool aligned=side==cf.side && side==dd.side;
@@ -1062,6 +1074,9 @@ void Decide(const string symbol,SwxDecision &d)
    bool signal=aligned && qualityGate && confirmationGate && adverseGate && riskGate && d.conditionPct>=80
       && continuationGate && structureGate && momentumGate && cycles>=2 && d.consensus>=0.72 && d.score>=84;
    d.verdict=signal?side:"ATTENDRE";
+   d.gAligned=aligned; d.gQuality=qualityGate; d.gConfirm=confirmationGate; d.gSetup=continuationGate;
+   d.gStructure=structureGate && momentumGate; d.gRisk=riskGate && adverseGate;
+   d.gScore=d.conditionPct>=80 && d.consensus>=0.72 && d.score>=84;
    d.confidence=signal?Clamp(d.score,84,96):Clamp(d.score,18,83);
 
    // Exécution : extension par rapport à l'EMA20, épuisement RSI, poursuite de cassure
@@ -1096,6 +1111,79 @@ void Decide(const string symbol,SwxDecision &d)
 //  SCANNER, EXÉCUTION ET TABLEAU DE BORD
 // ===================================================================================
 
+// ---------- Tableau de bord (v1.20) : etat du bot, analyses et controles avant chaque entree ----------
+#define SWX_GATES 12
+#define SWX_BAR_COLUMN 114
+string g_gate_names[SWX_GATES]={"Tendance alignee H1/H4/D1","Qualite des 3 unites de temps","Confirmation H4/D1 (ADX, DMI)",
+   "Setup de continuation (cassure / retest)","Structure et momentum","Risque (spike, epuisement, famille)",
+   "Confirmation sur 2 bougies H1","Score, consensus et conditions","Etat d'execution (marche / limite)",
+   "Capacite (1 position par indice)","Spread, prix et stops du broker","Marge libre et risque total"};
+
+struct PanelRow
+{
+   string symbol,verdict,side,state,setup,decision,detail[SWX_GATES];
+   double score,consensus,conditions,exec_score,confidence;
+   int    cycles;
+   int    gate[SWX_GATES];      // 1 = OK, 0 = bloque, -1 = non evalue
+   bool   opened,valid;
+};
+
+PanelRow g_rows[];
+string   g_trade_block="";
+datetime g_last_analysis=0;
+
+string F0(const double v){ return DoubleToString(v,0); }
+
+// "3/12", ou "3 (pas de plafond)" quand le nombre de positions n'est limite que par le risque total.
+string PositionsText()
+{
+   int allowed=AllowedOpenPositions();
+   return IntegerToString(OpenSeraPositions())+(allowed>=1000?" (pas de plafond)":"/"+IntegerToString(allowed));
+}
+
+string FormatPrice(const string symbol,const double price)
+{
+   return DoubleToString(price,(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS));
+}
+
+void PanelGate(PanelRow &r,const int index,const bool ok,const string detail)
+{
+   r.gate[index]=ok?1:0;
+   r.detail[index]=detail;
+}
+
+string PanelFirstBlock(const PanelRow &r)
+{
+   for(int i=0;i<SWX_GATES;i++) if(r.gate[i]==0) return g_gate_names[i]+(r.detail[i]!=""?" ("+r.detail[i]+")":"");
+   return "";
+}
+
+bool IsSignal(const string verdict){ return verdict=="BUY" || verdict=="SELL"; }
+
+// Les 8 controles de l'analyse (moteur Sera v4.1 dans MT5) et l'etat d'execution.
+void PanelFromDecision(PanelRow &r,const SwxDecision &d)
+{
+   r.symbol=d.symbol; r.verdict=d.verdict; r.side=d.side; r.state=d.state; r.setup=d.setupType; r.decision="";
+   r.score=d.score; r.consensus=d.consensus*100.0; r.conditions=d.conditionPct; r.exec_score=d.execScore;
+   r.confidence=d.confidence; r.cycles=d.cycles; r.opened=false; r.valid=d.valid;
+   for(int i=0;i<SWX_GATES;i++){ r.gate[i]=-1; r.detail[i]=""; }
+   if(!d.valid){ r.decision="ANALYSE IMPOSSIBLE : historique H1/H4/D1 insuffisant chez le broker"; return; }
+   PanelGate(r,0,d.gAligned,"H1 "+d.entrySide+" / H4 "+d.confSide+" / D1 "+d.dailySide);
+   PanelGate(r,1,d.gQuality,"H1 "+F0(d.qH1)+"/72  H4 "+F0(d.qH4)+"/75  D1 "+F0(d.qD1)+"/65");
+   PanelGate(r,2,d.gConfirm,d.gConfirm?"":(d.confTrendStrong?"ADX/DMI pas encore alignes":"tendance H4 pas assez forte"));
+   PanelGate(r,3,d.gSetup,d.gSetup?d.setupType:"pas de cassure ni de retest propre");
+   PanelGate(r,4,d.gStructure,"");
+   PanelGate(r,5,d.gRisk,d.gRisk?"":(d.state=="BLOCKED_RISK"?"spike ou retournement recent":"marche epuise ou contre la famille"));
+   PanelGate(r,6,d.cycles>=2,IntegerToString((int)MathMin(d.cycles,2))+"/2 bougies");
+   PanelGate(r,7,d.gScore,"score "+F0(d.score)+"/84  consensus "+F0(d.consensus*100.0)+"/72%  conditions "+IntegerToString(d.conditionPct)+"/80%");
+   if(IsSignal(d.verdict))
+   {
+      bool exec=d.state=="EXECUTE_NOW";
+      bool limit=d.state=="WAIT_RETRACE" && EnableSmartPendingLimits;
+      PanelGate(r,8,exec||limit,d.state+" score "+F0(d.execScore)+(exec?" : entree immediate":limit?" : ordre limite EMA20 H1":""));
+   }
+}
+
 string      g_symbols[];
 SwxDecision g_decisions[];
 datetime    g_lastBar[];
@@ -1119,6 +1207,8 @@ void AddSymbol(const string name)
    g_decisions[n].cycles=0;
    g_decisions[n].conditionPct=0;
    g_lastBar[n]=0;
+   ArrayResize(g_rows,n+1);
+   PanelFromDecision(g_rows[n],g_decisions[n]);
 }
 
 // Liste des indices Weltrade : liste manuelle, sinon détection automatique chez le broker.
@@ -1164,93 +1254,422 @@ void AnalysisReversalExit(const SwxDecision &d)
    if(trade.PositionClose(ticket)) SendSwxAlert("SyntX: "+d.symbol+" ferme — tendance H1 et H4 retournees ("+against+")");
 }
 
-bool TryMarketEntry(const SwxDecision &d,const bool can_trade)
+bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
 {
-   if(!can_trade || d.state!="EXECUTE_NOW" || (d.verdict!="BUY" && d.verdict!="SELL")) return false;
-   if(StoredLevel("SWX_TRADEDBAR_",d.symbol)==(double)d.barTime) return false;   // un trade par signal
-   if(OpenSeraPositions()>=AllowedOpenPositions() || TradesToday()>=AllowedTradesPerDay()) return false;
-   if(OnePositionPerSymbol && HasSeraPositionOn(d.symbol)) return false;
+   if(!can_trade || d.state!="EXECUTE_NOW" || !IsSignal(d.verdict)) return false;
+   if(StoredLevel("SWX_TRADEDBAR_",d.symbol)==(double)d.barTime)   // un trade par signal
+   { if(r.decision=="") r.decision="SIGNAL DEJA TRADE : une seule entree par bougie H1 de signal"; return false; }
+   bool on_symbol=OnePositionPerSymbol && HasSeraPositionOn(d.symbol);
+   bool capacity=OpenSeraPositions()<AllowedOpenPositions() && TradesToday()<AllowedTradesPerDay() && !on_symbol;
+   PanelGate(r,9,capacity,on_symbol?"deja une position Sera sur cet indice":
+             OpenSeraPositions()>=AllowedOpenPositions()?"positions max "+IntegerToString(AllowedOpenPositions())+" (selon la balance)":
+             TradesToday()>=AllowedTradesPerDay()?"trades du jour max "+IntegerToString(AllowedTradesPerDay()):
+             "positions "+PositionsText());
+   if(!capacity) return false;
    MqlTick tick;
-   if(!SymbolInfoTick(d.symbol,tick)) return false;
+   if(!SymbolInfoTick(d.symbol,tick)){ PanelGate(r,10,false,"pas de prix du broker"); return false; }
    double price=d.verdict=="BUY"?tick.ask:tick.bid;
    double risk_distance=MathAbs(d.entry-d.sl);
-   if(risk_distance<=0) return false;
+   if(risk_distance<=0){ PanelGate(r,10,false,"stop loss invalide"); return false; }
    double spread=MathAbs(tick.ask-tick.bid);
    bool spread_ok=spread<=risk_distance*(MaximumSpreadRiskPercent/100.0);
    bool chase_ok=d.verdict=="BUY"?price<=d.entry+risk_distance*(MaximumEntryChaseRiskPercent/100.0)
                                  :price>=d.entry-risk_distance*(MaximumEntryChaseRiskPercent/100.0);
    double final_tp=(DynamicFinalTarget && d.score>=88 && d.tp4>0)?d.tp4:d.tp3;
    bool levels_ok=d.verdict=="BUY"?(d.sl<price && final_tp>price):(d.sl>price && final_tp<price);
+   bool stops_ok=levels_ok && BrokerStopsValid(d.symbol,d.verdict,price,d.sl,final_tp);
+   PanelGate(r,10,spread_ok && chase_ok && stops_ok,!spread_ok?"spread trop large pour le risque":!chase_ok?"prix trop loin de l'entree calculee":
+             !levels_ok?"niveaux depasses par le prix":!stops_ok?"SL/TP trop proches pour le broker":"prix "+FormatPrice(d.symbol,price));
    if(!spread_ok){ PrintOnce("SyntX: "+d.symbol+" spread trop large pour le risque"); return false; }
    if(!chase_ok){ PrintOnce("SyntX: "+d.symbol+" prix trop eloigne de l'entree calculee"); return false; }
-   if(!levels_ok || !BrokerStopsValid(d.symbol,d.verdict,price,d.sl,final_tp)) return false;
+   if(!stops_ok) return false;
    double volume=SafeVolume(d.symbol,price,d.sl);
-   if(volume<=0){ PrintOnce("SyntX: "+d.symbol+" volume nul (lot minimum superieur au risque autorise)"); return false; }
+   if(volume<=0)
+   { PanelGate(r,11,false,"volume nul (lot minimum superieur au risque)"); PrintOnce("SyntX: "+d.symbol+" volume nul (lot minimum superieur au risque autorise)"); return false; }
    double margin=0.0;
    if(!OrderCalcMargin(d.verdict=="BUY"?ORDER_TYPE_BUY:ORDER_TYPE_SELL,d.symbol,volume,price,margin) || margin>AccountInfoDouble(ACCOUNT_MARGIN_FREE)*0.50)
-   { PrintOnce("SyntX: "+d.symbol+" marge libre insuffisante"); return false; }
+   { PanelGate(r,11,false,"marge libre insuffisante"); PrintOnce("SyntX: "+d.symbol+" marge libre insuffisante"); return false; }
    if(!TotalRiskAllows(PositionRiskUSD(d.symbol,d.verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,price,d.sl,volume)))
-   { PrintOnce("SyntX: "+d.symbol+" reporte — risque cumule maximum atteint"); return false; }
+   { PanelGate(r,11,false,"risque total maximum atteint"); PrintOnce("SyntX: "+d.symbol+" reporte — risque cumule maximum atteint"); return false; }
+   PanelGate(r,11,true,"lot "+DoubleToString(volume,2));
 
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.10"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.10");
-   if(!sent){ Print("SyntX: ordre refuse ",d.symbol," ",trade.ResultRetcodeDescription()); return false; }
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.20"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.20");
+   if(!sent)
+   {
+      r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
+      Print("SyntX: ordre refuse ",d.symbol," ",trade.ResultRetcodeDescription());
+      return false;
+   }
    StoreLevel("SWX_TRADEDBAR_",d.symbol,(double)d.barTime);
+   StoreLevel("SWX_CONF_",d.symbol,d.confidence);
    StoreTradeLevels(d.symbol,d.symbol,d.entry,d.tp1,d.tp2,d.tp3,d.tp4,d.tp5,final_tp,"swing");
-   SendSwxAlert("SyntX: "+d.verdict+" "+d.symbol+" "+DoubleToString(volume,2)+" lot · SL "+DoubleToString(d.sl,(int)SymbolInfoInteger(d.symbol,SYMBOL_DIGITS))+" · score "+DoubleToString(d.score,0));
+   r.opened=true;
+   r.decision="POSITION "+d.verdict+" OUVERTE : lot "+DoubleToString(volume,2)+"  SL "+FormatPrice(d.symbol,d.sl)+"  TP "+FormatPrice(d.symbol,final_tp);
+   SendSwxAlert("SyntX: "+d.verdict+" "+d.symbol+" "+DoubleToString(volume,2)+" lot · SL "+FormatPrice(d.symbol,d.sl)+" · score "+DoubleToString(d.score,0));
    return true;
 }
 
-// Signal confirmé mais prix étendu : ordre limite dans la zone EMA20 H1.
-void ManagePendingEntry(const SwxDecision &d,const bool can_trade)
+// Signal confirme mais prix etendu : ordre limite dans la zone EMA20 H1.
+bool ManagePendingEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
 {
-   if(!EnableSmartPendingLimits) return;
-   bool wanted=can_trade && d.state=="WAIT_RETRACE" && (d.verdict=="BUY" || d.verdict=="SELL")
-      && OpenSeraPositions()<AllowedOpenPositions() && (!OnePositionPerSymbol || !HasSeraPositionOn(d.symbol))
+   if(!EnableSmartPendingLimits) return false;
+   bool limit_state=can_trade && d.state=="WAIT_RETRACE" && IsSignal(d.verdict);
+   bool on_symbol=OnePositionPerSymbol && HasSeraPositionOn(d.symbol);
+   bool capacity=OpenSeraPositions()<AllowedOpenPositions() && !on_symbol
       && (FindSeraPendingOrder(d.symbol)>0 || OpenSeraPendingOrders()<AllowedPendingOrders());
-   if(!wanted)
+   if(limit_state) PanelGate(r,9,capacity,on_symbol?"deja une position Sera sur cet indice":!capacity?"nombre maximum d'ordres / positions atteint":"");
+   if(!limit_state || !capacity)
    {
       if(FindSeraPendingOrder(d.symbol)>0 && (d.verdict=="ATTENDRE" || d.state=="EXECUTE_NOW" || d.state=="BLOCKED_RISK"))
          CancelSeraPendingOrder(d.symbol,d.state=="EXECUTE_NOW"?"passage EXECUTE_NOW":"signal invalide");
-      return;
+      return false;
    }
    double entry=d.zoneEntry;
    double final_tp=(DynamicFinalTarget && d.score>=88 && d.tp4>0)?d.tp4:d.tp3;
-   if(!BrokerStopsValid(d.symbol,d.verdict,entry,d.sl,final_tp)) return;
+   bool stops_ok=BrokerStopsValid(d.symbol,d.verdict,entry,d.sl,final_tp);
+   PanelGate(r,10,stops_ok,stops_ok?"entree limite "+FormatPrice(d.symbol,entry):"SL/TP trop proches pour le broker");
+   if(!stops_ok) return false;
    double volume=SafeVolume(d.symbol,entry,d.sl);
-   if(volume<=0) return;
-   if(FindSeraPendingOrder(d.symbol)==0 &&
-      !TotalRiskAllows(PositionRiskUSD(d.symbol,d.verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,entry,d.sl,volume))) return;
+   bool had_order=FindSeraPendingOrder(d.symbol)>0;
+   bool risk_ok=volume>0 && (had_order ||
+      TotalRiskAllows(PositionRiskUSD(d.symbol,d.verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,entry,d.sl,volume)));
+   PanelGate(r,11,risk_ok,volume<=0?"volume nul (lot minimum ou SL)":!risk_ok?"risque total maximum atteint":"lot "+DoubleToString(volume,2));
+   if(!risk_ok) return false;
    if(PlaceOrUpdatePendingLimit(d.symbol,d.symbol,d.verdict,entry,d.sl,final_tp,volume))
+   {
       StoreTradeLevels(d.symbol,d.symbol,entry,d.tp1,d.tp2,d.tp3,d.tp4,d.tp5,final_tp,"swing");
+      StoreLevel("SWX_CONF_",d.symbol,d.confidence);
+      r.decision="ORDRE LIMITE "+d.verdict+(had_order?" EN PLACE":" PLACE")+" a "+FormatPrice(d.symbol,entry)+" (lot "+DoubleToString(volume,2)+")";
+      return true;
+   }
+   r.decision="ORDRE LIMITE NON PLACE : le prix a deja atteint la zone ou le broker refuse";
+   return false;
+}
+
+// ---------- Tableau de bord : affichage ----------
+color Rgb(const int r,const int g,const int b){ return (color)(r|(g<<8)|(b<<16)); }
+
+int g_panel_maxlen=0;
+void PanelText(const int line,const string text,const color clr,const int size=9)
+{
+   if(StringLen(text)>g_panel_maxlen) g_panel_maxlen=StringLen(text);
+   string name="SWX_PANEL_L"+IntegerToString(line);
+   if(ObjectFind(0,name)<0)
+   {
+      ObjectCreate(0,name,OBJ_LABEL,0,0,0);
+      ObjectSetInteger(0,name,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+      ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
+      ObjectSetInteger(0,name,OBJPROP_HIDDEN,true);
+      ObjectSetString(0,name,OBJPROP_FONT,"Consolas");
+   }
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,DashboardX+10);
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY+8+line*16);
+   ObjectSetInteger(0,name,OBJPROP_FONTSIZE,size);
+   ObjectSetInteger(0,name,OBJPROP_COLOR,clr);
+   ObjectSetString(0,name,OBJPROP_TEXT,text);
+}
+
+void PanelBackground(const int lines)
+{
+   string name="SWX_PANEL_BG";
+   if(ObjectFind(0,name)<0)
+   {
+      ObjectCreate(0,name,OBJ_RECTANGLE_LABEL,0,0,0);
+      ObjectSetInteger(0,name,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+      ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
+      ObjectSetInteger(0,name,OBJPROP_HIDDEN,true);
+      ObjectSetInteger(0,name,OBJPROP_BORDER_TYPE,BORDER_FLAT);
+   }
+   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,DashboardX);
+   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY);
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,(int)MathMax(420,g_panel_maxlen*7+24));
+   ObjectSetInteger(0,name,OBJPROP_YSIZE,lines*16+14);
+   ObjectSetInteger(0,name,OBJPROP_BGCOLOR,Rgb(10,20,32));
+   ObjectSetInteger(0,name,OBJPROP_COLOR,Rgb(40,70,100));
+}
+
+void PanelClear(){ ObjectsDeleteAll(0,"SWX_PANEL_"); }
+
+string Pad(const string text,const int width)
+{
+   string out=StringLen(text)>width?StringSubstr(text,0,width):text;
+   while(StringLen(out)<width) out+=" ";
+   return out;
+}
+
+// Barre de certitude : fond gris + remplissage proportionnel, alignee a droite des lignes du tableau.
+int g_bar_count=0;
+void PanelBar(const int line,const double percent,const color clr)
+{
+   int x=DashboardX+10+SWX_BAR_COLUMN*7;
+   int y=DashboardY+8+line*16+3;
+   string names[2];
+   names[0]="SWX_PANEL_B"+IntegerToString(g_bar_count)+"_BG";
+   names[1]="SWX_PANEL_B"+IntegerToString(g_bar_count)+"_FG";
+   g_bar_count++;
+   for(int k=0;k<2;k++)
+   {
+      if(ObjectFind(0,names[k])<0)
+      {
+         ObjectCreate(0,names[k],OBJ_RECTANGLE_LABEL,0,0,0);
+         ObjectSetInteger(0,names[k],OBJPROP_CORNER,CORNER_LEFT_UPPER);
+         ObjectSetInteger(0,names[k],OBJPROP_SELECTABLE,false);
+         ObjectSetInteger(0,names[k],OBJPROP_HIDDEN,true);
+         ObjectSetInteger(0,names[k],OBJPROP_BORDER_TYPE,BORDER_FLAT);
+      }
+      double pct=MathMax(0.0,MathMin(100.0,percent));
+      ObjectSetInteger(0,names[k],OBJPROP_XDISTANCE,x);
+      ObjectSetInteger(0,names[k],OBJPROP_YDISTANCE,y);
+      ObjectSetInteger(0,names[k],OBJPROP_XSIZE,k==0?100:(int)MathMax(1,pct));
+      ObjectSetInteger(0,names[k],OBJPROP_YSIZE,9);
+      ObjectSetInteger(0,names[k],OBJPROP_BGCOLOR,k==0?Rgb(32,44,60):clr);
+      ObjectSetInteger(0,names[k],OBJPROP_COLOR,k==0?Rgb(32,44,60):clr);
+   }
+   if(SWX_BAR_COLUMN+16>g_panel_maxlen) g_panel_maxlen=SWX_BAR_COLUMN+16;
+}
+
+color CertaintyColor(const double pct)
+{
+   if(pct>=85) return Rgb(56,232,187);
+   if(pct>=75) return Rgb(77,163,255);
+   return Rgb(255,190,80);
+}
+
+// Certitude d'un ordre / d'une position : analyse actuelle de l'indice, sinon celle enregistree a l'entree.
+double SymbolCertainty(const string symbol)
+{
+   for(int i=0;i<ArraySize(g_rows);i++)
+      if(g_rows[i].symbol==symbol && g_rows[i].valid && IsSignal(g_rows[i].verdict)) return g_rows[i].confidence;
+   return StoredLevel("SWX_CONF_",symbol);
+}
+
+// Avancement vers un signal tradable : le plus faible entre score/84, consensus/72 % et conditions/80 %.
+double RowProgress(const PanelRow &r)
+{
+   if(!r.valid) return 0;
+   return MathMin(100.0,MathMin(r.score/84.0*100.0,MathMin(r.consensus/72.0*100.0,r.conditions/80.0*100.0)));
+}
+
+double RowRank(const PanelRow &r)
+{
+   double bonus=IsSignal(r.verdict)?1000:0;
+   if(r.state=="EXECUTE_NOW") bonus+=2000;
+   if(r.opened) bonus+=10000;
+   return bonus+RowProgress(r)*10+r.score/100.0;
+}
+
+// Ce qui manque encore avant une entree, en quelques mots.
+string MissingShort(const PanelRow &r)
+{
+   if(!r.valid) return "historique insuffisant";
+   if(IsSignal(r.verdict))
+   {
+      if(r.state=="WAIT_RETRACE") return "retour zone EMA20 H1";
+      if(r.state=="WAIT_CONFIRMATION") return "score d'execution";
+   }
+   for(int i=0;i<SWX_GATES;i++) if(r.gate[i]==0) return StringSubstr(g_gate_names[i],0,24);
+   return "entree au prochain cycle";
+}
+
+// Tableau des ordres limites et positions Sera ouverts. Renvoie la ligne suivante.
+int RenderOrders(int line)
+{
+   color grey=Rgb(130,148,168),green=Rgb(56,232,187),red=Rgb(255,95,118),blue=Rgb(77,163,255);
+   int sera=0,foreign=0;
+   for(int i=0;i<PositionsTotal();i++){ ulong t=PositionGetTicket(i); if(t>0){ if(PositionGetInteger(POSITION_MAGIC)==MagicNumber) sera++; else foreign++; } }
+   for(int i=0;i<OrdersTotal();i++){ ulong t=OrderGetTicket(i); if(t>0){ if(OrderGetInteger(ORDER_MAGIC)==MagicNumber) sera++; else foreign++; } }
+   PanelText(line++,"",grey);
+   PanelText(line++,"ORDRES ET POSITIONS SERA WELTRADE ("+IntegerToString(sera)+")",Rgb(255,190,80));
+   if(sera==0) PanelText(line++,"  Aucun ordre ni position Sera pour le moment.",grey);
+   else PanelText(line++,"  "+Pad("Indice",27)+Pad("Type",11)+Pad("Entree",12)+Pad("SL",12)+Pad("TP",12)+Pad("Lot",6)+Pad("Etat / resultat",19)+"Certitude",grey);
+   int shown=0;
+   for(int i=0;i<PositionsTotal() && shown<DashboardMaxOrders;i++)
+   {
+      ulong t=PositionGetTicket(i);
+      if(t<=0 || PositionGetInteger(POSITION_MAGIC)!=MagicNumber) continue;
+      string sym=PositionGetString(POSITION_SYMBOL);
+      bool buy=PositionGetInteger(POSITION_TYPE)==POSITION_TYPE_BUY;
+      double profit=PositionGetDouble(POSITION_PROFIT)+PositionGetDouble(POSITION_SWAP);
+      double open=PositionGetDouble(POSITION_PRICE_OPEN),sl=PositionGetDouble(POSITION_SL);
+      bool secured=sl>0 && (buy?sl>=open:sl<=open);
+      string state=(profit>=0?"+":"")+DoubleToString(profit,2)+(secured?" SL securise":"");
+      double cert=SymbolCertainty(sym);
+      PanelText(line,"  "+Pad(sym,27)+Pad(buy?"BUY":"SELL",11)+Pad(FormatPrice(sym,open),12)+Pad(FormatPrice(sym,sl),12)+
+                Pad(FormatPrice(sym,PositionGetDouble(POSITION_TP)),12)+Pad(DoubleToString(PositionGetDouble(POSITION_VOLUME),2),6)+
+                Pad(state,19)+(cert>0?DoubleToString(cert,0)+"%":"-"),profit>=0?green:red);
+      if(cert>0) PanelBar(line,cert,CertaintyColor(cert));
+      line++; shown++;
+   }
+   for(int i=0;i<OrdersTotal() && shown<DashboardMaxOrders;i++)
+   {
+      ulong t=OrderGetTicket(i);
+      if(t<=0 || OrderGetInteger(ORDER_MAGIC)!=MagicNumber) continue;
+      ENUM_ORDER_TYPE type=(ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
+      if(type!=ORDER_TYPE_BUY_LIMIT && type!=ORDER_TYPE_SELL_LIMIT) continue;
+      string sym=OrderGetString(ORDER_SYMBOL);
+      double entry=OrderGetDouble(ORDER_PRICE_OPEN);
+      MqlTick tick;
+      string state="en attente";
+      if(SymbolInfoTick(sym,tick) && entry>0)
+      {
+         double px=type==ORDER_TYPE_BUY_LIMIT?tick.ask:tick.bid;
+         state="prix a "+DoubleToString(MathAbs(px-entry)/entry*100.0,2)+"%";
+      }
+      double cert=SymbolCertainty(sym);
+      PanelText(line,"  "+Pad(sym,27)+Pad(type==ORDER_TYPE_BUY_LIMIT?"BUY LIMIT":"SELL LIMIT",11)+Pad(FormatPrice(sym,entry),12)+
+                Pad(FormatPrice(sym,OrderGetDouble(ORDER_SL)),12)+Pad(FormatPrice(sym,OrderGetDouble(ORDER_TP)),12)+
+                Pad(DoubleToString(OrderGetDouble(ORDER_VOLUME_CURRENT),2),6)+Pad(state,19)+(cert>0?DoubleToString(cert,0)+"%":"-"),blue);
+      if(cert>0) PanelBar(line,cert,CertaintyColor(cert));
+      line++; shown++;
+   }
+   if(sera>shown) PanelText(line++,"  ... et "+IntegerToString(sera-shown)+" autre(s)",grey);
+   if(foreign>0) PanelText(line++,"  Attention : "+IntegerToString(foreign)+" ordre(s)/position(s) d'un autre EA ou manuel(s) sur ce compte",red);
+   return line;
+}
+
+// Positions possibles : indices analyses qui n'ont pas encore d'ordre ni de position.
+int RenderPossible(int line)
+{
+   color white=Rgb(220,232,245),grey=Rgb(130,148,168),cyan=Rgb(84,216,255);
+   int count=0;
+   for(int i=0;i<ArraySize(g_rows);i++)
+      if(g_rows[i].valid && FindSeraPendingOrder(g_rows[i].symbol)==0 && !HasSeraPositionOn(g_rows[i].symbol)) count++;
+   PanelText(line++,"",grey);
+   PanelText(line++,"POSITIONS POSSIBLES ("+IntegerToString(count)+") : indices analyses, les plus avances d'abord",Rgb(255,190,80));
+   if(count==0){ PanelText(line++,"  Aucun indice analyse sans ordre pour le moment.",grey); return line; }
+   PanelText(line++,"  "+Pad("Indice",23)+Pad("Sens",12)+Pad("Etat",19)+Pad("Conditions",11)+Pad("Consensus",10)+Pad("Ce qu'il manque",24)+"Score / 84",grey);
+   int order[];
+   ArrayResize(order,ArraySize(g_rows));
+   for(int i=0;i<ArraySize(g_rows);i++) order[i]=i;
+   for(int a=0;a<ArraySize(order);a++)
+      for(int b=a+1;b<ArraySize(order);b++)
+         if(RowRank(g_rows[order[b]])>RowRank(g_rows[order[a]])){ int t=order[a]; order[a]=order[b]; order[b]=t; }
+   int shown=0;
+   for(int k=0;k<ArraySize(order) && shown<DashboardMaxSetups;k++)
+   {
+      PanelRow r=g_rows[order[k]];
+      if(!r.valid || FindSeraPendingOrder(r.symbol)>0 || HasSeraPositionOn(r.symbol)) continue;
+      bool signal=IsSignal(r.verdict);
+      string side=signal?r.verdict:(r.side!="NEUTRE"?"biais "+r.side:"neutre");
+      PanelText(line,"  "+Pad(r.symbol,23)+Pad(side,12)+Pad(r.state,19)+Pad(DoubleToString(r.conditions,0)+"%",11)+
+                Pad(DoubleToString(r.consensus,0)+"%",10)+Pad(MissingShort(r),24)+DoubleToString(r.score,0)+" / 84",signal?white:cyan);
+      double progress=RowProgress(r);
+      PanelBar(line,progress,progress>=100?Rgb(56,232,187):progress>=90?Rgb(77,163,255):Rgb(255,190,80));
+      line++; shown++;
+   }
+   if(count>shown) PanelText(line++,"  ... et "+IntegerToString(count-shown)+" autre(s)",grey);
+   return line;
+}
+
+// Indice mis en avant : position ouverte ce cycle, sinon EXECUTE_NOW, sinon le plus avance.
+int PanelFocus()
+{
+   int best=-1;
+   double bestRank=-1;
+   for(int i=0;i<ArraySize(g_rows);i++)
+   {
+      if(!g_rows[i].valid) continue;
+      double rank=RowRank(g_rows[i]);
+      if(rank>bestRank){ bestRank=rank; best=i; }
+   }
+   return best;
 }
 
 void RenderDashboard(const bool can_trade,const string mode_label)
 {
-   int order[];
-   int n=ArraySize(g_symbols);
-   ArrayResize(order,n);
-   for(int i=0;i<n;i++) order[i]=i;
+   if(!ShowDashboard){ PanelClear(); return; }
+   color white=Rgb(220,232,245),grey=Rgb(130,148,168),green=Rgb(56,232,187),red=Rgb(255,95,118),
+         amber=Rgb(255,190,80),cyan=Rgb(84,216,255),blue=Rgb(77,163,255);
+   int line=0;
+   g_panel_maxlen=0;
+   g_bar_count=0;
+   // Le fond est cree en premier (MT5 dessine le dernier objet cree au-dessus) puis redimensionne a la fin.
+   if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
+   bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
+
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.20",amber,10);
+   if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
+   else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
+   else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
+   else PanelText(line++,"BOT EN PAUSE  |  trading automatique desactive dans les parametres",red);
+
+   int n=ArraySize(g_rows),valid=0,setups=0,signals=0;
    for(int i=0;i<n;i++)
-      for(int j=i+1;j<n;j++)
-         if(g_decisions[order[j]].score>g_decisions[order[i]].score){ int t=order[i]; order[i]=order[j]; order[j]=t; }
-   int signals=0;
-   for(int i=0;i<n;i++) if(g_decisions[i].verdict=="BUY" || g_decisions[i].verdict=="SELL") signals++;
-   string text="Sera EA Swing Intelligent Weltrade v1.10 — "+mode_label+(can_trade?" — auto-trade ACTIF":" — alertes seulement")+
-      "\nIndices suivis: "+IntegerToString(n)+" · signaux confirmes: "+IntegerToString(signals)+
-      " · positions "+IntegerToString(OpenSeraPositions())+"/"+IntegerToString(AllowedOpenPositions())+
-      " · risque ouvert "+DoubleToString(OpenSeraRiskUSD(),2)+
-      "\n—— Meilleurs setups H1/H4/D1 ——";
-   for(int i=0;i<n && i<DashboardRows;i++)
    {
-      SwxDecision d=g_decisions[order[i]];
-      if(!d.valid) continue;
-      text+="\n"+d.symbol+"  "+(d.verdict!="ATTENDRE"?d.verdict:("biais "+d.side))+"  score "+DoubleToString(d.score,0)+
-            "  "+IntegerToString(d.conditionPct)+"%  "+IntegerToString((int)MathMin(d.cycles,2))+"/2  "+d.state;
+      if(!g_rows[i].valid) continue;
+      valid++;
+      if(g_rows[i].side!="NEUTRE") setups++;
+      if(IsSignal(g_rows[i].verdict)) signals++;
    }
-   Comment(text);
+   if(n==0) PanelText(line++,"Analyse : aucun indice Weltrade trouve -> renseignez SymbolsList (ex: GainX 800,PainX 800)",red);
+   else
+   {
+      MqlDateTime t; TimeToStruct(g_last_analysis,t);
+      string at="-";
+      if(g_last_analysis>0) at=(t.hour<10?"0":"")+IntegerToString(t.hour)+":"+(t.min<10?"0":"")+IntegerToString(t.min);
+      PanelText(line++,"Analyse dans MT5 (sans internet) : "+IntegerToString(valid)+"/"+IntegerToString(n)+" indices  |  "+IntegerToString(setups)+
+                " tendances alignees  |  "+IntegerToString(signals)+" signaux  |  derniere bougie H1 "+at,valid>0?green:amber);
+   }
+   double balance=AccountInfoDouble(ACCOUNT_BALANCE),equity=AccountInfoDouble(ACCOUNT_EQUITY),risk=OpenSeraRiskUSD();
+   PanelText(line++,"Compte : balance "+DoubleToString(balance,2)+"  equite "+DoubleToString(equity,2)+"  |  positions "+
+             PositionsText()+"  |  risque ouvert "+DoubleToString(risk,2)+" ("+
+             DoubleToString(equity>0?risk/equity*100.0:0.0,1)+"% / max "+DoubleToString(MaximumTotalOpenRiskPercent,0)+"%)",white);
+   PanelText(line++,"Horizon : Swing H1/H4/D1  |  risque "+DoubleToString(RiskPercent,2)+"% par trade  |  controle toutes les "+
+             IntegerToString(MathMax(15,PollEverySeconds))+" s",grey);
+
+   line=RenderOrders(line);
+   line=RenderPossible(line);
+
+   int focus=ShowEntryChecks?PanelFocus():-1;
+   if(ShowEntryChecks && focus>=0)
+   {
+      PanelRow r=g_rows[focus];
+      PanelText(line++,"",grey);
+      string side=IsSignal(r.verdict)?r.verdict:(r.side!="NEUTRE"?"biais "+r.side:"setup");
+      PanelText(line++,"INDICE SUIVI (detail des controles) : "+r.symbol+"  |  "+side+"  |  "+r.state+"  |  "+r.setup,
+                r.verdict=="BUY"?blue:r.verdict=="SELL"?red:cyan);
+      PanelText(line++,"Score "+DoubleToString(r.score,0)+"   confiance "+DoubleToString(r.confidence,0)+"%   consensus "+DoubleToString(r.consensus,0)+
+                "%   conditions "+DoubleToString(r.conditions,0)+"%   score d'execution "+DoubleToString(r.exec_score,0),white);
+      PanelText(line++,"Controles avant d'ouvrir la position :",grey);
+      for(int g=0;g<SWX_GATES;g++)
+      {
+         string mark=r.gate[g]==1?"[OK] ":r.gate[g]==0?"[NON]":"[ - ]";
+         color c=r.gate[g]==1?green:r.gate[g]==0?red:grey;
+         string detail=r.detail[g]!=""?" : "+r.detail[g]:"";
+         PanelText(line++,"  "+mark+" "+g_gate_names[g]+detail,c);
+      }
+      PanelText(line++,"DECISION : "+r.decision,r.opened?green:(StringFind(r.decision,"LIMITE")>=0?blue:amber),10);
+   }
+   PanelBackground(line);
+   for(int k=line;k<120;k++){ string name="SWX_PANEL_L"+IntegerToString(k); if(ObjectFind(0,name)>=0) ObjectDelete(0,name); }
+   for(int k=g_bar_count;k<120;k++)
+   {
+      string bg="SWX_PANEL_B"+IntegerToString(k)+"_BG",fg="SWX_PANEL_B"+IntegerToString(k)+"_FG";
+      if(ObjectFind(0,bg)>=0) ObjectDelete(0,bg);
+      if(ObjectFind(0,fg)>=0) ObjectDelete(0,fg);
+   }
+   ChartRedraw(0);
+}
+
+// Controles, ordres et decision d'un indice deja analyse. entered : une seule entree au marche par cycle.
+void ProcessDecision(const int i,const bool can_trade,bool &entered)
+{
+   PanelFromDecision(g_rows[i],g_decisions[i]);
+   if(!g_decisions[i].valid) return;
+   bool signal=IsSignal(g_decisions[i].verdict);
+   ManagePendingEntry(g_decisions[i],can_trade,g_rows[i]);
+   if(!entered) entered=TryMarketEntry(g_decisions[i],can_trade,g_rows[i]);
+   else if(signal && g_decisions[i].state=="EXECUTE_NOW" && g_rows[i].decision=="")
+      g_rows[i].decision="ENTREE AU PROCHAIN CYCLE (une entree au marche par cycle)";
+   if(g_rows[i].decision!="") return;
+   if(HasSeraPositionOn(g_rows[i].symbol)) g_rows[i].decision="POSITION SERA OUVERTE : geree (TP1, break-even, coupure si retournement)";
+   else if(!signal) g_rows[i].decision="PAS D'ENTREE : "+PanelFirstBlock(g_rows[i]);
+   else if(!can_trade) g_rows[i].decision="SIGNAL "+g_decisions[i].verdict+" : alerte seulement (trading automatique en pause)";
+   else if(PanelFirstBlock(g_rows[i])!="") g_rows[i].decision="EN ATTENTE : "+PanelFirstBlock(g_rows[i]);
+   else g_rows[i].decision="EN ATTENTE : "+g_decisions[i].state;
 }
 
 void ScanAndTrade()
@@ -1263,29 +1682,30 @@ void ScanAndTrade()
    bool can_trade=EnableAutomaticTrading && !circuit && (!real || AllowRealAccount)
       && TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
    string mode_label=real?"REEL":"DEMO";
+   g_trade_block=circuit?"limite de perte du jour / pertes consecutives atteinte (reprise automatique)":
+                 (real && !AllowRealAccount)?"compte reel non autorise (AllowRealAccount)":"";
 
    bool entered=false;
    for(int i=0;i<ArraySize(g_symbols);i++)
    {
       string symbol=g_symbols[i];
       datetime bar=iTime(symbol,PERIOD_H1,1);
-      if(bar==0) continue;
+      if(bar==0){ PanelFromDecision(g_rows[i],g_decisions[i]); continue; }
       if(bar!=g_lastBar[i] || !g_decisions[i].valid)
       {
          string before=g_decisions[i].verdict;
          Decide(symbol,g_decisions[i]);
          g_lastBar[i]=bar;
+         if(bar>g_last_analysis) g_last_analysis=bar;
          if(g_decisions[i].valid)
          {
             AnalysisReversalExit(g_decisions[i]);
             string now=g_decisions[i].verdict;
-            if(EnableTrendWatch && now!=before && (now=="BUY" || now=="SELL"))
+            if(EnableTrendWatch && now!=before && IsSignal(now))
                SendSwxAlert("SyntX: signal "+now+" "+symbol+" · score "+DoubleToString(g_decisions[i].score,0)+" · "+g_decisions[i].state);
          }
       }
-      if(!g_decisions[i].valid) continue;
-      ManagePendingEntry(g_decisions[i],can_trade);
-      if(!entered) entered=TryMarketEntry(g_decisions[i],can_trade);   // au plus une entrée au marché par cycle
+      ProcessDecision(i,can_trade,entered);
    }
    RenderDashboard(can_trade,mode_label);
 }
@@ -1295,15 +1715,16 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v1.10: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v1.20: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)
       Print("SyntX: aucun indice Weltrade trouve. Renseignez SymbolsList (ex: GainX 800,PainX 800,SFX Vol 40).");
+   ScanAndTrade();   // tableau de bord affiche tout de suite
    return INIT_SUCCEEDED;
 }
 
-void OnDeinit(const int reason){ EventKillTimer(); Comment(""); }
+void OnDeinit(const int reason){ EventKillTimer(); PanelClear(); Comment(""); }
 
 void OnTimer()
 {

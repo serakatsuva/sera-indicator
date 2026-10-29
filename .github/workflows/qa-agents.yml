@@ -72,6 +72,8 @@ jobs:
         run: python scripts/qa_swx_engine.py
       - name: Run the Deriv EA decision loop + dashboard on the published feed (MT5 simulator)
         run: python scripts/qa_ea_dashboard.py
+      - name: Weltrade EA dashboard and execution simulation
+        run: python scripts/qa_ea_dashboard_weltrade.py --quiet
       - name: MT5 presets (.set) match the EA inputs
         run: python scripts/build_ea_set.py --check
 

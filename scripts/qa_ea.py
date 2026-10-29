@@ -121,6 +121,35 @@ if swx_path.exists():
     if '"SERA_' in swx:
         errors.append("SyntX EA must not share SERA_ global variables with the Sera EA")
 
+    # Every improvement of a shared module must reach BOTH EAs: functions present in both files
+    # must stay identical (after the SWX_/SERA_ prefix and log labels), except the ones listed here.
+    SPECIFIC = {"AssetRiskFactor", "MissingShort", "OnDeinit", "OnInit", "OnTimer", "PanelFocus", "RenderDashboard",
+                "RenderOrders", "RenderPossible", "RowProgress", "SymbolCertainty"}
+
+    def shared_functions(src: str) -> dict[str, str]:
+        for a, b in (("SWX_BAR_COLUMN", "DASH_BAR_COLUMN"), ("SWX_GATES", "SERA_GATES"), ("SWX_", "SERA_"),
+                     ("Sera SyntX", "LABEL"), ("Sera EA Swing Intelligent", "LABEL"), ("Sera Intelligent Swing", "LABEL")):
+            src = src.replace(a, b)
+        out = {}
+        for m in re.finditer(r"^[A-Za-z_][\w ]*?\b(\w+)\s*\([^;{]*\)\s*\n?\{", src, re.M):
+            depth, j = 0, src.index("{", m.start())
+            for j in range(j, len(src)):
+                depth += src[j] == "{"
+                depth -= src[j] == "}"
+                if depth == 0:
+                    break
+            out[m.group(1)] = src[m.start():j + 1]
+        return out
+
+    deriv_funcs, swx_funcs = shared_functions(text), shared_functions(swx)
+    common = set(deriv_funcs) & set(swx_funcs)
+    drift = sorted(f for f in common - SPECIFIC if deriv_funcs[f] != swx_funcs[f])
+    if drift:
+        errors.append("shared modules differ between the Deriv and Weltrade EAs (apply the change to both, "
+                      "then bump both versions): " + ", ".join(drift))
+    if len(common - SPECIFIC) < 40:
+        errors.append(f"only {len(common - SPECIFIC)} shared modules found between the Deriv and Weltrade EAs")
+
 if errors:
     print("\n".join("ERROR: " + e for e in errors))
     raise SystemExit(1)
