@@ -55,7 +55,8 @@ int main(int argc,char** argv){
   OnInit();
   Evaluate(json);
   dump("CYCLE 1 (flux publie)");
-  SIM_NOW+=30; Evaluate(json);
+  string json2=argc>4?slurp(argv[4]):json;
+  SIM_NOW+=30; Evaluate(json2);
   dump("CYCLE 2 (30 s plus tard)");
   click("PLUS"); dump("BOUTON + (5 marches de plus)");
   click("MINUS"); click("MINUS"); click("MINUS"); dump("BOUTON - (liste repliee)");
@@ -232,6 +233,37 @@ def main() -> int:
     vetoes = re.findall(r"non execute - les modeles IA", log)
     if len(vetoes) > len(set(re.findall(r"Sera: (.+?) (?:BUY|SELL) non execute", log))):
         errors.append("the same model veto is logged on every cycle")
+    # Scenario: confirmed Day signal waiting for confirmation (not confident enough for the fast entry)
+    # -> a limit order is placed at once; next cycle the AI models turn against it -> cancelled before it fills.
+    if day_rows:
+        wait = json.loads(json.dumps(feed))
+        target = next(m for m in wait["markets"] if m["id"] == day_rows[0]["id"])
+        lv = target["levels"]
+        risk = abs(lv["entry"] - lv["sl"])
+        sign = 1 if target["final_verdict"] == "BUY" else -1
+        zone = lv["entry"] - sign * risk * 0.3
+        target.update(execution_state="WAIT_CONFIRMATION", execution_score=75, final_confidence=80,
+                      condition_pass_percent=max(80, target["condition_pass_percent"]), setup_detected=1,
+                      setup_direction=target["final_verdict"],
+                      setup_entry_plan={"suggested_entry": zone, "zone_min": min(zone, zone - sign * risk * 0.1), "zone_max": max(zone, zone - sign * risk * 0.1)},
+                      model_ensemble_direction=target["final_verdict"], model_ensemble_consensus=80, model_models_available=4)
+        turned = json.loads(json.dumps(wait))
+        t2 = next(m for m in turned["markets"] if m["id"] == target["id"])
+        t2.update(model_ensemble_direction="SELL" if target["final_verdict"] == "BUY" else "BUY", model_ensemble_consensus=100)
+        p1, p2 = BUILD / "ea-signals-wait.json", BUILD / "ea-signals-turned.json"
+        p1.write_text(json.dumps(wait, separators=(",", ":")), encoding="utf-8")
+        p2.write_text(json.dumps(turned, separators=(",", ":")), encoding="utf-8")
+        out5 = subprocess.run([str(exe), str(p1), str(world(wait)), str(now), str(p2)], capture_output=True, text=True, timeout=120)
+        first, second = out5.stdout.split("=== CYCLE 2")[0], out5.stdout.split("=== CYCLE 2")[-1].split("=== BOUTON")[0]
+        name = target["market"]
+        if not quiet:
+            print(f"=== SCENARIO LIMITE PENDANT LA CONFIRMATION PUIS ANNULATION ({name}) ===")
+            print("\n".join(l for l in (first + second).splitlines() if l.startswith("ORD ") or "ORDRE LIMITE" in l))
+        if out5.returncode != 0 or not re.search(rf"^ORD {re.escape(name)} (BUY|SELL)_LIMIT", first, re.M):
+            errors.append(f"no limit order placed while {name} waits for confirmation")
+        log5 = out5.stdout.split("=== LOG ===")[-1]
+        if re.search(rf"^ORD {re.escape(name)} ", second, re.M) or f"pending supprime {name} - risque de changement : les modeles IA" not in log5:
+            errors.append(f"the limit order on {name} was not cancelled before execution when the AI models turned")
     if errors:
         print("\n".join("ERROR: " + e for e in errors))
         return 1

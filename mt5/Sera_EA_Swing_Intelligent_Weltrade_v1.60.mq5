@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "1.50"
+#property version   "1.60"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -32,7 +32,9 @@ input bool EnableSmartPendingLimits=true;
 // --- Entree rapide : signal confirme (2 bougies H1 deja exigees) et tres confiant, prix pas etendu -> au marche sans attendre EXECUTE_NOW
 input bool EnableFastEntry=true;
 input int FastEntryMinimumConfidence=85;
-input int FastEntryMinimumExecutionScore=72;    // ordre limite sur l'EMA20 H1 si le prix est trop etendu
+input int FastEntryMinimumExecutionScore=72;
+input bool PendingWhileConfirming=true;      // v1.60 : ordre limite (zone EMA20 H1) des que le signal est confirme
+input bool CancelPendingOnRisk=true;         // v1.60 : annuler l'ordre limite AVANT son execution si le signal se degrade    // ordre limite sur l'EMA20 H1 si le prix est trop etendu
 input int PendingExpirationHours=8;
 input int MaximumEntryChaseRiskPercent=35;
 input int MaximumSpreadRiskPercent=12;
@@ -91,7 +93,7 @@ double AssetRiskFactor(const string symbol)
 }
 
 // ===================================================================================
-//  MODULES PARTAGES — repris a l'identique de Sera EA Swing Intelligent Deriv v2.51
+//  MODULES PARTAGES — repris a l'identique de Sera EA Swing Intelligent Deriv (controle par scripts/qa_ea.py)
 //  (risque, ordres, gestion TP1-TP5, sortie partielle, coupure, arret d'urgence)
 // ===================================================================================
 
@@ -144,16 +146,17 @@ void CancelSeraPendingOrder(const string symbol,const string reason)
 
 void CancelAllSeraPendingOrders(const string reason)
 {
+   int deleted=0;
    for(int i=OrdersTotal()-1;i>=0;i--)
    {
       ulong ticket=OrderGetTicket(i);
       if(ticket<=0 || OrderGetInteger(ORDER_MAGIC)!=MagicNumber) continue;
       ENUM_ORDER_TYPE type=(ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
       if(type!=ORDER_TYPE_BUY_LIMIT && type!=ORDER_TYPE_SELL_LIMIT) continue;
-      if(!trade.OrderDelete(ticket))
-         Print("Sera SyntX: echec suppression pending #",ticket," - ",trade.ResultRetcodeDescription());
+      if(trade.OrderDelete(ticket)) deleted++;
+      else Print("Sera SyntX: echec suppression pending #",ticket," - ",trade.ResultRetcodeDescription());
    }
-   Print("Sera SyntX: pending globaux controles - ",reason);
+   if(deleted>0) Print("Sera SyntX: ",deleted," ordre(s) limite(s) annule(s) - ",reason);
 }
 
 datetime StartOfDay()
@@ -1115,7 +1118,7 @@ void Decide(const string symbol,SwxDecision &d)
 //  SCANNER, EXÉCUTION ET TABLEAU DE BORD
 // ===================================================================================
 
-// ---------- Tableau de bord (v1.50) : etat du bot, analyses et controles avant chaque entree ----------
+// ---------- Tableau de bord (depuis v1.20) : etat du bot, analyses et controles avant chaque entree ----------
 #define SWX_GATES 12
 #define SWX_BAR_COLUMN 114
 string g_gate_names[SWX_GATES]={"Tendance alignee H1/H4/D1","Qualite des 3 unites de temps","Confirmation H4/D1 (ADX, DMI)",
@@ -1310,7 +1313,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.50"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.50");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.60"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.60");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -1330,15 +1333,28 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
 bool ManagePendingEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
 {
    if(!EnableSmartPendingLimits) return false;
-   bool limit_state=can_trade && d.state=="WAIT_RETRACE" && IsSignal(d.verdict);
+   bool confirming=PendingWhileConfirming && d.state=="WAIT_CONFIRMATION" && !FastEntryOk(d);
+   bool limit_state=can_trade && (d.state=="WAIT_RETRACE" || confirming) && IsSignal(d.verdict);
    bool on_symbol=OnePositionPerSymbol && HasSeraPositionOn(d.symbol);
    bool capacity=OpenSeraPositions()<AllowedOpenPositions() && !on_symbol
       && (FindSeraPendingOrder(d.symbol)>0 || OpenSeraPendingOrders()<AllowedPendingOrders());
    if(limit_state) PanelGate(r,9,capacity,on_symbol?"deja une position Sera sur cet indice":!capacity?"nombre maximum d'ordres / positions atteint":"");
    if(!limit_state || !capacity)
    {
-      if(FindSeraPendingOrder(d.symbol)>0 && (d.verdict=="ATTENDRE" || d.state=="EXECUTE_NOW" || d.state=="BLOCKED_RISK"))
-         CancelSeraPendingOrder(d.symbol,d.state=="EXECUTE_NOW"?"passage EXECUTE_NOW":"signal invalide");
+      if(FindSeraPendingOrder(d.symbol)>0)
+      {
+         // Risque de changement detecte avant l'execution de l'ordre : on annule d'abord.
+         string risk="";
+         if(d.state=="BLOCKED_RISK") risk="risque de spike ou de retournement";
+         else if(!IsSignal(d.verdict)) risk="le signal a disparu"+(PanelFirstBlock(r)!=""?" ("+PanelFirstBlock(r)+")":"");
+         else if(CancelPendingOnRisk && (d.entrySide!=d.verdict || d.confSide!=d.verdict)) risk="H1/H4 se retournent";
+         if(risk!="")
+         {
+            CancelSeraPendingOrder(d.symbol,"risque de changement : "+risk);
+            r.decision="ORDRE LIMITE ANNULE avant execution : "+risk;
+         }
+         else if(d.state=="EXECUTE_NOW") CancelSeraPendingOrder(d.symbol,"passage EXECUTE_NOW");
+      }
       return false;
    }
    double entry=d.zoneEntry;
@@ -1687,7 +1703,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.50",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.60",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -1813,7 +1829,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v1.50: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v1.60: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)

@@ -43,7 +43,7 @@ static void dump(const char* title){
   for(auto& o:SIM_ORD) printf("ORD %s %s @%.3f vol=%.2f\n",o.symbol.c_str(),o.type==ORDER_TYPE_BUY_LIMIT?"BUY_LIMIT":"SELL_LIMIT",o.price,o.volume);
 }
 // Signal confirme injecte (meme forme que la sortie de Decide) pour tester l'execution.
-static void force(const string& name,const string& side,const string& state){
+static void force(const string& name,const string& side,const string& state,double exec=-1){
   int i=0; while(i<ArraySize(g_symbols) && g_symbols[i]!=name) i++;
   if(i>=ArraySize(g_symbols)){ printf("MISSING %s\n",name.c_str()); return; }
   SwxDecision& d=g_decisions[i]; double px=SIM_PRICE[d.symbol], dir=side=="BUY"?1:-1, dist=px*0.01;
@@ -53,6 +53,7 @@ static void force(const string& name,const string& side,const string& state){
   d.gAligned=d.gQuality=d.gConfirm=d.gSetup=d.gStructure=d.gRisk=d.gScore=true;
   d.entry=px; d.sl=px-dir*dist; d.tp1=px+dir*dist*1.5; d.tp2=px+dir*dist*2.4; d.tp3=px+dir*dist*3.6; d.tp4=px+dir*dist*4.8; d.tp5=px+dir*dist*6;
   d.zoneEntry=px-dir*dist*0.4; d.barTime=iTime(d.symbol,PERIOD_H1,1);
+  if(exec>=0) d.execScore=exec;
   g_lastBar[i]=d.barTime;
 }
 static void click(const char* name){ long l=0; double d=0; string s=string("SWX_PANEL_BTN_")+name; OnChartEvent(CHARTEVENT_OBJECT_CLICK,l,d,s); }
@@ -75,6 +76,10 @@ int main(int argc,char** argv){
   dump("CYCLE 3 (entree rapide)");
   click("MINUS"); click("MINUS"); dump("BOUTON - (liste repliee)");
   click("PLUS"); dump("BOUTON + (liste depliee)");
+  force("BreakX 1200","SELL","WAIT_CONFIRMATION",70);   // pas assez fort pour l'entree rapide
+  SIM_NOW+=30; OnTimer(); dump("LIMITE PENDANT LA CONFIRMATION");
+  for(int i=0;i<ArraySize(g_symbols);i++) if(g_symbols[i]=="BreakX 1200"){ g_decisions[i].verdict="ATTENDRE"; g_decisions[i].entrySide="BUY"; }
+  SIM_NOW+=30; OnTimer(); dump("ANNULATION AVANT EXECUTION");
   printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
   return 0;
 }
@@ -145,6 +150,13 @@ def main() -> int:
         errors.append("button - did not fold the possible positions list")
     if "page 1/" not in unfolded or not re.search(r"\[cyan\]   \S", unfolded):
         errors.append("button + did not show the markets again")
+    waiting = sections.get("LIMITE PENDANT LA CONFIRMATION", "")
+    cancelled = sections.get("ANNULATION AVANT EXECUTION", "")
+    if "ORD BreakX 1200 SELL_LIMIT" not in waiting:
+        errors.append("no limit order placed while the signal waits for confirmation")
+    log = text.split("=== LOG ===")[-1]
+    if "ORD BreakX 1200" in cancelled or "pending supprime BreakX 1200 - risque de changement" not in log:
+        errors.append("the limit order was not cancelled before execution when the signal disappeared")
     if "ZORDER BAD" in text:
         errors.append("dashboard background created after texts/bars: it would hide them")
     if errors:
