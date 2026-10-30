@@ -37,6 +37,10 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
 
+### Scalping v1.05 — actif 24h/24
+
+Plus de pause après des pertes : `DailyLossLimitPercent=0` (pas d’arrêt après les pertes du jour), `MaximumConsecutiveLosses=0` (pas de pause après des pertes de suite), `AvoidForexRollover=false` (Forex aussi autour de minuit). La stratégie de gain de la v1.04 est inchangée. Seul reste l’arrêt d’urgence à −15 % d’équité.
+
 ### Scalping v1.04 — priorité aux gains
 
 - **Objectif en dollars** (`TakeProfitMoney`, 0,50 $ par position) ou **+1 R**, le premier atteint : la position est **encaissée**. Si la tendance continue (`LetProfitsRun`), elle reste ouverte mais le SL **verrouille 70 % du gain** (`LockProfitPercent`) et suit le prix : le gain ne peut plus disparaître.
@@ -187,13 +191,13 @@ GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le termi
 
 ## Sera EA Scalping Intelligent — Volatility, Forex et crypto
 
-`mt5/Sera_EA_Scalping_Intelligent_v1.04.mq5` est un EA de **scalping** indépendant des signaux du site : toute l’analyse se fait **dans MT5**, sur les bougies du broker (Deriv, Weltrade ou autre). Installation : un seul graphique (n’importe lequel, M1 conseillé), Algo Trading activé, aucune adresse WebRequest nécessaire.
+`mt5/Sera_EA_Scalping_Intelligent_v1.05.mq5` est un EA de **scalping** indépendant des signaux du site : toute l’analyse se fait **dans MT5**, sur les bougies du broker (Deriv, Weltrade ou autre). Installation : un seul graphique (n’importe lequel, M1 conseillé), Algo Trading activé, aucune adresse WebRequest nécessaire.
 
 - **Marchés** : tous les symboles compatibles de la *Market Watch* (ou la liste `SymbolsList`) — indices **Volatility** (10 à 300, versions 1s, FX Vol / SFX Vol Weltrade), **Forex**, **crypto** (BTC, ETH, LTC, XRP, SOL…). **Boom, Crash, GainX et PainX sont exclus** ; métaux et Jump/Step désactivés par défaut.
 - **Entrée** : la tendance **M15** (prix et EMA50 qui monte/descend), la tendance **M5** (EMA9/EMA21, ADX) et la **bougie M1** cloturée (corps franc au-delà de l’EMA9) doivent aller dans le même sens, avec un score ≥ 70/100 (RSI, cassure de la bougie précédente, pas d’épuisement ni de prix trop étiré). Spread ≤ 25 % de la distance du stop loss.
 - **Plusieurs positions** : plusieurs symboles en même temps, et jusqu’à **3 positions par symbole** — une nouvelle position n’est ajoutée que lorsque les précédentes sont **sécurisées** (SL au prix d’entrée). Compte netting : 1 position par symbole.
 - **Sortie intelligente** : à +0,6 R le SL passe au prix d’entrée ; à **+1 R** l’EA **encaisse**, sauf si la tendance continue — il reste alors avec un **SL suiveur** (1 ATR) pour prendre plusieurs gains ; si le prix rend 50 % du meilleur gain, il ferme. **Retournement** (bougie M1 franche contre + tendance M5 contre ou RSI de l’autre côté de 50) : **coupure immédiate**, en gain comme en perte. Position qui n’avance pas en 15 min : fermée.
-- **Risque** : 0,30 % de l’équité par position (lot calculé sur la distance du SL), risque cumulé ≤ 10 %, perte du jour ≤ 5 % (reprise le lendemain), pause de 30 min après 4 pertes de suite, **arrêt d’urgence** à −15 % d’équité. Forex/métaux : pas d’entrée autour de minuit serveur ni le vendredi soir.
+- **Risque** : 0,30 % de l’équité par position (lot calculé sur la distance du SL), risque cumulé ≤ 10 %, pas de pause après les pertes (actif 24h/24 depuis v1.05 ; `DailyLossLimitPercent` et `MaximumConsecutiveLosses` permettent de les réactiver), **arrêt d’urgence** à −15 % d’équité (`EmergencyEquityStopPercent`, 0 = désactivé). Forex/métaux : pas d’entrée le vendredi soir / week-end (gap).
 - **Tableau de bord** : état du bot, compte, résultat du jour, positions (lot, SL, résultat, R, état), marchés scannés avec tendance M15/M5, bougie M1, score et barre, dernières actions.
 - **Tests** : `scripts/qa_ea_scalping.py` rejoue une séance complète dans le simulateur MT5 (filtre des marchés, entrées dans le sens de la tendance, ajouts sécurisés, SL suiveur, coupure au retournement, prise de bénéfice, compte netting, arrêt d’urgence).
 

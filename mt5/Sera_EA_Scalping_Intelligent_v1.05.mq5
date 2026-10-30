@@ -1,5 +1,5 @@
 #property copyright "Sera EA Scalping Intelligent"
-#property version   "1.04"
+#property version   "1.05"
 #property strict
 #property description "Scalping M1 qui suit la bougie et la tendance (M5, M15) sur les indices Volatility, le Forex et la crypto (sans Boom/Crash). Plusieurs positions, benefice encaisse ou laisse courir, coupure au retournement."
 
@@ -54,11 +54,11 @@ input bool CutOnReversal=true;               // couper des que la bougie et la t
 input int MaximumMinutesWithoutProgress=15;  // fermer une position qui n'avance pas
 
 // --- Protection du compte
-input double DailyLossLimitPercent=5.0;      // plus d'entree pour la journee apres -5 %
-input int MaximumConsecutiveLosses=4;
+input double DailyLossLimitPercent=0.0;      // v1.05 : 0 = pas d'arret apres les pertes du jour (bot actif 24h/24)
+input int MaximumConsecutiveLosses=0;        // v1.05 : 0 = pas de pause apres des pertes de suite
 input int PauseAfterLossesMinutes=30;
 input double EmergencyEquityStopPercent=15.0;
-input bool AvoidForexRollover=true;          // pas d'entree Forex/metaux autour de minuit serveur
+input bool AvoidForexRollover=false;         // v1.05 : false = Forex aussi autour de minuit serveur (24h/24)
 input bool AvoidWeekendGap=true;             // pas d'entree Forex/metaux le vendredi soir
 
 // --- Tableau de bord
@@ -771,7 +771,7 @@ bool TryEntry(ScalpView &v,const bool can_trade)
 
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   string comment="Sera Scalping v1.04";
+   string comment="Sera Scalping v1.05";
    bool sent=dir>0?trade.Buy(volume,v.symbol,0,sl,tp,comment):trade.Sell(volume,v.symbol,0,sl,tp,comment);
    if(!sent){ v.reason="ordre refuse : "+trade.ResultRetcodeDescription(); Print("Sera Scalping: ordre refuse ",v.symbol," ",trade.ResultRetcodeDescription()); return false; }
    GlobalVariableSet(LastKey(v.symbol),(double)TimeCurrent());
@@ -979,7 +979,7 @@ void RenderDashboard(const bool can_trade,const string pause)
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
    string account=demo?"DEMO":"REEL";
-   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.04",amber,10);
+   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.05",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  scalping M1 : cloture + cassure"+(EnterIntraBar?"":" (cassure off)"),green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(pause!="") PanelText(line++,"BOT EN PAUSE  |  "+pause,red);
@@ -990,8 +990,11 @@ void RenderDashboard(const bool can_trade,const string pause)
              "  |  risque ouvert "+DoubleToString(risk,2)+" ("+DoubleToString(equity>0?risk/equity*100.0:0.0,1)+"% / max "+DoubleToString(MaximumTotalRiskPercent,0)+"%)",white);
    double day=g_day_pnl+FloatingPnl();
    string dayText=day>=0?"+":"";
-   PanelText(line++,"Jour : "+dayText+DoubleToString(day,2)+" (limite -"+DoubleToString(DailyLossLimitPercent,1)+"%)  |  objectif +"+DoubleToString(TakeProfitMoney,2)+
-             " $ par position, SL a l'entree des +"+DoubleToString(BreakEvenMoney,2)+" $  |  pertes de suite "+IntegerToString(g_consecutive_losses)+"/"+IntegerToString(MaximumConsecutiveLosses)+
+   string lossText="";
+   if(MaximumConsecutiveLosses>0) lossText="  |  pertes de suite "+IntegerToString(g_consecutive_losses)+"/"+IntegerToString(MaximumConsecutiveLosses);
+   string limitText=DailyLossLimitPercent>0?" (limite -"+DoubleToString(DailyLossLimitPercent,1)+"%)":" (actif 24h/24, pas de pause)";
+   PanelText(line++,"Jour : "+dayText+DoubleToString(day,2)+limitText+"  |  objectif +"+DoubleToString(TakeProfitMoney,2)+
+             " $ par position, SL a l'entree des +"+DoubleToString(BreakEvenMoney,2)+" $"+lossText+
              (Netting()?"  |  compte netting : 1 position par symbole":""),grey);
 
    // Positions
@@ -1094,7 +1097,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(1,TimerSeconds));
-   Print("Sera EA Scalping Intelligent v1.04 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
+   Print("Sera EA Scalping Intelligent v1.05 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
          DoubleToString(RiskPercent,2),"% par position, ",MaximumPositionsPerSymbol," position(s) max par symbole");
    if(ArraySize(g_views)==0)
       Print("Sera Scalping: aucun symbole compatible. Ajoutez des symboles a la Market Watch ou renseignez SymbolsList.");
