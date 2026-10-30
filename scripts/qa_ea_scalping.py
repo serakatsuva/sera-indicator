@@ -47,6 +47,8 @@ int main(int argc,char** argv){
   string mode=argc>1?argv[1]:"";
   if(mode=="netting") SIM_MARGIN_MODE=ACCOUNT_MARGIN_MODE_RETAIL_NETTING;
   if(mode=="small"){ SIM_BALANCE=49.22; SIM_VOLMIN=0.3; }   // petit compte et lot minimum eleve
+  // spread fixe type indices (1s) Deriv : ~30 % de l'ATR M1 (= ~20 % du SL) accepte, ~60 % de l'ATR (~40 % du SL) refuse
+  if(mode=="spread"){ SIM_SPREAD["Volatility 75 Index"]=0.9; SIM_SPREAD["Volatility 100 (1s) Index"]=1.4; }
   struct W{ const char* name; double px; int dir; };
   W world[]={{"Volatility 75 Index",1000,1},{"Volatility 100 (1s) Index",800,-1},{"EURUSD",1.085,-1},{"BTCUSD",60000,1},
              {"Volatility 50 Index",500,1},{"Boom 1000 Index",12000,1},{"Crash 500 Index",3000,-1},{"Jump 25 Index",900,1},{"US Tech 100",18000,1}};
@@ -170,6 +172,12 @@ def main() -> int:
         errors.append("small account: a minimum lot risking more than 3 % of the equity was accepted")
     if "BTCUSD pret mais pas d'entree - BUY : lot min. risque" not in small:
         errors.append("small account: the refused entry is not explained in the journal")
+    spread = subprocess.run([str(exe), "spread"], capture_output=True, text=True, timeout=300).stdout
+    first = spread.split("=== TENDANCE")[0].split("=== CASSURE")[0]
+    if not re.search(r"^POS Volatility 75 Index BUY", first, re.M):
+        errors.append("spread of ~20 % of the stop loss was refused (Deriv 1s indices must trade)")
+    if re.search(r"^POS Volatility 100 \(1s\) Index", first, re.M) or "Volatility 100 (1s) Index pret mais pas d'entree - SELL pret mais spread =" not in spread:
+        errors.append("a spread of ~40 % of the stop loss was accepted, or the refusal is not explained")
     if errors:
         print("\n".join("ERROR: " + e for e in errors))
         return 1

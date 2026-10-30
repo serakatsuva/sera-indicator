@@ -1,5 +1,5 @@
 #property copyright "Sera EA Scalping Intelligent"
-#property version   "1.02"
+#property version   "1.03"
 #property strict
 #property description "Scalping M1 qui suit la bougie et la tendance (M5, M15) sur les indices Volatility, le Forex et la crypto (sans Boom/Crash). Plusieurs positions, benefice encaisse ou laisse courir, coupure au retournement."
 
@@ -26,7 +26,7 @@ input int MinimumScore=60;                   // score 0-100 pour entrer (v1.02 :
 input bool RequireM15Trend=false;            // v1.02 : false = M15 ne doit pas etre CONTRE (neutre accepte)
 input bool EnterIntraBar=true;               // v1.02 : entrer pendant la bougie des que le prix casse la bougie precedente
 input double MinimumADX=18.0;                // force de tendance M5
-input double MaximumSpreadATRPercent=25.0;   // spread <= 25 % de l'ATR M1
+input double MaximumSpreadRiskPercent=25.0;  // v1.03 : le spread ne doit pas couter plus de 25 % de la distance du SL
 input double MaximumExtensionATR=2.5;        // pas d'entree si le prix est trop loin de l'EMA21 M1
 
 // --- Risque
@@ -715,8 +715,7 @@ bool TryEntry(ScalpView &v,const bool can_trade)
    if(v.klass!="VOL" && v.klass!="JUMP" && TimeCurrent()-tick.time>180){ v.reason="marche ferme (pas de cotation)"; return false; }
    double spread=tick.ask-tick.bid;
    v.spread=spread;
-   if(v.atr<=0 || spread>v.atr*MaximumSpreadATRPercent/100.0)
-   { v.reason=sideText+" pret mais spread trop large ("+DoubleToString(v.atr>0?spread/v.atr*100.0:0,0)+"% de l'ATR)"; return false; }
+   if(v.atr<=0){ v.reason="ATR M1 indisponible"; return false; }
 
    double price=dir>0?tick.ask:tick.bid;
    TfState m1;
@@ -726,6 +725,9 @@ bool TryEntry(ScalpView &v,const bool can_trade)
    if(dist>v.atr*3.0){ dist=v.atr*3.0; sl=price-dir*dist; }
    double room=StopsDistance(v.symbol)+spread;
    if(dist<=room){ dist=room*1.5; sl=price-dir*dist; }
+   // Le spread est un cout fixe a chaque entree : il ne doit pas manger plus de MaximumSpreadRiskPercent du risque (SL).
+   if(spread>dist*MaximumSpreadRiskPercent/100.0)
+   { v.reason=sideText+" pret mais spread = "+DoubleToString(spread/dist*100.0,0)+"% du SL (max "+DoubleToString(MaximumSpreadRiskPercent,0)+"%)"; return false; }
    double tp=price+dir*dist*SafetyTakeProfitR;
    int digits=(int)SymbolInfoInteger(v.symbol,SYMBOL_DIGITS);
    sl=NormalizeDouble(sl,digits); tp=NormalizeDouble(tp,digits);
@@ -748,7 +750,7 @@ bool TryEntry(ScalpView &v,const bool can_trade)
 
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   string comment="Sera Scalping v1.02";
+   string comment="Sera Scalping v1.03";
    bool sent=dir>0?trade.Buy(volume,v.symbol,0,sl,tp,comment):trade.Sell(volume,v.symbol,0,sl,tp,comment);
    if(!sent){ v.reason="ordre refuse : "+trade.ResultRetcodeDescription(); Print("Sera Scalping: ordre refuse ",v.symbol," ",trade.ResultRetcodeDescription()); return false; }
    GlobalVariableSet(LastKey(v.symbol),(double)TimeCurrent());
@@ -956,7 +958,7 @@ void RenderDashboard(const bool can_trade,const string pause)
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
    string account=demo?"DEMO":"REEL";
-   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.02",amber,10);
+   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.03",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  scalping M1 : cloture + cassure"+(EnterIntraBar?"":" (cassure off)"),green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(pause!="") PanelText(line++,"BOT EN PAUSE  |  "+pause,red);
@@ -1070,7 +1072,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(1,TimerSeconds));
-   Print("Sera EA Scalping Intelligent v1.02 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
+   Print("Sera EA Scalping Intelligent v1.03 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
          DoubleToString(RiskPercent,2),"% par position, ",MaximumPositionsPerSymbol," position(s) max par symbole");
    if(ArraySize(g_views)==0)
       Print("Sera Scalping: aucun symbole compatible. Ajoutez des symboles a la Market Watch ou renseignez SymbolsList.");

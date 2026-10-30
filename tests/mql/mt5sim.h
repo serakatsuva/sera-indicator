@@ -88,7 +88,8 @@ double SymbolInfoDouble(const string& s,E_DBL p){
   switch(p){ case SYMBOL_POINT: return 0.001; case SYMBOL_TRADE_TICK_SIZE: return 0.001; case SYMBOL_TRADE_TICK_VALUE_LOSS: return 0.001;
     case SYMBOL_VOLUME_MIN: return SIM_VOLMIN; case SYMBOL_VOLUME_MAX: return 100; case SYMBOL_VOLUME_STEP: return 0.01; default: return 0; } }
 long SymbolInfoInteger(const string&,E_INT p){ return p==SYMBOL_DIGITS?3:0; }
-bool SymbolInfoTick(const string& s,MqlTick& t){ auto it=SIM_PRICE.find(s); if(it==SIM_PRICE.end()) return false; t.bid=it->second; t.ask=it->second*1.00002; t.last=t.bid; t.time=SIM_NOW; return true; }
+std::map<string,double> SIM_SPREAD;   // ecart fixe ask-bid (sinon 0,002 %)
+bool SymbolInfoTick(const string& s,MqlTick& t){ auto it=SIM_PRICE.find(s); if(it==SIM_PRICE.end()) return false; t.bid=it->second; t.ask=SIM_SPREAD.count(s)?it->second+SIM_SPREAD[s]:it->second*1.00002; t.last=t.bid; t.time=SIM_NOW; return true; }
 bool SymbolSelect(const string& s,bool){ return SIM_PRICE.count(s)>0; }
 int SymbolsTotal(bool){ return (int)SIM_PRICE.size(); }
 string SymbolName(int i,bool){ auto it=SIM_PRICE.begin(); std::advance(it,i); return it->first; }
