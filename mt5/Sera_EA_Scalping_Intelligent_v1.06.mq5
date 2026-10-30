@@ -1,5 +1,5 @@
 #property copyright "Sera EA Scalping Intelligent"
-#property version   "1.05"
+#property version   "1.06"
 #property strict
 #property description "Scalping M1 qui suit la bougie et la tendance (M5, M15) sur les indices Volatility, le Forex et la crypto (sans Boom/Crash). Plusieurs positions, benefice encaisse ou laisse courir, coupure au retournement."
 
@@ -30,7 +30,10 @@ input double MaximumSpreadRiskPercent=25.0;  // v1.03 : le spread ne doit pas co
 input double MaximumExtensionATR=2.5;        // pas d'entree si le prix est trop loin de l'EMA21 M1
 
 // --- Risque
-input double RiskPercent=0.30;               // risque par position (% de l'equite)
+input bool UseMinimumLotSizing=true;         // v1.06 : lot minimum, augmente seulement avec les gains
+input double LotStepProfitMoney=5.0;         // v1.06 : +1 lot minimum tous les 5 $ de gain net depuis le demarrage
+input int MaximumLotMultiplier=10;           // v1.06 : au plus 10 x le lot minimum
+input double RiskPercent=0.30;               // si UseMinimumLotSizing=false : risque par position (% de l'equite)
 input double MaximumLot=0.0;                 // 0 = lot maximum du broker
 input bool UseMinimumLotWhenRiskTooSmall=true;
 input double MinimumLotMaxRiskPercent=3.0;   // petit compte : lot minimum accepte si son risque <= 3 % de l'equite
@@ -42,11 +45,11 @@ input double MaximumTotalRiskPercent=10.0;   // risque cumule maximum (positions
 input int MinimumSecondsBetweenEntries=60;   // par symbole
 
 // --- Sortie intelligente
-input double TakeProfitMoney=0.50;           // v1.04 : objectif de gain par position en $ (0 = desactive) - encaisser des +0,50 $
-input double BreakEvenMoney=0.20;            // v1.04 : des +0,20 $ le SL passe au prix d'entree + spread : plus de perte possible
+input double TakeProfitMoney=0.30;           // v1.06 : encaisser des +0,30 $ par position (0 = desactive)
+input double BreakEvenMoney=0.15;            // v1.06 : des +0,15 $ le SL passe au prix d'entree + spread : plus de perte possible
 input double SecureAtR=0.3;                  // ou des +0,3 R (le premier atteint)
 input double TakeProfitR=1.0;                // objectif aussi atteint a +1 R (le premier atteint : $ ou R)
-input bool LetProfitsRun=true;               // a l'objectif, si la tendance continue : rester, mais LockProfitPercent du gain verrouille
+input bool LetProfitsRun=false;              // v1.06 : false = toujours couper a l'objectif ; true = rester si la tendance continue (70 % verrouille)
 input double LockProfitPercent=70.0;         // part du gain garantie par le SL quand on laisse courir
 input double TrailATR=1.0;                   // tendance qui continue : SL suiveur a 1 ATR M1 (jamais sous le gain verrouille)
 input double GiveBackPercent=40.0;           // fermer si la position rend plus de 40 % de son meilleur gain
@@ -426,8 +429,34 @@ double NormalizeVolume(const string symbol,const double lots)
    return NormalizeDouble(v,8);
 }
 
+// Gain net depuis le demarrage de l'EA (reference memorisee dans MT5) -> nombre de lots minimum.
+double BaseEquity()
+{
+   string key="SCALP_BASE_"+IntegerToString((long)MagicNumber);
+   if(!GlobalVariableCheck(key)) GlobalVariableSet(key,AccountInfoDouble(ACCOUNT_BALANCE));
+   return GlobalVariableGet(key);
+}
+
+int LotMultiplier()
+{
+   if(LotStepProfitMoney<=0) return 1;
+   double gained=AccountInfoDouble(ACCOUNT_BALANCE)-BaseEquity();
+   int m=1+(int)MathFloor(MathMax(0.0,gained)/LotStepProfitMoney);
+   return (int)MathMax(1,MathMin(MathMax(1,MaximumLotMultiplier),m));
+}
+
 double LotForRisk(const string symbol,const double entry,const double sl)
 {
+   if(UseMinimumLotSizing)
+   {
+      double minLot=SymbolInfoDouble(symbol,SYMBOL_VOLUME_MIN);
+      double perMin=LossMoney(symbol,entry-sl,minLot);
+      // le lot minimum doit rester raisonnable pour le compte (sinon : symbole trop cher, ex. BTC sur 49 $)
+      if(minLot<=0 || perMin<=0 || perMin>AccountInfoDouble(ACCOUNT_EQUITY)*MinimumLotMaxRiskPercent/100.0) return 0;
+      double lots=minLot*LotMultiplier();
+      double v=NormalizeVolume(symbol,lots);
+      return v>0?v:minLot;
+   }
    double riskMoney=AccountInfoDouble(ACCOUNT_EQUITY)*RiskPercent/100.0;
    double perLot=LossMoney(symbol,entry-sl,1.0);
    if(perLot<=0 || riskMoney<=0) return 0;
@@ -771,7 +800,7 @@ bool TryEntry(ScalpView &v,const bool can_trade)
 
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   string comment="Sera Scalping v1.05";
+   string comment="Sera Scalping v1.06";
    bool sent=dir>0?trade.Buy(volume,v.symbol,0,sl,tp,comment):trade.Sell(volume,v.symbol,0,sl,tp,comment);
    if(!sent){ v.reason="ordre refuse : "+trade.ResultRetcodeDescription(); Print("Sera Scalping: ordre refuse ",v.symbol," ",trade.ResultRetcodeDescription()); return false; }
    GlobalVariableSet(LastKey(v.symbol),(double)TimeCurrent());
@@ -979,13 +1008,15 @@ void RenderDashboard(const bool can_trade,const string pause)
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
    string account=demo?"DEMO":"REEL";
-   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.05",amber,10);
+   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.06",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  scalping M1 : cloture + cassure"+(EnterIntraBar?"":" (cassure off)"),green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(pause!="") PanelText(line++,"BOT EN PAUSE  |  "+pause,red);
    else PanelText(line++,"BOT EN PAUSE  |  trading automatique desactive dans les parametres",red);
 
    double balance=AccountInfoDouble(ACCOUNT_BALANCE),equity=AccountInfoDouble(ACCOUNT_EQUITY),risk=OpenRiskMoney();
+   string lotText=UseMinimumLotSizing?"lot minimum x"+IntegerToString(LotMultiplier())+" (+1 tous les "+DoubleToString(LotStepProfitMoney,0)+" $ de gain)":"risque "+DoubleToString(RiskPercent,2)+"% par position";
+   PanelText(line++,"Lots : "+lotText+"  |  depart "+DoubleToString(BaseEquity(),2)+" $",grey);
    PanelText(line++,"Compte : balance "+DoubleToString(balance,2)+"  equite "+DoubleToString(equity,2)+"  |  positions "+IntegerToString(SeraPositions("",0))+
              "  |  risque ouvert "+DoubleToString(risk,2)+" ("+DoubleToString(equity>0?risk/equity*100.0:0.0,1)+"% / max "+DoubleToString(MaximumTotalRiskPercent,0)+"%)",white);
    double day=g_day_pnl+FloatingPnl();
@@ -1097,8 +1128,8 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(1,TimerSeconds));
-   Print("Sera EA Scalping Intelligent v1.05 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
-         DoubleToString(RiskPercent,2),"% par position, ",MaximumPositionsPerSymbol," position(s) max par symbole");
+   Print("Sera EA Scalping Intelligent v1.06 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), lot minimum x",LotMultiplier(),
+         ", objectif +",DoubleToString(TakeProfitMoney,2)," $ par position, ",MaximumPositionsPerSymbol," position(s) max par symbole");
    if(ArraySize(g_views)==0)
       Print("Sera Scalping: aucun symbole compatible. Ajoutez des symboles a la Market Watch ou renseignez SymbolsList.");
    Cycle();

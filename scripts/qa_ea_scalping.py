@@ -52,6 +52,8 @@ static void hit_stops(){
 int main(int argc,char** argv){
   string mode=argc>1?argv[1]:"";
   if(mode=="netting") SIM_MARGIN_MODE=ACCOUNT_MARGIN_MODE_RETAIL_NETTING;
+  if(mode=="be" || mode=="tp") SIM_VOLMIN=0.67;
+  if(mode=="grow") SIM_GV["SCALP_BASE_26103001"]=988.0;     // +12 $ de gain net depuis le demarrage -> 3 x le lot minimum                            // lot minimum 0,67 : 1 point = 0,67 $
   if(mode=="small"){ SIM_BALANCE=49.22; SIM_VOLMIN=0.3; }   // petit compte et lot minimum eleve
   // spread fixe type indices (1s) Deriv : ~30 % de l'ATR M1 (= ~20 % du SL) accepte, ~60 % de l'ATR (~40 % du SL) refuse
   if(mode=="spread"){ SIM_SPREAD["Volatility 75 Index"]=0.9; SIM_SPREAD["Volatility 100 (1s) Index"]=1.4; }
@@ -64,10 +66,17 @@ int main(int argc,char** argv){
   OnInit();
   dump("DEMARRAGE");
   for(int i=0;i<ArraySize(g_views);i++) printf("VIEW %s class=%s score=%d side=%d reason=%s\n",g_views[i].symbol.c_str(),g_views[i].klass.c_str(),g_views[i].score,g_views[i].side,g_views[i].reason.c_str());
+  if(mode=="tp"){
+    double open=0,vol=1; for(auto& p:SIM_POS) if(p.symbol=="Volatility 75 Index"){ open=p.open; vol=p.volume; }
+    SIM_PRICE["Volatility 75 Index"]=open+0.35/vol; SIM_NOW+=10; OnTimer(); dump("OBJECTIF +0,35 $");
+    printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
+    return 0;
+  }
   if(mode=="be"){
-    // petit gain (+0,30 $ < objectif 0,50 $) -> SL au prix d'entree ; puis chute brutale -> la position sort a 0 ou en gain
-    double open=0; for(auto& p:SIM_POS) if(p.symbol=="Volatility 75 Index") open=p.open;
-    SIM_PRICE["Volatility 75 Index"]=open+0.30/0.67; SIM_NOW+=10; OnTimer(); dump("PETIT GAIN");
+    // petit gain (+0,20 $ : entre le seuil de securisation 0,15 $ et l'objectif 0,30 $) -> SL au prix d'entree ;
+    // puis chute brutale -> la position sort a 0 ou en gain
+    double open=0,vol=1; for(auto& p:SIM_POS) if(p.symbol=="Volatility 75 Index"){ open=p.open; vol=p.volume; }
+    SIM_PRICE["Volatility 75 Index"]=open+0.20/vol; SIM_NOW+=10; OnTimer(); dump("PETIT GAIN");
     SIM_PRICE["Volatility 75 Index"]=open*0.99; hit_stops(); SIM_NOW+=10; OnTimer(); dump("CHUTE APRES PETIT GAIN");
     printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
     return 0;
@@ -190,10 +199,21 @@ def main() -> int:
     small_gain = be.split("=== PETIT GAIN ===")[-1].split("=== CHUTE")[0]
     m = re.search(r"^POS Volatility 75 Index BUY vol=\S+ open=([0-9.]+) sl=([0-9.]+)", small_gain, re.M)
     if not m or float(m.group(2)) < float(m.group(1)):
-        errors.append("after a +0.30 $ gain the stop loss was not moved to the entry price")
+        errors.append("after a +0.20 $ gain the stop loss was not moved to the entry price")
     hits = [float(x) for x in re.findall(r"^STOPHIT Volatility 75 Index (-?[0-9.]+)", be, re.M)]
     if not hits or min(hits) < 0:
         errors.append(f"a position that was in gain finished with a loss after the market turned ({hits})")
+    tp = subprocess.run([str(exe), "tp"], capture_output=True, text=True, timeout=300).stdout
+    if not re.search(r"Volatility 75 Index ferme \([0-9.]+ R\) - benefice encaisse \+0\.3\d \$ \(objectif atteint\)", tp) or \
+            "POS Volatility 75 Index" in tp.split("=== OBJECTIF")[-1].split("=== LOG")[0]:
+        errors.append("a +0.35 $ gain was not taken at once (target 0.30 $)")
+    lots = re.findall(r"^POS \S.* vol=([0-9.]+) ", tp.split("=== OBJECTIF")[0], re.M)
+    if any(float(v) != 0.67 for v in lots):
+        errors.append(f"entries must use the minimum lot (0.67 here), saw {sorted(set(lots))}")
+    grow = subprocess.run([str(exe), "grow"], capture_output=True, text=True, timeout=300).stdout.split("=== CASSURE")[0]
+    grow_lots = set(re.findall(r"^POS \S.* vol=([0-9.]+) ", grow, re.M))
+    if grow_lots != {"0.03"} or "lot minimum x3" not in grow:
+        errors.append(f"after +12 $ of gains the lot must be 3 x the minimum (0.03), saw {sorted(grow_lots)}")
     spread = subprocess.run([str(exe), "spread"], capture_output=True, text=True, timeout=300).stdout
     first = spread.split("=== TENDANCE")[0].split("=== CASSURE")[0]
     if not re.search(r"^POS Volatility 75 Index BUY", first, re.M):
