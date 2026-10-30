@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "tests" / "mql" / "build"
-TYPES = r"(double|MqlRates|string|int|SwxDecision|PanelRow|ScalpView|datetime|char)"
+TYPES = r"(double|MqlRates|string|int|SwxDecision|PanelRow|ScalpView|datetime|char|ENUM_TIMEFRAMES)"
 
 
 def to_cpp(src: str) -> str:

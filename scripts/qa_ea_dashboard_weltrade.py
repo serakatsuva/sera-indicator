@@ -78,6 +78,7 @@ int main(int argc,char** argv){
   dump("CYCLE SUIVANT (30 s plus tard)");
   SIM_NOW+=30; OnTimer();
   dump("CYCLE 3 (entree rapide)");
+  click("OPEN_0");
   click("MINUS"); click("MINUS"); dump("BOUTON - (liste repliee)");
   click("PLUS"); dump("BOUTON + (liste depliee)");
   force("BreakX 1200","SELL","WAIT_CONFIRMATION",70);   // pas assez fort pour l'entree rapide
@@ -163,6 +164,10 @@ def main() -> int:
         errors.append("the limit order was not cancelled before execution when the signal disappeared")
     if "LABEL TOO LONG" in text or "LABEL EMPTY" in text:
         errors.append("a chart label is longer than 63 characters (MT5 cuts it) or empty (MT5 shows 'Label')")
+    if "SIGNAUX EN COURS (" not in signal or not re.search(r"^\[green\]   PainX 800 +H1 +\^ BUY", signal, re.M) or "BTN Ouvrir" not in signal:
+        errors.append("signals table (indice, H1, BUY/SELL, levels, Ouvrir) missing")
+    if "CHARTOPEN " not in text.split("=== LOG ===")[-1]:
+        errors.append("the 'Ouvrir' button did not open the chart")
     if "ZORDER BAD" in text:
         errors.append("dashboard background created after texts/bars: it would hide them")
     if errors:

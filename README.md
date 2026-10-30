@@ -15,9 +15,9 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 `USDBRL-STD`, `USDCAD-STD`, `USDCHF-STD`, `USDCLP-STD`, `USDCNH-STD`, `USDCOP-STD`, `USDCZK-STD`, `USDDKK-STD`, `USDHUF-STD`, `USDIDR-STD`, `USDINR-STD`, `USDJPY-STD`, `USDKRW-STD`, `USDMXN-STD`, `USDNOK-STD`, `USDPLN-STD`, `USDSEK-STD`, `USDSGD-STD`, `USDTHB-STD`, `USDTRY-STD`, `USDTWD-STD`, `USDZAR-STD`, `USDILS-STD`, `AUDUSD-STD`, `EURUSD-STD`, `GBPUSD-STD` et `NZDUSD-STD`.
 
-## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.60
+## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.61
 
-Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv_v2.60.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade_v1.80.mq5`.
+Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv_v2.61.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade_v1.90.mq5`.
 
 **Nom des fichiers** : la version fait partie du nom (`…_Deriv_vX.YY.mq5`, `…_Weltrade_vX.YY.mq5`). À chaque amélioration, le fichier est renommé avec la nouvelle version ; `scripts/ea_files.py` vérifie que la version du nom, celle du code (`#property version`) et le lien de téléchargement de l’application correspondent.
 
@@ -36,6 +36,10 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - **Symboles Forex reconnus chez tous les brokers** : `EUR/USD`, `EURUSD-STD`, `EURUSD`, `EURUSD.m`, `frxEURUSD`…
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
+
+### v2.61 (Deriv) / v1.90 (Weltrade) — tableau des signaux en cours
+
+En haut du tableau de bord, **SIGNAUX EN COURS** liste chaque signal BUY/SELL : marché, unité de temps (H1 Swing, M15 Day), sens, **âge** (bougies depuis l’apparition du signal), **entrée, SL, TP1, TP2, TP3**, et un bouton **Ouvrir** qui ouvre le graphique du marché dans l’unité de temps du signal. Réglages : `ShowSignalsTable`, `DashboardMaxSignals` (8).
 
 ### Scalping v1.07 — lecture des bougies et de la structure
 
@@ -138,7 +142,7 @@ Le tableau de bord affiche maintenant :
 
 Nombre de lignes : `DashboardMaxOrders`, `DashboardMaxSetups`. Le flux `ea-signals.json` publie désormais `engine_score` et `engine_minimum_score`.
 
-**Fichiers .set** : `mt5/Sera_EA_Swing_Intelligent_Deriv_v2.60.set` et `mt5/Sera_EA_Swing_Intelligent_Weltrade_v1.80.set` contiennent les réglages par défaut de chaque version. Dans MT5 : clic droit sur l’EA > *Propriétés* > onglet *Paramètres* > *Charger*. Ils sont générés depuis le code par `scripts/build_ea_set.py` et la QA vérifie qu’ils sont à jour.
+**Fichiers .set** : `mt5/Sera_EA_Swing_Intelligent_Deriv_v2.61.set` et `mt5/Sera_EA_Swing_Intelligent_Weltrade_v1.90.set` contiennent les réglages par défaut de chaque version. Dans MT5 : clic droit sur l’EA > *Propriétés* > onglet *Paramètres* > *Charger*. Ils sont générés depuis le code par `scripts/build_ea_set.py` et la QA vérifie qu’ils sont à jour.
 
 ### v2.40 (Deriv) — tableau de bord sur le graphique
 
@@ -217,7 +221,7 @@ GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le termi
 
 ## Sera EA Swing Intelligent Weltrade — indices synthétiques Weltrade
 
-`mt5/Sera_EA_Swing_Intelligent_Weltrade_v1.80.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ni GitHub.
+`mt5/Sera_EA_Swing_Intelligent_Weltrade_v1.90.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ni GitHub.
 
 **Indices détectés automatiquement** (ou liste manuelle dans `SymbolsList`) :
 

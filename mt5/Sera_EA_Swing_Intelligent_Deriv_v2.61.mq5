@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.60"
+#property version   "2.61"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -84,6 +84,8 @@ input bool ShowDashboard=true;              // tableau de bord sur le graphique
 input int DashboardX=10;
 input int DashboardY=22;
 input int DashboardMaxOrders=15;            // lignes max. pour les ordres et positions
+input bool ShowSignalsTable=true;           // tableau des signaux en cours (entree, SL, TP1-TP3, bouton Ouvrir)
+input int DashboardMaxSignals=8;
 input int DashboardMaxSetups=8;             // lignes max. pour les positions possibles
 input bool ShowEntryChecks=true;            // detail des 11 controles du signal suivi
 input bool TradeDaySignals=true;             // prendre aussi les signaux Day M15/H1 (plus fréquents, plus courts)
@@ -225,9 +227,13 @@ struct PanelRow
    double confidence,conditions,exec_score,engine_score,engine_min;
    int gate[SERA_GATES];      // 1 = OK, 0 = bloque, -1 = non evalue
    bool opened;
+   double entry,sl,tp1,tp2,tp3;   // niveaux du signal (tableau des signaux)
+   datetime since;                // apparition du signal
 };
 
 PanelRow g_rows[];
+string   g_open_symbols[];         // bouton "Ouvrir" -> symbole et unite de temps
+ENUM_TIMEFRAMES g_open_tfs[];
 string   g_feed_status="Connexion aux signaux...";
 bool     g_feed_ok=false;
 int      g_feed_age_min=-1;
@@ -704,8 +710,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.60")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.60");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.61")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.61");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -1309,6 +1315,7 @@ void PanelReset(PanelRow &r,const string market,const string mode,const string v
 {
    r.market=market; r.symbol=""; r.mode=mode; r.verdict=verdict; r.state=state; r.setup_side=""; r.decision="";
    r.confidence=confidence; r.conditions=conditions; r.exec_score=exec_score; r.engine_score=0; r.engine_min=0; r.opened=false;
+   r.entry=0; r.sl=0; r.tp1=0; r.tp2=0; r.tp3=0; r.since=0;
    for(int i=0;i<SERA_GATES;i++){ r.gate[i]=-1; r.detail[i]=""; }
 }
 
@@ -1410,7 +1417,7 @@ int PanelSetupsShown()
    return (int)MathMax(0,DashboardMaxSetups);
 }
 
-void PanelButton(const string name,const string text,const int x,const int line)
+void PanelButton(const string name,const string text,const int x,const int line,const int width=28)
 {
    if(ObjectFind(0,name)<0)
    {
@@ -1423,12 +1430,58 @@ void PanelButton(const string name,const string text,const int x,const int line)
    }
    ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
    ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY+8+line*16-1);
-   ObjectSetInteger(0,name,OBJPROP_XSIZE,28);
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,width);
    ObjectSetInteger(0,name,OBJPROP_YSIZE,17);
    ObjectSetInteger(0,name,OBJPROP_BGCOLOR,Rgb(32,60,92));
    ObjectSetInteger(0,name,OBJPROP_COLOR,Rgb(220,232,245));
    ObjectSetInteger(0,name,OBJPROP_STATE,false);
    ObjectSetString(0,name,OBJPROP_TEXT,text);
+}
+
+
+// ---------- Tableau des signaux en cours (v2.61 / v1.90) ----------
+// Age d'un signal : moment ou ce signal (marche + sens) est apparu pour la premiere fois.
+datetime SignalSince(const string id,const string verdict)
+{
+   string key=StateKey("SERA_SIGT_",id+"|"+verdict);
+   if(!GlobalVariableCheck(key)) GlobalVariableSet(key,(double)TimeCurrent());
+   return (datetime)GlobalVariableGet(key);
+}
+
+void SignalForget(const string id)
+{
+   GlobalVariableDel(StateKey("SERA_SIGT_",id+"|BUY"));
+   GlobalVariableDel(StateKey("SERA_SIGT_",id+"|SELL"));
+}
+
+string AgeText(const datetime since,const int seconds_per_bar)
+{
+   int bars=(int)((TimeCurrent()-since)/MathMax(60,seconds_per_bar));
+   if(bars<=0) return "nouveau";
+   if(bars==1) return "1 bougie";
+   return IntegerToString(bars)+" bougies";
+}
+
+string PriceText(const string symbol,const double price)
+{
+   if(price<=0) return "-";
+   if(symbol!="") return DoubleToString(price,(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS));
+   return DoubleToString(price,price>=1000?2:(price>=10?3:5));
+}
+
+// Bouton "Ouvrir" d'une ligne de signal : ouvre le graphique du marche dans l'unite de temps du signal.
+void PanelOpenButton(const int index,const string symbol,const ENUM_TIMEFRAMES tf,const int line)
+{
+   if(index>=ArraySize(g_open_symbols)){ ArrayResize(g_open_symbols,index+1); ArrayResize(g_open_tfs,index+1); }
+   g_open_symbols[index]=symbol;
+   g_open_tfs[index]=tf;
+   PanelButton("SERA_PANEL_BTN_OPEN_"+IntegerToString(index),"Ouvrir",DashboardX+10+DASH_BAR_COLUMN*PanelCharWidth(),line,62);
+}
+
+void PanelOpenButtonDelete(const int index)
+{
+   string name="SERA_PANEL_BTN_OPEN_"+IntegerToString(index);
+   if(ObjectFind(0,name)>=0) ObjectDelete(0,name);
 }
 
 // [-] [+] (lignes par page) et [<] [>] (pages) sur la ligne de titre des positions possibles.
@@ -1684,6 +1737,37 @@ int RenderPossible(int line)
    return line;
 }
 
+// Signaux BUY/SELL du moteur Sera (GitHub) : marche, unite de temps, age, entree, SL, TP1-TP3 et bouton Ouvrir.
+int RenderSignals(int line)
+{
+   int shown=0;
+   if(ShowSignalsTable)
+   {
+      color grey=Rgb(130,148,168),green=Rgb(56,232,187),red=Rgb(255,95,118);
+      int count=0;
+      for(int i=0;i<ArraySize(g_rows);i++) if((g_rows[i].verdict=="BUY" || g_rows[i].verdict=="SELL") && g_rows[i].entry>0) count++;
+      PanelText(line++,"",grey);
+      PanelText(line++,"SIGNAUX EN COURS ("+IntegerToString(count)+") : moteur Sera sur GitHub, mis a jour toutes les ~5 min",Rgb(255,190,80));
+      if(count==0) PanelText(line++,g_feed_ok?"  Aucun signal BUY/SELL pour le moment.":"  En attente de signaux frais.",grey);
+      else PanelText(line++,"  "+Pad("Marche",24)+Pad("TF",6)+Pad("Signal",7)+Pad("Age",11)+Pad("Entree",12)+Pad("SL",12)+Pad("TP1",12)+Pad("TP2",12)+"TP3",grey);
+      for(int i=0;i<ArraySize(g_rows) && shown<DashboardMaxSignals;i++)
+      {
+         PanelRow r=g_rows[i];
+         if((r.verdict!="BUY" && r.verdict!="SELL") || r.entry<=0) continue;
+         bool day=r.mode=="day";
+         string arrow=r.verdict=="BUY"?"^ BUY":"v SELL";
+         PanelText(line,"  "+Pad(r.market,24)+Pad(day?"M15":"H1",6)+Pad(arrow,7)+Pad(AgeText(r.since,day?900:3600),11)+Pad(PriceText(r.symbol,r.entry),12)+
+                   Pad(PriceText(r.symbol,r.sl),12)+Pad(PriceText(r.symbol,r.tp1),12)+Pad(PriceText(r.symbol,r.tp2),12)+PriceText(r.symbol,r.tp3),r.verdict=="BUY"?green:red);
+         if(r.symbol!="") PanelOpenButton(shown,r.symbol,day?PERIOD_M15:PERIOD_H1,line);
+         else PanelOpenButtonDelete(shown);
+         line++; shown++;
+      }
+      if(count>shown) PanelText(line++,"  ... et "+IntegerToString(count-shown)+" autre(s) signal(s)",grey);
+   }
+   for(int k=shown;k<40;k++) PanelOpenButtonDelete(k);
+   return line;
+}
+
 void RenderDashboard()
 {
    if(!ShowDashboard){ PanelClear(); return; }
@@ -1700,7 +1784,7 @@ void RenderDashboard()
 
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.60",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.61",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -1730,6 +1814,7 @@ void RenderDashboard()
    PanelText(line++,"Horizons : "+horizons+"  |  risque "+DoubleToString(RiskPercent,2)+
              "% par trade  |  analyse toutes les "+IntegerToString(MathMax(15,PollEverySeconds))+" s",grey);
 
+   line=RenderSignals(line);
    line=RenderOrders(line);
    line=RenderPossible(line);
 
@@ -1835,6 +1920,14 @@ void Evaluate(const string json)
          string setup_id=JsonString(object,"id");
          string market_name=JsonString(object,"market");
          string deriv_code=JsonString(object,"symbol");
+         if(verdict=="BUY" || verdict=="SELL")
+         {
+            string lv=JsonObject(object,"levels");
+            pr.entry=JsonNumber(lv,"entry"); pr.sl=JsonNumber(lv,"sl");
+            pr.tp1=JsonNumber(lv,"tp1"); pr.tp2=JsonNumber(lv,"tp2"); pr.tp3=JsonNumber(lv,"tp3");
+            pr.since=SignalSince(setup_id,verdict);
+         }
+         else SignalForget(setup_id);
          string symbol=ResolveTradeSymbol(market_name,deriv_code);
          if(symbol!="") ManageSeraPosition(setup_id,symbol);
          int state=VerdictState(verdict);
@@ -2057,7 +2150,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.60"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.60");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.61"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.61");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -2126,7 +2219,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.60: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.61: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
@@ -2156,6 +2249,15 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
 {
    if(id!=CHARTEVENT_OBJECT_CLICK) return;
    if(StringFind(sparam,"SERA_PANEL_BTN_")!=0) return;
+   string openPrefix="SERA_PANEL_BTN_OPEN_";
+   if(StringFind(sparam,openPrefix)==0)
+   {
+      int k=(int)StringToDouble(StringSubstr(sparam,StringLen(openPrefix)));
+      ObjectSetInteger(0,sparam,OBJPROP_STATE,false);
+      if(k>=0 && k<ArraySize(g_open_symbols) && g_open_symbols[k]!="" && ChartOpen(g_open_symbols[k],g_open_tfs[k])==0)
+         Print("Sera: impossible d'ouvrir le graphique ",g_open_symbols[k]);
+      return;
+   }
    if(sparam=="SERA_PANEL_BTN_NEXT") GlobalVariableSet(PanelPageKey(),PanelPage()+1);
    else if(sparam=="SERA_PANEL_BTN_PREV") GlobalVariableSet(PanelPageKey(),MathMax(0,PanelPage()-1));
    else

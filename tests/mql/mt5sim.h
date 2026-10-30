@@ -166,6 +166,7 @@ int ObjectFind(long,const string& n){ return SIM_OBJ.count(n)?0:-1; }
 bool ObjectDelete(long,const string& n){ return SIM_OBJ.erase(n)>0; }
 int ObjectsDeleteAll(long,const string& prefix){ int k=0; for(auto it=SIM_OBJ.begin();it!=SIM_OBJ.end();){ if(it->first.rfind(prefix,0)==0){ it=SIM_OBJ.erase(it); k++; } else ++it; } return k; }
 void ChartRedraw(long){}
+long ChartOpen(const string& s,ENUM_TIMEFRAMES tf){ SIM_LOG.push_back("CHARTOPEN "+s+" "+std::to_string((long)tf)); return 1; }
 long SIM_CHART_H=0; const int CHART_HEIGHT_IN_PIXELS=1; long ChartGetInteger(long,int,int=0){ return SIM_CHART_H; }
 
 struct CTrade{

@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "1.80"
+#property version   "1.90"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -18,6 +18,8 @@ input bool ShowDashboard=true;              // tableau de bord sur le graphique
 input int DashboardX=10;
 input int DashboardY=22;
 input int DashboardMaxOrders=15;            // lignes max. pour les ordres et positions
+input bool ShowSignalsTable=true;           // tableau des signaux en cours (entree, SL, TP1-TP3, bouton Ouvrir)
+input int DashboardMaxSignals=8;
 input int DashboardMaxSetups=10;            // lignes max. pour les positions possibles
 input bool ShowEntryChecks=true;            // detail des 12 controles de l'indice suivi
 
@@ -1133,9 +1135,13 @@ struct PanelRow
    int    cycles;
    int    gate[SWX_GATES];      // 1 = OK, 0 = bloque, -1 = non evalue
    bool   opened,valid;
+   double entry,sl,tp1,tp2,tp3;   // niveaux du signal (tableau des signaux)
+   datetime since;                // apparition du signal
 };
 
 PanelRow g_rows[];
+string   g_open_symbols[];         // bouton "Ouvrir" -> symbole et unite de temps
+ENUM_TIMEFRAMES g_open_tfs[];
 string   g_trade_block="";
 datetime g_last_analysis=0;
 bool     g_dash_can_trade=false;
@@ -1176,11 +1182,17 @@ bool FastEntryOk(const SwxDecision &d)
 }
 
 // Les 8 controles de l'analyse (moteur Sera v4.1 dans MT5) et l'etat d'execution.
+datetime SignalSince(const string id,const string verdict);   // definies avec le tableau de bord
+void SignalForget(const string id);
+
 void PanelFromDecision(PanelRow &r,const SwxDecision &d)
 {
    r.symbol=d.symbol; r.verdict=d.verdict; r.side=d.side; r.state=d.state; r.setup=d.setupType; r.decision="";
    r.score=d.score; r.consensus=d.consensus*100.0; r.conditions=d.conditionPct; r.exec_score=d.execScore;
    r.confidence=d.confidence; r.cycles=d.cycles; r.opened=false; r.valid=d.valid;
+   r.entry=d.entry; r.sl=d.sl; r.tp1=d.tp1; r.tp2=d.tp2; r.tp3=d.tp3; r.since=0;
+   if(d.valid && (d.verdict=="BUY" || d.verdict=="SELL")) r.since=SignalSince(d.symbol,d.verdict);
+   else if(d.valid) SignalForget(d.symbol);
    for(int i=0;i<SWX_GATES;i++){ r.gate[i]=-1; r.detail[i]=""; }
    if(!d.valid){ r.decision="ANALYSE IMPOSSIBLE : historique H1/H4/D1 insuffisant chez le broker"; return; }
    PanelGate(r,0,d.gAligned,"H1 "+d.entrySide+" / H4 "+d.confSide+" / D1 "+d.dailySide);
@@ -1313,7 +1325,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.80"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.80");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.90"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.90");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -1468,7 +1480,7 @@ int PanelSetupsShown()
    return (int)MathMax(0,DashboardMaxSetups);
 }
 
-void PanelButton(const string name,const string text,const int x,const int line)
+void PanelButton(const string name,const string text,const int x,const int line,const int width=28)
 {
    if(ObjectFind(0,name)<0)
    {
@@ -1481,12 +1493,58 @@ void PanelButton(const string name,const string text,const int x,const int line)
    }
    ObjectSetInteger(0,name,OBJPROP_XDISTANCE,x);
    ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY+8+line*16-1);
-   ObjectSetInteger(0,name,OBJPROP_XSIZE,28);
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,width);
    ObjectSetInteger(0,name,OBJPROP_YSIZE,17);
    ObjectSetInteger(0,name,OBJPROP_BGCOLOR,Rgb(32,60,92));
    ObjectSetInteger(0,name,OBJPROP_COLOR,Rgb(220,232,245));
    ObjectSetInteger(0,name,OBJPROP_STATE,false);
    ObjectSetString(0,name,OBJPROP_TEXT,text);
+}
+
+
+// ---------- Tableau des signaux en cours (v2.61 / v1.90) ----------
+// Age d'un signal : moment ou ce signal (marche + sens) est apparu pour la premiere fois.
+datetime SignalSince(const string id,const string verdict)
+{
+   string key=StateKey("SWX_SIGT_",id+"|"+verdict);
+   if(!GlobalVariableCheck(key)) GlobalVariableSet(key,(double)TimeCurrent());
+   return (datetime)GlobalVariableGet(key);
+}
+
+void SignalForget(const string id)
+{
+   GlobalVariableDel(StateKey("SWX_SIGT_",id+"|BUY"));
+   GlobalVariableDel(StateKey("SWX_SIGT_",id+"|SELL"));
+}
+
+string AgeText(const datetime since,const int seconds_per_bar)
+{
+   int bars=(int)((TimeCurrent()-since)/MathMax(60,seconds_per_bar));
+   if(bars<=0) return "nouveau";
+   if(bars==1) return "1 bougie";
+   return IntegerToString(bars)+" bougies";
+}
+
+string PriceText(const string symbol,const double price)
+{
+   if(price<=0) return "-";
+   if(symbol!="") return DoubleToString(price,(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS));
+   return DoubleToString(price,price>=1000?2:(price>=10?3:5));
+}
+
+// Bouton "Ouvrir" d'une ligne de signal : ouvre le graphique du marche dans l'unite de temps du signal.
+void PanelOpenButton(const int index,const string symbol,const ENUM_TIMEFRAMES tf,const int line)
+{
+   if(index>=ArraySize(g_open_symbols)){ ArrayResize(g_open_symbols,index+1); ArrayResize(g_open_tfs,index+1); }
+   g_open_symbols[index]=symbol;
+   g_open_tfs[index]=tf;
+   PanelButton("SWX_PANEL_BTN_OPEN_"+IntegerToString(index),"Ouvrir",DashboardX+10+SWX_BAR_COLUMN*PanelCharWidth(),line,62);
+}
+
+void PanelOpenButtonDelete(const int index)
+{
+   string name="SWX_PANEL_BTN_OPEN_"+IntegerToString(index);
+   if(ObjectFind(0,name)>=0) ObjectDelete(0,name);
 }
 
 // [-] [+] (lignes par page) et [<] [>] (pages) sur la ligne de titre des positions possibles.
@@ -1726,6 +1784,35 @@ int PanelFocus()
    return best;
 }
 
+// Signaux BUY/SELL de l'analyse Swing H1/H4/D1 : indice, age, entree, SL, TP1-TP3 et bouton Ouvrir.
+int RenderSignals(int line)
+{
+   int shown=0;
+   if(ShowSignalsTable)
+   {
+      color grey=Rgb(130,148,168),green=Rgb(56,232,187),red=Rgb(255,95,118);
+      int count=0;
+      for(int i=0;i<ArraySize(g_rows);i++) if(g_rows[i].valid && IsSignal(g_rows[i].verdict) && g_rows[i].entry>0) count++;
+      PanelText(line++,"",grey);
+      PanelText(line++,"SIGNAUX EN COURS ("+IntegerToString(count)+") : analyse Swing H1/H4/D1 dans MT5",Rgb(255,190,80));
+      if(count==0) PanelText(line++,"  Aucun signal BUY/SELL pour le moment.",grey);
+      else PanelText(line++,"  "+Pad("Indice",24)+Pad("TF",6)+Pad("Signal",7)+Pad("Age",11)+Pad("Entree",12)+Pad("SL",12)+Pad("TP1",12)+Pad("TP2",12)+"TP3",grey);
+      for(int i=0;i<ArraySize(g_rows) && shown<DashboardMaxSignals;i++)
+      {
+         PanelRow r=g_rows[i];
+         if(!r.valid || !IsSignal(r.verdict) || r.entry<=0) continue;
+         string arrow=r.verdict=="BUY"?"^ BUY":"v SELL";
+         PanelText(line,"  "+Pad(r.symbol,24)+Pad("H1",6)+Pad(arrow,7)+Pad(AgeText(r.since,3600),11)+Pad(PriceText(r.symbol,r.entry),12)+
+                   Pad(PriceText(r.symbol,r.sl),12)+Pad(PriceText(r.symbol,r.tp1),12)+Pad(PriceText(r.symbol,r.tp2),12)+PriceText(r.symbol,r.tp3),r.verdict=="BUY"?green:red);
+         PanelOpenButton(shown,r.symbol,PERIOD_H1,line);
+         line++; shown++;
+      }
+      if(count>shown) PanelText(line++,"  ... et "+IntegerToString(count-shown)+" autre(s) signal(s)",grey);
+   }
+   for(int k=shown;k<40;k++) PanelOpenButtonDelete(k);
+   return line;
+}
+
 void RenderDashboard(const bool can_trade,const string mode_label)
 {
    if(!ShowDashboard){ PanelClear(); return; }
@@ -1738,7 +1825,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.80",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.90",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -1770,6 +1857,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    PanelText(line++,"Horizon : Swing H1/H4/D1  |  risque "+DoubleToString(RiskPercent,2)+"% par trade  |  controle toutes les "+
              IntegerToString(MathMax(15,PollEverySeconds))+" s",grey);
 
+   line=RenderSignals(line);
    line=RenderOrders(line);
    line=RenderPossible(line);
 
@@ -1872,7 +1960,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v1.80: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v1.90: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)
@@ -1897,6 +1985,15 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
 {
    if(id!=CHARTEVENT_OBJECT_CLICK) return;
    if(StringFind(sparam,"SWX_PANEL_BTN_")!=0) return;
+   string openPrefix="SWX_PANEL_BTN_OPEN_";
+   if(StringFind(sparam,openPrefix)==0)
+   {
+      int k=(int)StringToDouble(StringSubstr(sparam,StringLen(openPrefix)));
+      ObjectSetInteger(0,sparam,OBJPROP_STATE,false);
+      if(k>=0 && k<ArraySize(g_open_symbols) && g_open_symbols[k]!="" && ChartOpen(g_open_symbols[k],g_open_tfs[k])==0)
+         Print("Sera: impossible d'ouvrir le graphique ",g_open_symbols[k]);
+      return;
+   }
    if(sparam=="SWX_PANEL_BTN_NEXT") GlobalVariableSet(PanelPageKey(),PanelPage()+1);
    else if(sparam=="SWX_PANEL_BTN_PREV") GlobalVariableSet(PanelPageKey(),MathMax(0,PanelPage()-1));
    else

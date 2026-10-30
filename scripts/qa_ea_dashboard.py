@@ -66,6 +66,7 @@ int main(int argc,char** argv){
   if(mode=="conflict"){ for(auto& kv:SIM_GV) if(kv.first.rfind("SERA_ALERTSTATE_",0)==0) kv.second=12345; SIM_GV["SERA_HB_424242"]=SIM_NOW+30; }
   SIM_NOW+=30; Evaluate(json2);
   dump("CYCLE 2 (30 s plus tard)");
+  click("OPEN_0");
   click("PLUS"); dump("BOUTON + (5 marches de plus)");
   click("MINUS"); click("MINUS"); click("MINUS"); dump("BOUTON - (liste repliee)");
   click("PLUS"); click("PLUS");
@@ -181,6 +182,15 @@ def main() -> int:
         errors.append("page 2 shows the same markets as page 1")
     if possible_rows(p1) > 30:
         errors.append(f"the list does not fit a 720 px chart ({possible_rows(p1)} rows)")
+    n_sig = len([m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels") and m["mode"] in ("swing", "day")])
+    if f"SIGNAUX EN COURS ({n_sig})" not in c2s:
+        errors.append(f"signals table missing or wrong count (expected {n_sig})")
+    if n_sig:
+        first = next(m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels"))
+        if not re.search(rf"^\[(green|red)\]   {re.escape(first['market'][:24])}.*(\^ BUY|v SELL)", c2s, re.M) or "BTN Ouvrir" not in c2s:
+            errors.append("signal row (market, direction, levels) or its 'Ouvrir' button missing")
+        if "CHARTOPEN " not in text.split("=== LOG ===")[-1]:
+            errors.append("the 'Ouvrir' button did not open the market chart")
     c4014 = sections.get("WEBREQUEST NON AUTORISE (erreur 4014)", "")
     if "erreur 4014" not in c4014 or "https://serakatsuva.github.io" not in c4014:
         errors.append("4014 case does not explain the WebRequest fix on the dashboard")

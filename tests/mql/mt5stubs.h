@@ -57,4 +57,4 @@ enum ENUM_OBJECT_PROPERTY_STRING{OBJPROP_FONT,OBJPROP_TEXT};
 const long CORNER_LEFT_UPPER=0; const long BORDER_FLAT=0;
 bool ObjectCreate(long,const string&,ENUM_OBJECT,int,datetime,double); bool ObjectSetInteger(long,const string&,ENUM_OBJECT_PROPERTY_INTEGER,long);
 bool ObjectSetString(long,const string&,ENUM_OBJECT_PROPERTY_STRING,const string&); int ObjectFind(long,const string&); bool ObjectDelete(long,const string&);
-int ObjectsDeleteAll(long,const string&); void ChartRedraw(long); const int CHART_HEIGHT_IN_PIXELS=1; long ChartGetInteger(long,int,int=0);
+int ObjectsDeleteAll(long,const string&); void ChartRedraw(long); long ChartOpen(const string&,ENUM_TIMEFRAMES); const int CHART_HEIGHT_IN_PIXELS=1; long ChartGetInteger(long,int,int=0);
