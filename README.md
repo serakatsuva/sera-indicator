@@ -37,6 +37,12 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
 
+### Scalping v1.02 — plus actif, comme un scalpeur
+
+- **Entrée pendant la bougie** (`EnterIntraBar`) : dès que le prix casse le haut (BUY) ou le bas (SELL) de la dernière bougie M1 clôturée, au-delà de l’EMA9 et dans le sens de la tendance M5, l’EA entre sans attendre la clôture (une entrée maximum par bougie et par symbole).
+- **M15** (`RequireM15Trend=false`) : la tendance M15 ne doit plus qu’être **non contraire** (neutre accepté). **Score minimum 60** (70 avant).
+- Le tableau et le journal indiquent le déclencheur : « cloture » ou « cassure ».
+
 ### v2.60 (Deriv) / v1.80 (Weltrade) / Scalping v1.01 — tableau de bord lisible en entier
 
 - MT5 coupe le texte d’un label à 63 caractères : les colonnes de droite (score, état, raison) disparaissaient. Chaque ligne est maintenant écrite en morceaux de 60 caractères placés côte à côte, adaptés à la résolution de l’écran. Les lignes vides n’affichent plus « Label ».
@@ -170,7 +176,7 @@ GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le termi
 
 ## Sera EA Scalping Intelligent — Volatility, Forex et crypto
 
-`mt5/Sera_EA_Scalping_Intelligent_v1.01.mq5` est un EA de **scalping** indépendant des signaux du site : toute l’analyse se fait **dans MT5**, sur les bougies du broker (Deriv, Weltrade ou autre). Installation : un seul graphique (n’importe lequel, M1 conseillé), Algo Trading activé, aucune adresse WebRequest nécessaire.
+`mt5/Sera_EA_Scalping_Intelligent_v1.02.mq5` est un EA de **scalping** indépendant des signaux du site : toute l’analyse se fait **dans MT5**, sur les bougies du broker (Deriv, Weltrade ou autre). Installation : un seul graphique (n’importe lequel, M1 conseillé), Algo Trading activé, aucune adresse WebRequest nécessaire.
 
 - **Marchés** : tous les symboles compatibles de la *Market Watch* (ou la liste `SymbolsList`) — indices **Volatility** (10 à 300, versions 1s, FX Vol / SFX Vol Weltrade), **Forex**, **crypto** (BTC, ETH, LTC, XRP, SOL…). **Boom, Crash, GainX et PainX sont exclus** ; métaux et Jump/Step désactivés par défaut.
 - **Entrée** : la tendance **M15** (prix et EMA50 qui monte/descend), la tendance **M5** (EMA9/EMA21, ADX) et la **bougie M1** cloturée (corps franc au-delà de l’EMA9) doivent aller dans le même sens, avec un score ≥ 70/100 (RSI, cassure de la bougie précédente, pas d’épuisement ni de prix trop étiré). Spread ≤ 25 % de l’ATR.

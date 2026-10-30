@@ -1,5 +1,5 @@
 #property copyright "Sera EA Scalping Intelligent"
-#property version   "1.01"
+#property version   "1.02"
 #property strict
 #property description "Scalping M1 qui suit la bougie et la tendance (M5, M15) sur les indices Volatility, le Forex et la crypto (sans Boom/Crash). Plusieurs positions, benefice encaisse ou laisse courir, coupure au retournement."
 
@@ -22,7 +22,9 @@ input int DeviationPoints=30;
 input int TimerSeconds=2;                    // controle des positions toutes les 2 s
 
 // --- Analyse (M1 entree, M5 confirmation, M15 tendance)
-input int MinimumScore=70;                   // score 0-100 pour entrer
+input int MinimumScore=60;                   // score 0-100 pour entrer (v1.02 : 60, plus actif)
+input bool RequireM15Trend=false;            // v1.02 : false = M15 ne doit pas etre CONTRE (neutre accepte)
+input bool EnterIntraBar=true;               // v1.02 : entrer pendant la bougie des que le prix casse la bougie precedente
 input double MinimumADX=18.0;                // force de tendance M5
 input double MaximumSpreadATRPercent=25.0;   // spread <= 25 % de l'ATR M1
 input double MaximumExtensionATR=2.5;        // pas d'entree si le prix est trop loin de l'EMA21 M1
@@ -82,7 +84,9 @@ struct ScalpView
    bool     valid,fresh;
    int      t15,t5,c1,side,score,buyScore,sellScore;
    double   atr,spread,rsi,adx,price;
+   double   lastHigh,lastLow,ema9;         // derniere bougie M1 cloturee (cassure pendant la bougie suivante)
    datetime bar;
+   string   trigger;                       // "cloture" ou "cassure"
 };
 
 double EmaAt(const double &v[],const int n,const int period,const int back)
@@ -323,6 +327,7 @@ void AddSymbol(const string name)
    g_views[n].t15=0; g_views[n].t5=0; g_views[n].c1=0; g_views[n].side=0; g_views[n].score=0;
    g_views[n].buyScore=0; g_views[n].sellScore=0;
    g_views[n].atr=0; g_views[n].spread=0; g_views[n].rsi=50; g_views[n].adx=0; g_views[n].price=0;
+   g_views[n].lastHigh=0; g_views[n].lastLow=0; g_views[n].ema9=0; g_views[n].trigger="";
 }
 
 void RefreshSymbols()
@@ -372,13 +377,15 @@ void Analyze(ScalpView &v)
    v.fresh=true;
    v.t15=TrendM15(m15); v.t5=TrendM5(m5); v.c1=CandleM1(m1);
    v.atr=m1.atr; v.rsi=m1.rsi; v.adx=m5.adx;
+   v.lastHigh=m1.high; v.lastLow=m1.low; v.ema9=m1.emaFast; v.trigger="cloture";
    v.buyScore=ScoreFor(1,m1,m5,m15);
    v.sellScore=ScoreFor(-1,m1,m5,m15);
    v.side=0;
    int dir=v.buyScore>=v.sellScore?1:-1;
    v.score=dir>0?v.buyScore:v.sellScore;
    string sideText=dir>0?"BUY":"SELL";
-   if(v.t15!=dir) v.reason="tendance M15 "+(v.t15==0?"neutre":"contre "+sideText);
+   bool m15ok=RequireM15Trend?v.t15==dir:v.t15!=-dir;
+   if(!m15ok) v.reason="tendance M15 "+(v.t15==0?"neutre":"contre "+sideText);
    else if(v.t5!=dir) v.reason="tendance M5 pas encore "+sideText;
    else if(v.c1!=dir) v.reason="attente d'une bougie M1 "+sideText+" franche";
    else if(v.score<MinimumScore) v.reason="score "+IntegerToString(v.score)+" < "+IntegerToString(MinimumScore);
@@ -431,6 +438,7 @@ double LotForRisk(const string symbol,const double entry,const double sl)
 string RKey(const ulong ticket){ return "SCALP_R_"+IntegerToString((long)ticket); }
 string LastKey(const string symbol){ return "SCALP_LAST_"+symbol; }
 string BarKey(const string symbol){ return "SCALP_BAR_"+symbol; }
+datetime FormingBar(const string symbol){ return iTime(symbol,PERIOD_M1,0); }
 string MaxRKey(const ulong ticket){ return "SCALP_MAXR_"+IntegerToString((long)ticket); }
 
 int SeraPositions(const string symbol,const int dir)
@@ -643,7 +651,7 @@ void ManagePositions()
       if(CutOnReversal && ReversalAgainst(g_views[vi],dir))
       {
          if(ClosePosition(ticket,symbol,"retournement detecte (bougie M1 et tendance contre)",pr))
-            GlobalVariableSet(BarKey(symbol),(double)g_views[vi].bar);   // pas de nouvelle entree sur cette bougie
+            GlobalVariableSet(BarKey(symbol),(double)FormingBar(symbol));   // pas de nouvelle entree sur cette bougie
          continue;
       }
 
@@ -698,7 +706,7 @@ bool TryEntry(ScalpView &v,const bool can_trade)
    if(same>=perSymbol){ v.reason=sideText+" : "+IntegerToString(same)+" position(s) deja ouverte(s), maximum atteint"; return false; }
    if(same>0 && !AllSecured(v.symbol,dir)){ v.reason=sideText+" : ajout quand la position est securisee"; return false; }
    if(MaximumOpenPositions>0 && SeraPositions("",0)>=MaximumOpenPositions){ v.reason=sideText+" : nombre maximum de positions atteint"; return false; }
-   if(GlobalVariableCheck(BarKey(v.symbol)) && (datetime)GlobalVariableGet(BarKey(v.symbol))==v.bar) return false;   // une entree par bougie
+   if(GlobalVariableCheck(BarKey(v.symbol)) && (datetime)GlobalVariableGet(BarKey(v.symbol))==FormingBar(v.symbol)) return false;   // une entree par bougie
    if(GlobalVariableCheck(LastKey(v.symbol)) && TimeCurrent()-(datetime)GlobalVariableGet(LastKey(v.symbol))<MinimumSecondsBetweenEntries)
    { v.reason=sideText+" : delai entre deux entrees"; return false; }
 
@@ -740,11 +748,11 @@ bool TryEntry(ScalpView &v,const bool can_trade)
 
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   string comment="Sera Scalping v1.01";
+   string comment="Sera Scalping v1.02";
    bool sent=dir>0?trade.Buy(volume,v.symbol,0,sl,tp,comment):trade.Sell(volume,v.symbol,0,sl,tp,comment);
    if(!sent){ v.reason="ordre refuse : "+trade.ResultRetcodeDescription(); Print("Sera Scalping: ordre refuse ",v.symbol," ",trade.ResultRetcodeDescription()); return false; }
    GlobalVariableSet(LastKey(v.symbol),(double)TimeCurrent());
-   GlobalVariableSet(BarKey(v.symbol),(double)v.bar);
+   GlobalVariableSet(BarKey(v.symbol),(double)FormingBar(v.symbol));
    // memorise le risque initial (R) de la nouvelle position
    for(int i=PositionsTotal()-1;i>=0;i--)
    {
@@ -752,8 +760,8 @@ bool TryEntry(ScalpView &v,const bool can_trade)
       if(t>0 && PositionGetInteger(POSITION_MAGIC)==MagicNumber && PositionGetString(POSITION_SYMBOL)==v.symbol && !GlobalVariableCheck(RKey(t)))
          GlobalVariableSet(RKey(t),dist);
    }
-   v.reason=sideText+" ouvert (score "+IntegerToString(v.score)+")";
-   Note(sideText+" "+v.symbol+" lot "+DoubleToString(volume,2)+"  SL "+DoubleToString(sl,digits)+"  score "+IntegerToString(v.score)+
+   v.reason=sideText+" ouvert ("+v.trigger+", score "+IntegerToString(v.score)+")";
+   Note(sideText+" "+v.symbol+" lot "+DoubleToString(volume,2)+"  SL "+DoubleToString(sl,digits)+"  "+v.trigger+" score "+IntegerToString(v.score)+
         (same>0?"  (ajout n."+IntegerToString(same+1)+")":""));
    return true;
 }
@@ -772,6 +780,27 @@ void RefreshAnalysis()
    }
 }
 
+// Cassure pendant la bougie : le prix depasse le haut (BUY) / le bas (SELL) de la derniere bougie cloturee,
+// au-dela de l'EMA9, dans le sens de la tendance M5, M15 pas contre, RSI pas epuise, score suffisant.
+int BreakoutSide(ScalpView &v)
+{
+   if(!EnterIntraBar || !v.valid || v.atr<=0) return 0;
+   MqlTick tick;
+   if(!SymbolInfoTick(v.symbol,tick)) return 0;
+   double buffer=MathMax(tick.ask-tick.bid,v.atr*0.05);
+   for(int dir=1;dir>=-1;dir-=2)
+   {
+      if(v.t5!=dir) continue;
+      if(RequireM15Trend?v.t15!=dir:v.t15==-dir) continue;
+      int score=dir>0?v.buyScore:v.sellScore;
+      if(score<MinimumScore-10) continue;
+      if(dir>0?v.rsi>75:v.rsi<25) continue;
+      bool broke=dir>0?(tick.bid>v.lastHigh+buffer && tick.bid>v.ema9):(tick.ask<v.lastLow-buffer && tick.ask<v.ema9);
+      if(broke) return dir;
+   }
+   return 0;
+}
+
 void ScanAndTrade(const bool can_trade)
 {
    int n=ArraySize(g_views);
@@ -785,10 +814,26 @@ void ScanAndTrade(const bool can_trade)
    for(int k=0;k<n;k++)
    {
       int i=order[k];
-      if(!g_views[i].valid || g_views[i].side==0 || !g_views[i].fresh) continue;
-      if(!TryEntry(g_views[i],can_trade) && g_views[i].side!=0 && StringFind(g_views[i].reason,"ouvert")<0)
-         LogBlockedOnce(g_views[i].symbol,g_views[i].reason);
-      g_views[i].fresh=false;     // une tentative par bougie M1
+      if(!g_views[i].valid) continue;
+      if(g_views[i].side!=0 && g_views[i].fresh)
+      {
+         g_views[i].trigger="cloture";
+         if(!TryEntry(g_views[i],can_trade) && StringFind(g_views[i].reason,"ouvert")<0)
+            LogBlockedOnce(g_views[i].symbol,g_views[i].reason);
+         g_views[i].fresh=false;     // une tentative a la cloture de chaque bougie M1
+         continue;
+      }
+      // Pendant la bougie : cassure de la bougie precedente (une entree maximum par bougie)
+      int breakout=BreakoutSide(g_views[i]);
+      if(breakout!=0 && !(GlobalVariableCheck(BarKey(g_views[i].symbol)) && (datetime)GlobalVariableGet(BarKey(g_views[i].symbol))==FormingBar(g_views[i].symbol)))
+      {
+         int saved=g_views[i].side;
+         g_views[i].side=breakout;
+         g_views[i].trigger="cassure";
+         if(!TryEntry(g_views[i],can_trade) && StringFind(g_views[i].reason,"ouvert")<0)
+            LogBlockedOnce(g_views[i].symbol,g_views[i].reason);
+         if(StringFind(g_views[i].reason,"ouvert")<0) g_views[i].side=saved;
+      }
    }
 }
 
@@ -911,8 +956,8 @@ void RenderDashboard(const bool can_trade,const string pause)
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
    string account=demo?"DEMO":"REEL";
-   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.01",amber,10);
-   if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  scalping automatique M1 (tendance M5 + M15)",green);
+   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.02",amber,10);
+   if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  scalping M1 : cloture + cassure"+(EnterIntraBar?"":" (cassure off)"),green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(pause!="") PanelText(line++,"BOT EN PAUSE  |  "+pause,red);
    else PanelText(line++,"BOT EN PAUSE  |  trading automatique desactive dans les parametres",red);
@@ -1025,7 +1070,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(1,TimerSeconds));
-   Print("Sera EA Scalping Intelligent v1.01 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
+   Print("Sera EA Scalping Intelligent v1.02 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
          DoubleToString(RiskPercent,2),"% par position, ",MaximumPositionsPerSymbol," position(s) max par symbole");
    if(ArraySize(g_views)==0)
       Print("Sera Scalping: aucun symbole compatible. Ajoutez des symboles a la Market Watch ou renseignez SymbolsList.");
