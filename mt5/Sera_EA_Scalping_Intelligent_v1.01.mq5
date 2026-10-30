@@ -1,5 +1,5 @@
 #property copyright "Sera EA Scalping Intelligent"
-#property version   "1.00"
+#property version   "1.01"
 #property strict
 #property description "Scalping M1 qui suit la bougie et la tendance (M5, M15) sur les indices Volatility, le Forex et la crypto (sans Boom/Crash). Plusieurs positions, benefice encaisse ou laisse courir, coupure au retournement."
 
@@ -31,6 +31,7 @@ input double MaximumExtensionATR=2.5;        // pas d'entree si le prix est trop
 input double RiskPercent=0.30;               // risque par position (% de l'equite)
 input double MaximumLot=0.0;                 // 0 = lot maximum du broker
 input bool UseMinimumLotWhenRiskTooSmall=true;
+input double MinimumLotMaxRiskPercent=3.0;   // petit compte : lot minimum accepte si son risque <= 3 % de l'equite
 input double StopLossATR=1.5;                // SL = 1,5 x ATR M1 (ou sous/sur la derniere meche)
 input double SafetyTakeProfitR=4.0;          // TP de securite chez le broker (en R = distance du SL)
 input int MaximumPositionsPerSymbol=3;       // ajout seulement si les positions precedentes sont securisees
@@ -270,6 +271,23 @@ ScalpView g_views[];
 datetime  g_last_symbol_refresh=0;
 string    g_events[];
 string    g_pause_reason="";
+string    g_blocked_logged[];
+
+// Journal : pourquoi un signal pret n'a pas donne d'entree (une fois par symbole et par raison).
+void LogBlockedOnce(const string symbol,const string reason)
+{
+   string key=reason;
+   int cut=StringFind(key,"(");
+   if(cut<0) cut=StringFind(key,"%");
+   if(cut>0) key=StringSubstr(key,0,cut);
+   key=symbol+"|"+key;
+   for(int i=0;i<ArraySize(g_blocked_logged);i++) if(g_blocked_logged[i]==key) return;
+   int n=ArraySize(g_blocked_logged);
+   if(n>=300){ ArrayResize(g_blocked_logged,0); n=0; }
+   ArrayResize(g_blocked_logged,n+1);
+   g_blocked_logged[n]=key;
+   Print("Sera Scalping: ",symbol," pret mais pas d'entree - ",reason);
+}
 double    g_day_pnl=0;
 int       g_consecutive_losses=0;
 datetime  g_last_loss_time=0;
@@ -405,8 +423,8 @@ double LotForRisk(const string symbol,const double entry,const double sl)
    double lots=NormalizeVolume(symbol,riskMoney/perLot);
    if(lots>0) return lots;
    double minLot=SymbolInfoDouble(symbol,SYMBOL_VOLUME_MIN);
-   // lot minimum accepte seulement s'il ne risque pas plus de 3 fois le risque prevu
-   if(UseMinimumLotWhenRiskTooSmall && minLot>0 && perLot*minLot<=riskMoney*3.0) return minLot;
+   // petit compte : le lot minimum est accepte tant que son risque reste sous MinimumLotMaxRiskPercent de l'equite
+   if(UseMinimumLotWhenRiskTooSmall && minLot>0 && perLot*minLot<=AccountInfoDouble(ACCOUNT_EQUITY)*MinimumLotMaxRiskPercent/100.0) return minLot;
    return 0;
 }
 
@@ -705,7 +723,14 @@ bool TryEntry(ScalpView &v,const bool can_trade)
    sl=NormalizeDouble(sl,digits); tp=NormalizeDouble(tp,digits);
 
    double volume=LotForRisk(v.symbol,price,sl);
-   if(volume<=0){ v.reason=sideText+" : lot minimum trop risque pour la balance"; return false; }
+   if(volume<=0)
+   {
+      double minLot=SymbolInfoDouble(v.symbol,SYMBOL_VOLUME_MIN);
+      double equity=AccountInfoDouble(ACCOUNT_EQUITY);
+      double pct=equity>0?LossMoney(v.symbol,dist,minLot)/equity*100.0:0;
+      v.reason=sideText+" : lot min. risque "+DoubleToString(pct,1)+"% (max "+DoubleToString(MinimumLotMaxRiskPercent,1)+"%)";
+      return false;
+   }
    double margin=0;
    if(!OrderCalcMargin(dir>0?ORDER_TYPE_BUY:ORDER_TYPE_SELL,v.symbol,volume,price,margin) || margin>AccountInfoDouble(ACCOUNT_MARGIN_FREE)*0.5)
    { v.reason=sideText+" : marge libre insuffisante"; return false; }
@@ -715,7 +740,7 @@ bool TryEntry(ScalpView &v,const bool can_trade)
 
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   string comment="Sera Scalping v1.00";
+   string comment="Sera Scalping v1.01";
    bool sent=dir>0?trade.Buy(volume,v.symbol,0,sl,tp,comment):trade.Sell(volume,v.symbol,0,sl,tp,comment);
    if(!sent){ v.reason="ordre refuse : "+trade.ResultRetcodeDescription(); Print("Sera Scalping: ordre refuse ",v.symbol," ",trade.ResultRetcodeDescription()); return false; }
    GlobalVariableSet(LastKey(v.symbol),(double)TimeCurrent());
@@ -761,7 +786,8 @@ void ScanAndTrade(const bool can_trade)
    {
       int i=order[k];
       if(!g_views[i].valid || g_views[i].side==0 || !g_views[i].fresh) continue;
-      TryEntry(g_views[i],can_trade);
+      if(!TryEntry(g_views[i],can_trade) && g_views[i].side!=0 && StringFind(g_views[i].reason,"ouvert")<0)
+         LogBlockedOnce(g_views[i].symbol,g_views[i].reason);
       g_views[i].fresh=false;     // une tentative par bougie M1
    }
 }
@@ -770,26 +796,42 @@ void ScanAndTrade(const bool can_trade)
 //  TABLEAU DE BORD
 // ===================================================================================
 color Rgb(const int r,const int g,const int b){ return (color)(r|(g<<8)|(b<<16)); }
+// MT5 coupe le texte d'un label a 63 caracteres : chaque ligne est ecrite en morceaux de 60 caracteres
+// places cote a cote (police a chasse fixe). Une ligne vide recoit un espace (sinon MT5 affiche "Label").
+int PanelCharWidth()
+{
+   long dpi=TerminalInfoInteger(TERMINAL_SCREEN_DPI);
+   if(dpi<72) dpi=96;
+   return (int)MathRound(7.0*dpi/96.0);
+}
+
 int g_panel_maxlen=0;
 int g_bar_count=0;
 
 void PanelText(const int line,const string text,const color clr,const int size=9)
 {
    if(StringLen(text)>g_panel_maxlen) g_panel_maxlen=StringLen(text);
-   string name="SCALP_PANEL_L"+IntegerToString(line);
-   if(ObjectFind(0,name)<0)
+   string shown=text==""?" ":text;
+   int parts=(StringLen(shown)+59)/60;
+   for(int p=0;p<4;p++)
    {
-      ObjectCreate(0,name,OBJ_LABEL,0,0,0);
-      ObjectSetInteger(0,name,OBJPROP_CORNER,CORNER_LEFT_UPPER);
-      ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
-      ObjectSetInteger(0,name,OBJPROP_HIDDEN,true);
-      ObjectSetString(0,name,OBJPROP_FONT,"Consolas");
+      string name="SCALP_PANEL_L"+IntegerToString(line);
+      if(p>0) name+="_"+IntegerToString(p);
+      if(p>=parts){ if(ObjectFind(0,name)>=0) ObjectDelete(0,name); continue; }
+      if(ObjectFind(0,name)<0)
+      {
+         ObjectCreate(0,name,OBJ_LABEL,0,0,0);
+         ObjectSetInteger(0,name,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+         ObjectSetInteger(0,name,OBJPROP_SELECTABLE,false);
+         ObjectSetInteger(0,name,OBJPROP_HIDDEN,true);
+         ObjectSetString(0,name,OBJPROP_FONT,"Consolas");
+      }
+      ObjectSetInteger(0,name,OBJPROP_XDISTANCE,DashboardX+10+p*60*PanelCharWidth());
+      ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY+8+line*16);
+      ObjectSetInteger(0,name,OBJPROP_FONTSIZE,size);
+      ObjectSetInteger(0,name,OBJPROP_COLOR,clr);
+      ObjectSetString(0,name,OBJPROP_TEXT,StringSubstr(shown,p*60,60));
    }
-   ObjectSetInteger(0,name,OBJPROP_XDISTANCE,DashboardX+10);
-   ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY+8+line*16);
-   ObjectSetInteger(0,name,OBJPROP_FONTSIZE,size);
-   ObjectSetInteger(0,name,OBJPROP_COLOR,clr);
-   ObjectSetString(0,name,OBJPROP_TEXT,text);
 }
 
 void PanelBackground(const int lines)
@@ -805,7 +847,7 @@ void PanelBackground(const int lines)
    }
    ObjectSetInteger(0,name,OBJPROP_XDISTANCE,DashboardX);
    ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY);
-   ObjectSetInteger(0,name,OBJPROP_XSIZE,(int)MathMax(420,g_panel_maxlen*7+24));
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,(int)MathMax(420,g_panel_maxlen*PanelCharWidth()+24));
    ObjectSetInteger(0,name,OBJPROP_YSIZE,lines*16+14);
    ObjectSetInteger(0,name,OBJPROP_BGCOLOR,Rgb(10,20,32));
    ObjectSetInteger(0,name,OBJPROP_COLOR,Rgb(40,70,100));
@@ -829,7 +871,7 @@ void PanelBar(const int line,const double percent,const color clr)
          ObjectSetInteger(0,names[k],OBJPROP_BORDER_TYPE,BORDER_FLAT);
       }
       double pct=MathMax(0.0,MathMin(100.0,percent));
-      ObjectSetInteger(0,names[k],OBJPROP_XDISTANCE,DashboardX+10+SCALP_BAR_COLUMN*7);
+      ObjectSetInteger(0,names[k],OBJPROP_XDISTANCE,DashboardX+10+SCALP_BAR_COLUMN*PanelCharWidth());
       ObjectSetInteger(0,names[k],OBJPROP_YDISTANCE,DashboardY+8+line*16+3);
       ObjectSetInteger(0,names[k],OBJPROP_XSIZE,k==0?100:(int)MathMax(1,pct));
       ObjectSetInteger(0,names[k],OBJPROP_YSIZE,9);
@@ -869,7 +911,7 @@ void RenderDashboard(const bool can_trade,const string pause)
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
    string account=demo?"DEMO":"REEL";
-   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.00",amber,10);
+   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.01",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  scalping automatique M1 (tendance M5 + M15)",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(pause!="") PanelText(line++,"BOT EN PAUSE  |  "+pause,red);
@@ -945,7 +987,13 @@ void RenderDashboard(const bool can_trade,const string pause)
    for(int i=ArraySize(g_events)-1;i>=0;i--) PanelText(line++,"  "+g_events[i],StringFind(g_events[i]," ferme ")>=0?cyan:white);
 
    PanelBackground(line);
-   for(int k=line;k<200;k++){ string name="SCALP_PANEL_L"+IntegerToString(k); if(ObjectFind(0,name)>=0) ObjectDelete(0,name); }
+   for(int k=line;k<200;k++)
+      for(int p=0;p<4;p++)
+      {
+         string name="SCALP_PANEL_L"+IntegerToString(k);
+         if(p>0) name+="_"+IntegerToString(p);
+         if(ObjectFind(0,name)>=0) ObjectDelete(0,name);
+      }
    for(int k=g_bar_count;k<200;k++)
    {
       string bg="SCALP_PANEL_B"+IntegerToString(k)+"_BG",fg="SCALP_PANEL_B"+IntegerToString(k)+"_FG";
@@ -977,7 +1025,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(1,TimerSeconds));
-   Print("Sera EA Scalping Intelligent v1.00 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
+   Print("Sera EA Scalping Intelligent v1.01 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
          DoubleToString(RiskPercent,2),"% par position, ",MaximumPositionsPerSymbol," position(s) max par symbole");
    if(ArraySize(g_views)==0)
       Print("Sera Scalping: aucun symbole compatible. Ajoutez des symboles a la Market Watch ou renseignez SymbolsList.");

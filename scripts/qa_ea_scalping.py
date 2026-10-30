@@ -29,18 +29,24 @@ static const char* colname(long c){
 static void dump(const char* title){
   printf("=== %s ===\n",title);
   std::vector<std::pair<long,string>> lines;
-  for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL) lines.push_back({kv.second.ints[OBJPROP_YDISTANCE],string("[")+colname(kv.second.ints[OBJPROP_COLOR])+"] "+kv.second.strs[OBJPROP_TEXT]});
+  { std::map<long,std::vector<std::pair<long,string>>> rows; std::map<long,long> rowcol;
+    for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL){ long y=kv.second.ints[OBJPROP_YDISTANCE]; rows[y].push_back({kv.second.ints[OBJPROP_XDISTANCE],kv.second.strs[OBJPROP_TEXT]});
+      rowcol[y]=kv.second.ints[OBJPROP_COLOR]; }   // les morceaux d'une ligne ont la meme couleur
+    for(auto& r:rows){ std::sort(r.second.begin(),r.second.end()); string txt; for(auto& part:r.second) txt+=part.second; while(!txt.empty() && txt.back()==' ') txt.pop_back(); lines.push_back({r.first,string("[")+colname(rowcol[r.first])+"] "+txt}); } }
   std::sort(lines.begin(),lines.end());
   for(auto& l:lines) printf("%s\n",l.second.c_str());
   long bg=SIM_OBJ.count("SCALP_PANEL_BG")?SIM_OBJ["SCALP_PANEL_BG"].order:-1; long first=LONG_MAX;
   for(auto& kv:SIM_OBJ) if(kv.first!="SCALP_PANEL_BG" && kv.first.rfind("SCALP_PANEL_",0)==0) first=std::min(first,kv.second.order);
   printf("ZORDER %s\n",bg>0 && bg<first?"OK":"BAD");
+  for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL){ const string& s=kv.second.strs[OBJPROP_TEXT];
+    if(s.size()>63) printf("LABEL TOO LONG %s (%zu)\n",kv.first.c_str(),s.size()); if(s.empty()) printf("LABEL EMPTY %s\n",kv.first.c_str()); }
   for(auto& p:SIM_POS) printf("POS %s %s vol=%.2f open=%.5f sl=%.5f\n",p.symbol.c_str(),p.type==POSITION_TYPE_BUY?"BUY":"SELL",p.volume,p.open,p.sl);
 }
 static void move(const string& s,double pct){ SIM_PRICE[s]*=1.0+pct; }
 int main(int argc,char** argv){
   string mode=argc>1?argv[1]:"";
   if(mode=="netting") SIM_MARGIN_MODE=ACCOUNT_MARGIN_MODE_RETAIL_NETTING;
+  if(mode=="small"){ SIM_BALANCE=49.22; SIM_VOLMIN=0.3; }   // petit compte et lot minimum eleve
   struct W{ const char* name; double px; int dir; };
   W world[]={{"Volatility 75 Index",1000,1},{"Volatility 100 (1s) Index",800,-1},{"EURUSD",1.085,-1},{"BTCUSD",60000,1},
              {"Boom 1000 Index",12000,1},{"Crash 500 Index",3000,-1},{"Jump 25 Index",900,1},{"US Tech 100",18000,1}};
@@ -131,6 +137,8 @@ def main() -> int:
             if line.startswith("[") and len(line.split("] ", 1)[-1]) > 135:
                 errors.append(f"dashboard line too long: {line[:70]}...")
                 break
+    if "LABEL TOO LONG" in text or "LABEL EMPTY" in text:
+        errors.append("a chart label is longer than 63 characters (MT5 cuts it) or empty (MT5 shows 'Label')")
     if "ZORDER BAD" in text:
         errors.append("dashboard background drawn over the texts")
     if "SERA EA SCALPING INTELLIGENT" not in sections.get("DEMARRAGE", ""):
@@ -146,6 +154,14 @@ def main() -> int:
         errors.append("emergency stop did not close every position after a -15 % equity drop")
     if "BOT EN PAUSE  |  arret d'urgence" not in after:
         errors.append("no new entries should be allowed after the emergency stop (dashboard must show the pause)")
+    small = subprocess.run([str(exe), "small"], capture_output=True, text=True, timeout=300).stdout
+    first = small.split("=== TENDANCE")[0]
+    if not re.search(r"^POS Volatility 75 Index BUY vol=0.30", first, re.M):
+        errors.append("small account (49 $): the minimum lot risking < 3 % of the equity was refused")
+    if re.search(r"^POS BTCUSD", first, re.M):
+        errors.append("small account: a minimum lot risking more than 3 % of the equity was accepted")
+    if "BTCUSD pret mais pas d'entree - BUY : lot min. risque" not in small:
+        errors.append("small account: the refused entry is not explained in the journal")
     if errors:
         print("\n".join("ERROR: " + e for e in errors))
         return 1

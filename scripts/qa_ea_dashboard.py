@@ -31,8 +31,10 @@ static const char* colname(long c){
 static void dump(const char* title){
   printf("=== %s ===\n",title);
   std::vector<std::pair<long,string>> lines;
-  for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL) lines.push_back({kv.second.ints[OBJPROP_YDISTANCE],
-      string("[")+colname(kv.second.ints[OBJPROP_COLOR])+"] "+kv.second.strs[OBJPROP_TEXT]});
+  { std::map<long,std::vector<std::pair<long,string>>> rows; std::map<long,long> rowcol;
+    for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL){ long y=kv.second.ints[OBJPROP_YDISTANCE]; rows[y].push_back({kv.second.ints[OBJPROP_XDISTANCE],kv.second.strs[OBJPROP_TEXT]});
+      rowcol[y]=kv.second.ints[OBJPROP_COLOR]; }   // les morceaux d'une ligne ont la meme couleur
+    for(auto& r:rows){ std::sort(r.second.begin(),r.second.end()); string txt; for(auto& part:r.second) txt+=part.second; while(!txt.empty() && txt.back()==' ') txt.pop_back(); lines.push_back({r.first,string("[")+colname(rowcol[r.first])+"] "+txt}); } }
   for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_BUTTON) lines.push_back({kv.second.ints[OBJPROP_YDISTANCE]+1,string("BTN ")+kv.second.strs[OBJPROP_TEXT]});
   for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_RECTANGLE_LABEL && kv.first.find("_FG")!=string::npos)
     lines.push_back({kv.second.ints[OBJPROP_YDISTANCE]-3,string("BAR ")+std::to_string(kv.second.ints[OBJPROP_XSIZE])+" "+
@@ -42,6 +44,8 @@ static void dump(const char* title){
   long bg=SIM_OBJ.count("SERA_PANEL_BG")?SIM_OBJ["SERA_PANEL_BG"].order:-1; long first=LONG_MAX;
   for(auto& kv:SIM_OBJ) if(kv.first!="SERA_PANEL_BG" && kv.first.rfind("SERA_PANEL_",0)==0) first=std::min(first,kv.second.order);
   printf("ZORDER %s\n",bg>0 && bg<first?"OK":"BAD");
+  for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL){ const string& s=kv.second.strs[OBJPROP_TEXT];
+    if(s.size()>63) printf("LABEL TOO LONG %s (%zu)\n",kv.first.c_str(),s.size()); if(s.empty()) printf("LABEL EMPTY %s\n",kv.first.c_str()); }
   printf("--- positions %zu, ordres limites %zu\n",SIM_POS.size(),SIM_ORD.size());
   for(auto& p:SIM_POS) printf("POS %s %s vol=%.2f sl=%.3f\n",p.symbol.c_str(),p.type==POSITION_TYPE_BUY?"BUY":"SELL",p.volume,p.sl);
   for(auto& o:SIM_ORD) printf("ORD %s %s @%.3f vol=%.2f\n",o.symbol.c_str(),o.type==ORDER_TYPE_BUY_LIMIT?"BUY_LIMIT":"SELL_LIMIT",o.price,o.volume);
@@ -141,6 +145,8 @@ def main() -> int:
     if "positions 0, ordres limites 0" in sections.get("CYCLE 2 (30 s plus tard)", "") and any(
             m["execution_state"] == "EXECUTE_NOW" and m["final_verdict"] in ("BUY", "SELL") for m in traded):
         errors.append("an EXECUTE_NOW signal did not lead to a position in the simulation")
+    if "LABEL TOO LONG" in text or "LABEL EMPTY" in text:
+        errors.append("a chart label is longer than 63 characters (MT5 cuts it) or empty (MT5 shows 'Label')")
     if "ZORDER BAD" in text:
         errors.append("dashboard background created after texts/bars: it would hide them")
     c2s = sections.get("CYCLE 2 (30 s plus tard)", "")
