@@ -37,6 +37,15 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
 
+### Scalping v1.07 — lecture des bougies et de la structure
+
+- **Figures de bougies M1** : englobante (avalement) et bougie de rejet (marteau / étoile filante) comptent dans le score (+ dans le sens, − contre).
+- **Entrée « rebond »** : dans la tendance M5, retour du prix sur l’EMA21 puis bougie de rejet ou englobante dans le sens de la tendance.
+- **Structure M5** : sommets et creux montants (BUY) ou descendants (SELL) favorisés ; pas d’entrée contre la structure.
+- **Obstacle** : pas d’achat juste sous le dernier sommet (ni de vente juste au-dessus du dernier creux), sauf en cassure.
+- **État du marché** : pas d’entrée si l’ATR M1 est sous 50 % de sa moyenne (marché mort) ou au-dessus de 3 fois (pic).
+- **Sortie** : une bougie englobante contre la position la coupe ; une bougie de rejet ou englobante contre une position en gain fait encaisser.
+
 ### Scalping v1.06 — petits gains encaissés, lot minimum
 
 - **Objectif 0,30 $ par position** (`TakeProfitMoney`), **toujours coupé** à l’objectif (`LetProfitsRun=false`) ; SL au prix d’entrée dès **+0,15 $** (`BreakEvenMoney`).
@@ -196,7 +205,7 @@ GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le termi
 
 ## Sera EA Scalping Intelligent — Volatility, Forex et crypto
 
-`mt5/Sera_EA_Scalping_Intelligent_v1.06.mq5` est un EA de **scalping** indépendant des signaux du site : toute l’analyse se fait **dans MT5**, sur les bougies du broker (Deriv, Weltrade ou autre). Installation : un seul graphique (n’importe lequel, M1 conseillé), Algo Trading activé, aucune adresse WebRequest nécessaire.
+`mt5/Sera_EA_Scalping_Intelligent_v1.07.mq5` est un EA de **scalping** indépendant des signaux du site : toute l’analyse se fait **dans MT5**, sur les bougies du broker (Deriv, Weltrade ou autre). Installation : un seul graphique (n’importe lequel, M1 conseillé), Algo Trading activé, aucune adresse WebRequest nécessaire.
 
 - **Marchés** : tous les symboles compatibles de la *Market Watch* (ou la liste `SymbolsList`) — indices **Volatility** (10 à 300, versions 1s, FX Vol / SFX Vol Weltrade), **Forex**, **crypto** (BTC, ETH, LTC, XRP, SOL…). **Boom, Crash, GainX et PainX sont exclus** ; métaux et Jump/Step désactivés par défaut.
 - **Entrée** : la tendance **M15** (prix et EMA50 qui monte/descend), la tendance **M5** (EMA9/EMA21, ADX) et la **bougie M1** cloturée (corps franc au-delà de l’EMA9) doivent aller dans le même sens, avec un score ≥ 70/100 (RSI, cassure de la bougie précédente, pas d’épuisement ni de prix trop étiré). Spread ≤ 25 % de la distance du stop loss.

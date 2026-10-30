@@ -133,7 +133,8 @@ datetime iTime(const string&,ENUM_TIMEFRAMES tf,int shift){ return (SIM_NOW/(lon
 // Broker candles: a clean trend per symbol (SIM_TREND) ending at the current price.
 // "Wave" symbols (scalping tests): trend of SIM_STEP per bar + a wave peaking on the last closed bar + wicks.
 std::map<string,bool> SIM_WAVE; double SIM_STEP=0.0002, SIM_AMP=0.0016, SIM_WICK=0.0003, SIM_PULL_SIZE=0.002;
-std::map<string,int> SIM_PULL, SIM_PULLDIR;   // last N bars pulled back against the trend (essoufflement)
+std::map<string,int> SIM_PULL, SIM_PULLDIR;
+std::map<string,double> SIM_HAMMER;   // longue meche basse sur la derniere bougie (rebond sur la moyenne)   // last N bars pulled back against the trend (essoufflement)
 int CopyClose(const string& s,ENUM_TIMEFRAMES tf,int start,int count,std::vector<double>& out){
   double px=SIM_PRICE.count(s)?SIM_PRICE[s]:100; int dir=SIM_TREND.count(s)?SIM_TREND[s]:1; out.resize(count);
   if(SIM_WAVE.count(s)){ int pull=SIM_PULL.count(s)?SIM_PULL[s]:0; int tdir=SIM_PULLDIR.count(s)?SIM_PULLDIR[s]:dir;
@@ -144,7 +145,8 @@ int CopyRates(const string& s,ENUM_TIMEFRAMES tf,int start,int count,std::vector
   double px=SIM_PRICE.count(s)?SIM_PRICE[s]:100; bool wave=SIM_WAVE.count(s)>0;
   for(int i=0;i<count;i++){ out[i].time=iTime(s,tf,start+count-1-i); out[i].open=i?c[i-1]:c[i]; out[i].close=c[i];
     out[i].high=wave?std::max(out[i].open,c[i])+px*SIM_WICK:std::max(out[i].open,c[i])*1.0005;
-    out[i].low=wave?std::min(out[i].open,c[i])-px*SIM_WICK:std::min(out[i].open,c[i])*0.9995; }
+    out[i].low=wave?std::min(out[i].open,c[i])-px*SIM_WICK:std::min(out[i].open,c[i])*0.9995;
+    if(wave && i==count-1 && SIM_HAMMER.count(s)) out[i].low=std::min(out[i].open,c[i])-px*SIM_HAMMER[s]; }
   return count; }
 std::string SymbolInfoString(const string&,int){ return ""; }
 int iMA(const string&,ENUM_TIMEFRAMES,int,int,ENUM_MA_METHOD,ENUM_APPLIED_PRICE){ return INVALID_HANDLE; }

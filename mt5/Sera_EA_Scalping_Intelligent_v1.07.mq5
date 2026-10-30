@@ -1,5 +1,5 @@
 #property copyright "Sera EA Scalping Intelligent"
-#property version   "1.06"
+#property version   "1.07"
 #property strict
 #property description "Scalping M1 qui suit la bougie et la tendance (M5, M15) sur les indices Volatility, le Forex et la crypto (sans Boom/Crash). Plusieurs positions, benefice encaisse ou laisse courir, coupure au retournement."
 
@@ -83,6 +83,9 @@ struct TfState
    double   emaFast,emaSlow,emaTrend,emaTrendPrev;
    double   rsi,atr,adx,pdi,mdi;
    double   swingHigh,swingLow;
+   double   prevOpen,prevClose,atrAvg;      // v1.07 : bougie precedente, ATR moyen (50 bougies)
+   double   rangeHigh,rangeLow;             // v1.07 : plus haut / plus bas des 20 bougies avant la derniere
+   int      structure;                      // v1.07 : +1 sommets et creux montants, -1 descendants, 0 sinon
 };
 
 struct ScalpView
@@ -92,6 +95,8 @@ struct ScalpView
    int      t15,t5,c1,side,score,buyScore,sellScore;
    double   atr,spread,rsi,adx,price;
    double   lastHigh,lastLow,ema9;         // derniere bougie M1 cloturee (cassure pendant la bougie suivante)
+   int      eng1,rej1,struct5,volState;    // v1.07 : englobante / rejet M1, structure M5, volatilite (-1 calme, 1 pic)
+   double   roomUp,roomDown;               // v1.07 : place jusqu'au dernier sommet / creux (0 = cassure, pas d'obstacle)
    datetime bar;
    string   trigger;                       // "cloture" ou "cassure"
 };
@@ -184,6 +189,17 @@ bool Inspect(const string symbol,const ENUM_TIMEFRAMES tf,TfState &s)
    AdxLast(h,l,c,n,14,s.adx,s.pdi,s.mdi);
    s.swingHigh=h[n-1]; s.swingLow=l[n-1];
    for(int i=n-5;i<n;i++){ if(h[i]>s.swingHigh) s.swingHigh=h[i]; if(l[i]<s.swingLow) s.swingLow=l[i]; }
+   s.prevOpen=rates[n-2].open; s.prevClose=c[n-2];
+   double trSum=0;
+   for(int i=n-50;i<n;i++) trSum+=MathMax(h[i]-l[i],MathMax(MathAbs(h[i]-c[i-1]),MathAbs(l[i]-c[i-1])));
+   s.atrAvg=trSum/50.0;
+   s.rangeHigh=h[n-21]; s.rangeLow=l[n-21];
+   for(int i=n-21;i<n-1;i++){ if(h[i]>s.rangeHigh) s.rangeHigh=h[i]; if(l[i]<s.rangeLow) s.rangeLow=l[i]; }
+   // structure : 10 dernieres bougies comparees aux 10 precedentes
+   double hiA=h[n-20],loA=l[n-20],hiB=h[n-10],loB=l[n-10];
+   for(int i=n-20;i<n-10;i++){ if(h[i]>hiA) hiA=h[i]; if(l[i]<loA) loA=l[i]; }
+   for(int i=n-10;i<n;i++){ if(h[i]>hiB) hiB=h[i]; if(l[i]<loB) loB=l[i]; }
+   s.structure=(hiB>hiA && loB>loA)?1:((hiB<hiA && loB<loA)?-1:0);
    s.ok=s.atr>0;
    return s.ok;
 }
@@ -214,6 +230,25 @@ int CandleM1(const TfState &s)
    return 0;
 }
 
+// Bougie englobante (avalement) : la derniere bougie avale le corps de la precedente, en sens inverse.
+int Engulfing(const TfState &s)
+{
+   if(s.close>s.open && s.prevClose<s.prevOpen && s.close>=s.prevOpen && s.open<=s.prevClose) return 1;
+   if(s.close<s.open && s.prevClose>s.prevOpen && s.close<=s.prevOpen && s.open>=s.prevClose) return -1;
+   return 0;
+}
+
+// Bougie de rejet (marteau / etoile filante) : longue meche d'un cote, cloture de l'autre cote.
+int Rejection(const TfState &s)
+{
+   double range=s.high-s.low;
+   if(range<=0) return 0;
+   double lower=MathMin(s.open,s.close)-s.low,upper=s.high-MathMax(s.open,s.close);
+   if(lower>=range*0.5 && s.close>=s.low+range*0.6) return 1;
+   if(upper>=range*0.5 && s.close<=s.high-range*0.6) return -1;
+   return 0;
+}
+
 int ScoreFor(const int dir,const TfState &m1,const TfState &m5,const TfState &m15)
 {
    int score=0;
@@ -226,6 +261,9 @@ int ScoreFor(const int dir,const TfState &m1,const TfState &m5,const TfState &m1
    if(dir>0?(m1.rsi>=52 && m1.rsi<=72):(m1.rsi<=48 && m1.rsi>=28)) score+=10;
    if(dir>0?m1.rsi>78:m1.rsi<22) score-=20;                                   // epuisement
    if(m1.atr>0 && MathAbs(m1.close-m1.emaSlow)/m1.atr>MaximumExtensionATR) score-=15;   // poursuite du prix
+   if(m5.structure==dir) score+=10; else if(m5.structure==-dir) score-=15;    // structure M5
+   if(Engulfing(m1)==dir) score+=10; else if(Engulfing(m1)==-dir) score-=15;  // bougie englobante
+   if(Rejection(m1)==dir) score+=5;  else if(Rejection(m1)==-dir) score-=10;  // bougie de rejet
    return (int)MathMax(0,MathMin(100,score));
 }
 
@@ -335,6 +373,7 @@ void AddSymbol(const string name)
    g_views[n].buyScore=0; g_views[n].sellScore=0;
    g_views[n].atr=0; g_views[n].spread=0; g_views[n].rsi=50; g_views[n].adx=0; g_views[n].price=0;
    g_views[n].lastHigh=0; g_views[n].lastLow=0; g_views[n].ema9=0; g_views[n].trigger="";
+   g_views[n].eng1=0; g_views[n].rej1=0; g_views[n].struct5=0; g_views[n].volState=0; g_views[n].roomUp=0; g_views[n].roomDown=0;
 }
 
 void RefreshSymbols()
@@ -385,6 +424,14 @@ void Analyze(ScalpView &v)
    v.t15=TrendM15(m15); v.t5=TrendM5(m5); v.c1=CandleM1(m1);
    v.atr=m1.atr; v.rsi=m1.rsi; v.adx=m5.adx;
    v.lastHigh=m1.high; v.lastLow=m1.low; v.ema9=m1.emaFast; v.trigger="cloture";
+   v.eng1=Engulfing(m1); v.rej1=Rejection(m1); v.struct5=m5.structure;
+   double ratio=m1.atrAvg>0?m1.atr/m1.atrAvg:1.0;
+   v.volState=ratio<0.5?-1:(ratio>3.0?1:0);
+   // place avant l'obstacle le plus proche (sommet / creux des 20 bougies M1) ; au-dela = cassure, pas d'obstacle
+   v.roomUp=m1.close>=m1.rangeHigh-m1.atr*0.1?0:m1.rangeHigh-m1.close;
+   v.roomDown=m1.close<=m1.rangeLow+m1.atr*0.1?0:m1.close-m1.rangeLow;
+   bool pullBuy=m1.low<=m1.emaSlow+m1.atr*0.2 && m1.close>m1.emaSlow;     // retour sur l'EMA21 puis cloture au-dessus
+   bool pullSell=m1.high>=m1.emaSlow-m1.atr*0.2 && m1.close<m1.emaSlow;
    v.buyScore=ScoreFor(1,m1,m5,m15);
    v.sellScore=ScoreFor(-1,m1,m5,m15);
    v.side=0;
@@ -392,11 +439,24 @@ void Analyze(ScalpView &v)
    v.score=dir>0?v.buyScore:v.sellScore;
    string sideText=dir>0?"BUY":"SELL";
    bool m15ok=RequireM15Trend?v.t15==dir:v.t15!=-dir;
+   // rebond : retour sur l'EMA21 dans la tendance + bougie de rejet ou englobante dans le sens de la tendance
+   bool rebound=(v.rej1==dir || v.eng1==dir) && (dir>0?pullBuy:pullSell);
+   double room=dir>0?v.roomUp:v.roomDown;
+   double need=m1.atr*StopLossATR*0.5;
    if(!m15ok) v.reason="tendance M15 "+(v.t15==0?"neutre":"contre "+sideText);
    else if(v.t5!=dir) v.reason="tendance M5 pas encore "+sideText;
-   else if(v.c1!=dir) v.reason="attente d'une bougie M1 "+sideText+" franche";
+   else if(v.volState<0) v.reason="marche trop calme (ATR "+DoubleToString(ratio*100.0,0)+"% de la moyenne)";
+   else if(v.volState>0) v.reason="pic de volatilite (ATR x"+DoubleToString(ratio,1)+") : attente";
+   else if(v.struct5==-dir) v.reason="structure M5 contre "+sideText;
+   else if(v.c1!=dir && !rebound) v.reason="attente d'une bougie M1 "+sideText+" franche ou d'un rebond";
+   else if(room>0 && room<need) v.reason=(dir>0?"trop pres du dernier sommet":"trop pres du dernier creux");
    else if(v.score<MinimumScore) v.reason="score "+IntegerToString(v.score)+" < "+IntegerToString(MinimumScore);
-   else { v.side=dir; v.reason=sideText+" pret (score "+IntegerToString(v.score)+")"; }
+   else
+   {
+      v.side=dir;
+      if(v.c1!=dir) v.trigger="rebond";
+      v.reason=sideText+" pret ("+v.trigger+", score "+IntegerToString(v.score)+")";
+   }
 }
 
 // ===================================================================================
@@ -622,6 +682,7 @@ bool ReversalAgainst(const ScalpView &v,const int dir)
 {
    if(!v.valid) return false;
    if(v.c1==-dir && (v.t5==-dir || (dir>0?v.rsi<45:v.rsi>55))) return true;
+   if(v.eng1==-dir && v.t5!=dir) return true;                 // bougie englobante contre + M5 plus dans le sens
    if(v.t15==-dir && v.t5==-dir) return true;
    return false;
 }
@@ -699,6 +760,10 @@ void ManagePositions()
             GlobalVariableSet(BarKey(symbol),(double)FormingBar(symbol));   // pas de nouvelle entree sur cette bougie
          continue;
       }
+
+      // Bougie de rejet ou englobante contre une position en gain : on encaisse avant le retournement.
+      if(money>0 && (g_views[vi].rej1==-dir || g_views[vi].eng1==-dir) && g_views[vi].bar>opened)
+      { ClosePosition(ticket,symbol,"benefice encaisse "+gain+" (bougie de retournement)",pr); continue; }
 
       bool target=(TakeProfitMoney>0 && money>=TakeProfitMoney) || pr>=TakeProfitR;
       bool wasTarget=(TakeProfitMoney>0 && bestMoney>=TakeProfitMoney) || best>=TakeProfitR;
@@ -800,7 +865,7 @@ bool TryEntry(ScalpView &v,const bool can_trade)
 
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   string comment="Sera Scalping v1.06";
+   string comment="Sera Scalping v1.07";
    bool sent=dir>0?trade.Buy(volume,v.symbol,0,sl,tp,comment):trade.Sell(volume,v.symbol,0,sl,tp,comment);
    if(!sent){ v.reason="ordre refuse : "+trade.ResultRetcodeDescription(); Print("Sera Scalping: ordre refuse ",v.symbol," ",trade.ResultRetcodeDescription()); return false; }
    GlobalVariableSet(LastKey(v.symbol),(double)TimeCurrent());
@@ -840,9 +905,10 @@ int BreakoutSide(ScalpView &v)
    MqlTick tick;
    if(!SymbolInfoTick(v.symbol,tick)) return 0;
    double buffer=MathMax(tick.ask-tick.bid,v.atr*0.05);
+   if(v.volState!=0) return 0;                     // marche mort ou pic de volatilite
    for(int dir=1;dir>=-1;dir-=2)
    {
-      if(v.t5!=dir) continue;
+      if(v.t5!=dir || v.struct5==-dir || v.eng1==-dir) continue;
       if(RequireM15Trend?v.t15!=dir:v.t15==-dir) continue;
       int score=dir>0?v.buyScore:v.sellScore;
       if(score<MinimumScore-10) continue;
@@ -869,7 +935,6 @@ void ScanAndTrade(const bool can_trade)
       if(!g_views[i].valid) continue;
       if(g_views[i].side!=0 && g_views[i].fresh)
       {
-         g_views[i].trigger="cloture";
          if(!TryEntry(g_views[i],can_trade) && StringFind(g_views[i].reason,"ouvert")<0)
             LogBlockedOnce(g_views[i].symbol,g_views[i].reason);
          g_views[i].fresh=false;     // une tentative a la cloture de chaque bougie M1
@@ -1008,7 +1073,7 @@ void RenderDashboard(const bool can_trade,const string pause)
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
    string account=demo?"DEMO":"REEL";
-   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.06",amber,10);
+   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.07",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  scalping M1 : cloture + cassure"+(EnterIntraBar?"":" (cassure off)"),green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(pause!="") PanelText(line++,"BOT EN PAUSE  |  "+pause,red);
@@ -1128,7 +1193,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(1,TimerSeconds));
-   Print("Sera EA Scalping Intelligent v1.06 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), lot minimum x",LotMultiplier(),
+   Print("Sera EA Scalping Intelligent v1.07 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), lot minimum x",LotMultiplier(),
          ", objectif +",DoubleToString(TakeProfitMoney,2)," $ par position, ",MaximumPositionsPerSymbol," position(s) max par symbole");
    if(ArraySize(g_views)==0)
       Print("Sera Scalping: aucun symbole compatible. Ajoutez des symboles a la Market Watch ou renseignez SymbolsList.");

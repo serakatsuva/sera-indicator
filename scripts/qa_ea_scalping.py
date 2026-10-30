@@ -59,9 +59,10 @@ int main(int argc,char** argv){
   if(mode=="spread"){ SIM_SPREAD["Volatility 75 Index"]=0.9; SIM_SPREAD["Volatility 100 (1s) Index"]=1.4; }
   struct W{ const char* name; double px; int dir; };
   W world[]={{"Volatility 75 Index",1000,1},{"Volatility 100 (1s) Index",800,-1},{"EURUSD",1.085,-1},{"BTCUSD",60000,1},
-             {"Volatility 50 Index",500,1},{"Boom 1000 Index",12000,1},{"Crash 500 Index",3000,-1},{"Jump 25 Index",900,1},{"US Tech 100",18000,1}};
+             {"Volatility 50 Index",500,1},{"Volatility 25 Index",700,1},{"Boom 1000 Index",12000,1},{"Crash 500 Index",3000,-1},{"Jump 25 Index",900,1},{"US Tech 100",18000,1}};
   for(auto& w:world){ SIM_PRICE[w.name]=w.px; SIM_TREND[w.name]=w.dir; SIM_WAVE[w.name]=true; }
   SIM_PULL["Volatility 50 Index"]=1;        // derniere bougie hesitante : pas d'entree a la cloture
+  SIM_HAMMER["Volatility 25 Index"]=0.004;  // retour sur l'EMA21 + longue meche basse : rebond dans la tendance
   SIM_NOW=1793182830;                       // mercredi 28/10/2026 10:00:30 UTC
   OnInit();
   dump("DEMARRAGE");
@@ -127,7 +128,7 @@ def main() -> int:
     sections = dict(re.findall(r"=== (.+?) ===\n(.*?)(?==== |\Z)", text, re.S))
     log = sections.get("LOG", "")
     errors = []
-    allowed = {"Volatility 75 Index", "Volatility 100 (1s) Index", "EURUSD", "BTCUSD", "Volatility 50 Index"}
+    allowed = {"Volatility 75 Index", "Volatility 100 (1s) Index", "EURUSD", "BTCUSD", "Volatility 50 Index", "Volatility 25 Index"}
     traded = set(re.findall(r"^POS (.+?) (?:BUY|SELL) ", text, re.M))
     if traded - allowed:
         errors.append(f"excluded symbols were traded: {sorted(traded - allowed)}")
@@ -146,6 +147,8 @@ def main() -> int:
         errors.append("Volatility 50 Index entered at the close although its last candle was not clear")
     if not re.search(r"^POS Volatility 50 Index BUY", brk, re.M) or "BUY Volatility 50 Index lot" not in log or "cassure score" not in log:
         errors.append("no intrabar breakout entry on Volatility 50 Index when the price broke the previous candle")
+    if not re.search(r"BUY Volatility 25 Index lot \S+  SL \S+  rebond score", log):
+        errors.append("no 'rebond' BUY on Volatility 25 Index (pull-back to the EMA21 with a hammer candle in an up-trend)")
     counts = [len(re.findall(r"^POS Volatility 75 Index BUY", sec, re.M)) for sec in sections.values()]
     if max(counts or [0]) < 2:
         errors.append("no second position added on Volatility 75 Index while the trend continued")
