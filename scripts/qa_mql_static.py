@@ -17,7 +17,7 @@ GlobalVariableSet TimeCurrent TimeGMT TimeToStruct StructToTime iTime EventSetTi
 ResetLastError TerminalInfoInteger MQLInfoInteger WebRequest NormalizeDouble IndicatorRelease iMA iRSI iATR iADX iMACD
 Buy Sell BuyLimit SellLimit PositionClose PositionClosePartial PositionModify OrderDelete SetExpertMagicNumber
 SetDeviationInPoints SetAsyncMode ResultRetcodeDescription ObjectCreate ObjectSetInteger ObjectSetString ObjectFind
-ObjectDelete ObjectsDeleteAll ChartRedraw ChartGetInteger TextSetFont TextGetSize ChartOpen ChartID GlobalVariablesTotal GlobalVariableName GlobalVariableDel""".split())
+ObjectDelete ObjectsDeleteAll ObjectSetDouble ChartRedraw ChartGetInteger TextSetFont TextGetSize ChartOpen ChartID GlobalVariablesTotal GlobalVariableName GlobalVariableDel""".split())
 KEYWORDS = set("if for while return else switch case break continue sizeof new delete void bool int long ulong uint "
                "double string datetime char ushort short".split())
 KNOWN_TYPES = {"CTrade", "MqlTick", "MqlRates", "MqlDateTime", "Trade", "PanelRow", "ScalpView", "TfState"}

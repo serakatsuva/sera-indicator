@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "2.00"
+#property version   "2.10"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -1142,6 +1142,7 @@ struct PanelRow
 PanelRow g_rows[];
 string   g_open_symbols[];         // bouton "Ouvrir" -> symbole et unite de temps
 ENUM_TIMEFRAMES g_open_tfs[];
+int      g_open_rows[];
 string   g_trade_block="";
 datetime g_last_analysis=0;
 bool     g_dash_can_trade=false;
@@ -1325,7 +1326,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.00"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.00");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.10"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.10");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -1558,9 +1559,10 @@ string PriceText(const string symbol,const double price)
 }
 
 // Bouton "Ouvrir" d'une ligne de signal : ouvre le graphique du marche dans l'unite de temps du signal.
-void PanelOpenButton(const int index,const string symbol,const ENUM_TIMEFRAMES tf,const int line)
+void PanelOpenButton(const int index,const string symbol,const ENUM_TIMEFRAMES tf,const int line,const int row)
 {
-   if(index>=ArraySize(g_open_symbols)){ ArrayResize(g_open_symbols,index+1); ArrayResize(g_open_tfs,index+1); }
+   if(index>=ArraySize(g_open_symbols)){ ArrayResize(g_open_symbols,index+1); ArrayResize(g_open_tfs,index+1); ArrayResize(g_open_rows,index+1); }
+   g_open_rows[index]=row;
    g_open_symbols[index]=symbol;
    g_open_tfs[index]=tf;
    PanelButton("SWX_PANEL_BTN_OPEN_"+IntegerToString(index),"Ouvrir",PanelX(SWX_BAR_COLUMN),line,62);
@@ -1570,6 +1572,62 @@ void PanelOpenButtonDelete(const int index)
 {
    string name="SWX_PANEL_BTN_OPEN_"+IntegerToString(index);
    if(ObjectFind(0,name)>=0) ObjectDelete(0,name);
+}
+
+
+// ---------- Dessin de la position sur le graphique (v2.63 / v2.10) ----------
+// Zone rouge entree -> SL, zone verte entree -> TP3, lignes ENTREE / SL / TP1 / TP2 / TP3 avec leurs prix.
+// Les objets restent en place quand on change d'unite de temps sur ce graphique.
+void SigRect(const long chart,const string name,const datetime t1,const double p1,const datetime t2,const double p2,const color clr)
+{
+   if(ObjectFind(chart,name)<0) ObjectCreate(chart,name,OBJ_RECTANGLE,0,t1,p1,t2,p2);
+   ObjectSetInteger(chart,name,OBJPROP_TIME,0,t1); ObjectSetDouble(chart,name,OBJPROP_PRICE,0,p1);
+   ObjectSetInteger(chart,name,OBJPROP_TIME,1,t2); ObjectSetDouble(chart,name,OBJPROP_PRICE,1,p2);
+   ObjectSetInteger(chart,name,OBJPROP_COLOR,clr);
+   ObjectSetInteger(chart,name,OBJPROP_FILL,true);
+   ObjectSetInteger(chart,name,OBJPROP_BACK,true);
+   ObjectSetInteger(chart,name,OBJPROP_SELECTABLE,false);
+}
+
+void SigLine(const long chart,const string name,const datetime t1,const datetime t2,const double price,const color clr,const int style,const string text)
+{
+   if(ObjectFind(chart,name)<0) ObjectCreate(chart,name,OBJ_TREND,0,t1,price,t2,price);
+   ObjectSetInteger(chart,name,OBJPROP_TIME,0,t1); ObjectSetDouble(chart,name,OBJPROP_PRICE,0,price);
+   ObjectSetInteger(chart,name,OBJPROP_TIME,1,t2); ObjectSetDouble(chart,name,OBJPROP_PRICE,1,price);
+   ObjectSetInteger(chart,name,OBJPROP_COLOR,clr);
+   ObjectSetInteger(chart,name,OBJPROP_STYLE,style);
+   ObjectSetInteger(chart,name,OBJPROP_WIDTH,style==STYLE_SOLID?2:1);
+   ObjectSetInteger(chart,name,OBJPROP_RAY_RIGHT,false);
+   ObjectSetInteger(chart,name,OBJPROP_SELECTABLE,false);
+   string label=name+"_TXT";
+   if(ObjectFind(chart,label)<0) ObjectCreate(chart,label,OBJ_TEXT,0,t2,price);
+   ObjectSetInteger(chart,label,OBJPROP_TIME,0,t2); ObjectSetDouble(chart,label,OBJPROP_PRICE,0,price);
+   ObjectSetString(chart,label,OBJPROP_TEXT," "+text);
+   ObjectSetString(chart,label,OBJPROP_FONT,"Consolas");
+   ObjectSetInteger(chart,label,OBJPROP_FONTSIZE,8);
+   ObjectSetInteger(chart,label,OBJPROP_COLOR,clr);
+   ObjectSetInteger(chart,label,OBJPROP_ANCHOR,ANCHOR_LEFT);
+   ObjectSetInteger(chart,label,OBJPROP_SELECTABLE,false);
+}
+
+void DrawSignalOnChart(const long chart,const int row)
+{
+   if(row<0 || row>=ArraySize(g_rows)) return;
+   PanelRow r=g_rows[row];
+   if(r.entry<=0 || r.sl<=0 || (r.verdict!="BUY" && r.verdict!="SELL")) return;
+   ObjectsDeleteAll(chart,"SWX_SIG_");
+   datetime t1=r.since>0?r.since:TimeCurrent()-3600;
+   datetime t2=TimeCurrent()+12*3600;
+   double far=r.tp3>0?r.tp3:(r.tp2>0?r.tp2:r.tp1);
+   color red=Rgb(255,95,118),green=Rgb(56,232,187),white=Rgb(220,232,245);
+   SigRect(chart,"SWX_SIG_RISK",t1,r.entry,t2,r.sl,Rgb(90,28,38));
+   if(far>0) SigRect(chart,"SWX_SIG_REWARD",t1,r.entry,t2,far,Rgb(18,72,58));
+   SigLine(chart,"SWX_SIG_ENTRY",t1,t2,r.entry,white,STYLE_SOLID,"ENTREE "+r.verdict+"  "+PriceText(r.symbol,r.entry));
+   SigLine(chart,"SWX_SIG_SL",t1,t2,r.sl,red,STYLE_SOLID,"SL  "+PriceText(r.symbol,r.sl));
+   if(r.tp1>0) SigLine(chart,"SWX_SIG_TP1",t1,t2,r.tp1,green,STYLE_DASH,"TP1 "+PriceText(r.symbol,r.tp1));
+   if(r.tp2>0) SigLine(chart,"SWX_SIG_TP2",t1,t2,r.tp2,green,STYLE_DASH,"TP2 "+PriceText(r.symbol,r.tp2));
+   if(r.tp3>0) SigLine(chart,"SWX_SIG_TP3",t1,t2,r.tp3,green,STYLE_SOLID,"TP3 "+PriceText(r.symbol,r.tp3));
+   ChartRedraw(chart);
 }
 
 // [-] [+] (lignes par page) et [<] [>] (pages) sur la ligne de titre des positions possibles.
@@ -1829,7 +1887,8 @@ int RenderSignals(int line)
          string arrow=r.verdict=="BUY"?"^ BUY":"v SELL";
          PanelText(line,"  "+Pad(r.symbol,24)+Pad("H1",6)+Pad(arrow,7)+Pad(AgeText(r.since,3600),11)+Pad(PriceText(r.symbol,r.entry),12)+
                    Pad(PriceText(r.symbol,r.sl),12)+Pad(PriceText(r.symbol,r.tp1),12)+Pad(PriceText(r.symbol,r.tp2),12)+PriceText(r.symbol,r.tp3),r.verdict=="BUY"?green:red);
-         PanelOpenButton(shown,r.symbol,PERIOD_H1,line);
+         PanelOpenButton(shown,r.symbol,PERIOD_H1,line,i);
+         if(r.symbol==_Symbol) DrawSignalOnChart(0,i);   // signal du graphique de l'EA : dessine ici aussi
          line++; shown++;
       }
       if(count>shown) PanelText(line++,"  ... et "+IntegerToString(count-shown)+" autre(s) signal(s)",grey);
@@ -1850,7 +1909,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.00",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.10",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -1985,7 +2044,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v2.00: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v2.10: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)
@@ -2015,8 +2074,12 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
    {
       int k=(int)StringToDouble(StringSubstr(sparam,StringLen(openPrefix)));
       ObjectSetInteger(0,sparam,OBJPROP_STATE,false);
-      if(k>=0 && k<ArraySize(g_open_symbols) && g_open_symbols[k]!="" && ChartOpen(g_open_symbols[k],g_open_tfs[k])==0)
-         Print("Sera: impossible d'ouvrir le graphique ",g_open_symbols[k]);
+      if(k>=0 && k<ArraySize(g_open_symbols) && g_open_symbols[k]!="")
+      {
+         long chart=ChartOpen(g_open_symbols[k],g_open_tfs[k]);
+         if(chart==0) Print("Sera: impossible d'ouvrir le graphique ",g_open_symbols[k]);
+         else DrawSignalOnChart(chart,g_open_rows[k]);   // entree, SL et TP dessines sur le nouveau graphique
+      }
       return;
    }
    if(sparam=="SWX_PANEL_BTN_NEXT") GlobalVariableSet(PanelPageKey(),PanelPage()+1);

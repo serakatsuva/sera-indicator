@@ -44,6 +44,8 @@ static void dump(const char* title){
   long bg=SIM_OBJ.count("SERA_PANEL_BG")?SIM_OBJ["SERA_PANEL_BG"].order:-1; long first=LONG_MAX;
   for(auto& kv:SIM_OBJ) if(kv.first!="SERA_PANEL_BG" && kv.first.rfind("SERA_PANEL_",0)==0) first=std::min(first,kv.second.order);
   printf("ZORDER %s\n",bg>0 && bg<first?"OK":"BAD");
+  for(auto& kv:SIM_OBJ) if(kv.first.rfind("SERA_SIG_",0)==0 && kv.first.find("_TXT")==string::npos)
+    printf("SIG %s %.5f %.5f\n",kv.first.c_str()+5+4,kv.second.prices[0],kv.second.prices[1]);
   for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL){ const string& s=kv.second.strs[OBJPROP_TEXT];
     if(s.size()>63) printf("LABEL TOO LONG %s (%zu)\n",kv.first.c_str(),s.size()); if(s.empty()) printf("LABEL EMPTY %s\n",kv.first.c_str()); }
   printf("--- positions %zu, ordres limites %zu\n",SIM_POS.size(),SIM_ORD.size());
@@ -191,6 +193,13 @@ def main() -> int:
             errors.append("signal row (market, direction, levels) or its 'Ouvrir' button missing")
         if "CHARTOPEN " not in text.split("=== LOG ===")[-1]:
             errors.append("the 'Ouvrir' button did not open the market chart")
+        plus_sec = sections.get("BOUTON + (5 marches de plus)", "")
+        lv = first["levels"]
+        drawn = {m.group(1): (float(m.group(2)), float(m.group(3))) for m in re.finditer(r"^SIG (\w+) (\S+) (\S+)", plus_sec, re.M)}
+        ok = (abs(drawn.get("ENTRY", (0, 0))[0] - lv["entry"]) < 1e-6 and abs(drawn.get("SL", (0, 0))[0] - lv["sl"]) < 1e-6
+              and abs(drawn.get("TP3", (0, 0))[0] - lv["tp3"]) < 1e-6 and "RISK" in drawn and "REWARD" in drawn)
+        if not ok:
+            errors.append(f"the opened chart does not show entry / SL / TP zones at the signal levels ({drawn})")
     c4014 = sections.get("WEBREQUEST NON AUTORISE (erreur 4014)", "")
     if "erreur 4014" not in c4014 or "https://serakatsuva.github.io" not in c4014:
         errors.append("4014 case does not explain the WebRequest fix on the dashboard")

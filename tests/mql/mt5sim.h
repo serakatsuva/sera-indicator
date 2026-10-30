@@ -27,9 +27,11 @@ enum E_STR{POSITION_SYMBOL,ORDER_SYMBOL};
 const int INIT_SUCCEEDED=0; const double EMPTY_VALUE=1e308; const int WHOLE_ARRAY=-1; const int CP_UTF8=65001;
 const int INVALID_HANDLE=-1; enum ENUM_MA_METHOD{MODE_EMA}; enum ENUM_APPLIED_PRICE{PRICE_CLOSE};
 const long ACCOUNT_TRADE_MODE_REAL=2;
-enum ENUM_OBJECT{OBJ_LABEL,OBJ_RECTANGLE_LABEL,OBJ_BUTTON};
+enum ENUM_OBJECT{OBJ_LABEL,OBJ_RECTANGLE_LABEL,OBJ_BUTTON,OBJ_RECTANGLE,OBJ_TREND,OBJ_TEXT};
+const int STYLE_SOLID=0,STYLE_DASH=1; const long ANCHOR_LEFT=0;
 const int CHARTEVENT_OBJECT_CLICK=1;
-enum ENUM_OBJECT_PROPERTY_INTEGER{OBJPROP_CORNER,OBJPROP_SELECTABLE,OBJPROP_HIDDEN,OBJPROP_XDISTANCE,OBJPROP_YDISTANCE,OBJPROP_FONTSIZE,OBJPROP_COLOR,OBJPROP_BORDER_TYPE,OBJPROP_XSIZE,OBJPROP_YSIZE,OBJPROP_BGCOLOR,OBJPROP_STATE};
+enum ENUM_OBJECT_PROPERTY_INTEGER{OBJPROP_CORNER,OBJPROP_SELECTABLE,OBJPROP_HIDDEN,OBJPROP_XDISTANCE,OBJPROP_YDISTANCE,OBJPROP_FONTSIZE,OBJPROP_COLOR,OBJPROP_BORDER_TYPE,OBJPROP_XSIZE,OBJPROP_YSIZE,OBJPROP_BGCOLOR,OBJPROP_STATE,OBJPROP_TIME,OBJPROP_FILL,OBJPROP_BACK,OBJPROP_STYLE,OBJPROP_WIDTH,OBJPROP_RAY_RIGHT,OBJPROP_ANCHOR};
+enum ENUM_OBJECT_PROPERTY_DOUBLE{OBJPROP_PRICE};
 enum ENUM_OBJECT_PROPERTY_STRING{OBJPROP_FONT,OBJPROP_TEXT};
 const long CORNER_LEFT_UPPER=0; const long BORDER_FLAT=0;
 struct MqlTick{datetime time;double bid,ask,last;};
@@ -46,7 +48,7 @@ struct SimPos{ulong ticket;string symbol;long type;double open,sl,tp,volume;date
 struct SimOrd{ulong ticket;string symbol;ENUM_ORDER_TYPE type;double price,sl,tp,volume;long magic;};
 std::vector<SimPos> SIM_POS; std::vector<SimOrd> SIM_ORD; ulong SIM_TICKET=1000; int SIM_SEL_POS=-1, SIM_SEL_ORD=-1;
 std::map<string,double> SIM_GV;
-struct SimObj{int type; long order=0; std::map<int,long> ints; std::map<int,string> strs;};
+struct SimObj{int type; long order=0; std::map<int,long> ints; std::map<int,string> strs; std::map<int,double> prices;};
 long SIM_OBJ_SEQ=0;
 std::map<string,SimObj> SIM_OBJ;
 std::vector<string> SIM_LOG;
@@ -159,7 +161,9 @@ int g_last_error=0; int GetLastError(){ return g_last_error; } void ResetLastErr
 double NormalizeDouble(double v,int d){ double f=std::pow(10.0,d); return std::round(v*f)/f; }
 int WebRequest(const string&,const string&,const string&,const string&,int,const std::vector<char>&,int,std::vector<char>&,string&){ g_last_error=4014; return -1; }
 
-bool ObjectCreate(long,const string& n,ENUM_OBJECT t,int,datetime,double){ SIM_OBJ[n].type=t; SIM_OBJ[n].order=++SIM_OBJ_SEQ; return true; }
+bool ObjectCreate(long,const string& n,ENUM_OBJECT t,int,datetime t1,double p1,datetime t2=0,double p2=0){ SIM_OBJ[n].type=t; SIM_OBJ[n].order=++SIM_OBJ_SEQ; SIM_OBJ[n].prices[0]=p1; SIM_OBJ[n].prices[1]=p2; return true; }
+bool ObjectSetInteger(long,const string& n,ENUM_OBJECT_PROPERTY_INTEGER p,int idx,long v){ SIM_OBJ[n].ints[p*10+idx]=v; return true; }
+bool ObjectSetDouble(long,const string& n,ENUM_OBJECT_PROPERTY_DOUBLE,int idx,double v){ SIM_OBJ[n].prices[idx]=v; return true; }
 bool ObjectSetInteger(long,const string& n,ENUM_OBJECT_PROPERTY_INTEGER p,long v){ SIM_OBJ[n].ints[p]=v; return true; }
 bool ObjectSetString(long,const string& n,ENUM_OBJECT_PROPERTY_STRING p,const string& v){ SIM_OBJ[n].strs[p]=v; return true; }
 int ObjectFind(long,const string& n){ return SIM_OBJ.count(n)?0:-1; }

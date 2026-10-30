@@ -50,11 +50,13 @@ extern string _Symbol; const long ACCOUNT_TRADE_MODE_REAL=2;
 double StoredLevel(const string&,const string&); void StoreLevel(const string&,const string&,const double); double AdaptiveRiskPercent(); double SafeVolume(const string&,const double,const double);
 // Chart objects (dashboard)
 typedef unsigned int color;
-enum ENUM_OBJECT{OBJ_LABEL,OBJ_RECTANGLE_LABEL,OBJ_BUTTON};
+enum ENUM_OBJECT{OBJ_LABEL,OBJ_RECTANGLE_LABEL,OBJ_BUTTON,OBJ_RECTANGLE,OBJ_TREND,OBJ_TEXT};
+const int STYLE_SOLID=0,STYLE_DASH=1; const long ANCHOR_LEFT=0;
 const int CHARTEVENT_OBJECT_CLICK=1;
-enum ENUM_OBJECT_PROPERTY_INTEGER{OBJPROP_CORNER,OBJPROP_SELECTABLE,OBJPROP_HIDDEN,OBJPROP_XDISTANCE,OBJPROP_YDISTANCE,OBJPROP_FONTSIZE,OBJPROP_COLOR,OBJPROP_BORDER_TYPE,OBJPROP_XSIZE,OBJPROP_YSIZE,OBJPROP_BGCOLOR,OBJPROP_STATE};
+enum ENUM_OBJECT_PROPERTY_INTEGER{OBJPROP_CORNER,OBJPROP_SELECTABLE,OBJPROP_HIDDEN,OBJPROP_XDISTANCE,OBJPROP_YDISTANCE,OBJPROP_FONTSIZE,OBJPROP_COLOR,OBJPROP_BORDER_TYPE,OBJPROP_XSIZE,OBJPROP_YSIZE,OBJPROP_BGCOLOR,OBJPROP_STATE,OBJPROP_TIME,OBJPROP_FILL,OBJPROP_BACK,OBJPROP_STYLE,OBJPROP_WIDTH,OBJPROP_RAY_RIGHT,OBJPROP_ANCHOR};
+enum ENUM_OBJECT_PROPERTY_DOUBLE{OBJPROP_PRICE};
 enum ENUM_OBJECT_PROPERTY_STRING{OBJPROP_FONT,OBJPROP_TEXT};
 const long CORNER_LEFT_UPPER=0; const long BORDER_FLAT=0;
-bool ObjectCreate(long,const string&,ENUM_OBJECT,int,datetime,double); bool ObjectSetInteger(long,const string&,ENUM_OBJECT_PROPERTY_INTEGER,long);
+bool ObjectCreate(long,const string&,ENUM_OBJECT,int,datetime,double,datetime=0,double=0); bool ObjectSetInteger(long,const string&,ENUM_OBJECT_PROPERTY_INTEGER,int,long); bool ObjectSetDouble(long,const string&,ENUM_OBJECT_PROPERTY_DOUBLE,int,double); bool ObjectSetInteger(long,const string&,ENUM_OBJECT_PROPERTY_INTEGER,long);
 bool ObjectSetString(long,const string&,ENUM_OBJECT_PROPERTY_STRING,const string&); int ObjectFind(long,const string&); bool ObjectDelete(long,const string&);
 int ObjectsDeleteAll(long,const string&); void ChartRedraw(long); bool TextSetFont(const string&,int); bool TextGetSize(const string&,uint&,uint&); long ChartOpen(const string&,ENUM_TIMEFRAMES); const int CHART_HEIGHT_IN_PIXELS=1; long ChartGetInteger(long,int,int=0);

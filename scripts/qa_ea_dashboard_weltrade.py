@@ -40,6 +40,8 @@ static void dump(const char* title){
   long bg=SIM_OBJ.count("SWX_PANEL_BG")?SIM_OBJ["SWX_PANEL_BG"].order:-1; long first=LONG_MAX;
   for(auto& kv:SIM_OBJ) if(kv.first!="SWX_PANEL_BG" && kv.first.rfind("SWX_PANEL_",0)==0) first=std::min(first,kv.second.order);
   printf("ZORDER %s\n",bg>0 && bg<first?"OK":"BAD");
+  for(auto& kv:SIM_OBJ) if(kv.first.rfind("SWX_SIG_",0)==0 && kv.first.find("_TXT")==string::npos)
+    printf("SIG %s %.5f %.5f\n",kv.first.c_str()+4+4,kv.second.prices[0],kv.second.prices[1]);
   for(auto& kv:SIM_OBJ) if(kv.second.type==OBJ_LABEL){ const string& s=kv.second.strs[OBJPROP_TEXT];
     if(s.size()>63) printf("LABEL TOO LONG %s (%zu)\n",kv.first.c_str(),s.size()); if(s.empty()) printf("LABEL EMPTY %s\n",kv.first.c_str()); }
   printf("--- positions %zu, ordres limites %zu\n",SIM_POS.size(),SIM_ORD.size());
@@ -168,6 +170,9 @@ def main() -> int:
         errors.append("signals table (indice, H1, BUY/SELL, levels, Ouvrir) missing")
     if "CHARTOPEN " not in text.split("=== LOG ===")[-1]:
         errors.append("the 'Ouvrir' button did not open the chart")
+    folded_sec = sections.get("BOUTON - (liste repliee)", "")
+    if not all(f"SIG {k} " in folded_sec for k in ("ENTRY", "SL", "TP1", "TP3", "RISK", "REWARD")):
+        errors.append("the opened chart does not show the entry / SL / TP zones")
     if "ZORDER BAD" in text:
         errors.append("dashboard background created after texts/bars: it would hide them")
     if errors:

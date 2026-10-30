@@ -124,7 +124,7 @@ if swx_path.exists():
     # Every improvement of a shared module must reach BOTH EAs: functions present in both files
     # must stay identical (after the SWX_/SERA_ prefix and log labels), except the ones listed here.
     SPECIFIC = {"AssetRiskFactor", "MissingShort", "OnDeinit", "OnInit", "OnTimer", "PanelFocus", "RenderDashboard",
-                "RenderOrders", "RenderPossible", "RowProgress", "SymbolCertainty", "RedrawDashboard", "RenderSignals"}
+                "RenderOrders", "RenderPossible", "RowProgress", "SymbolCertainty", "RedrawDashboard", "RenderSignals", "DrawSignalOnChart"}
 
     def shared_functions(src: str) -> dict[str, str]:
         for a, b in (("SWX_BAR_COLUMN", "DASH_BAR_COLUMN"), ("SWX_GATES", "SERA_GATES"), ("SWX_", "SERA_"),
