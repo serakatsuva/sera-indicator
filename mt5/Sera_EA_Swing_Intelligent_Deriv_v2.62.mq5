@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.61"
+#property version   "2.62"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -710,8 +710,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.61")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.61");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.62")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.62");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -1333,24 +1333,43 @@ string PanelFirstBlock(const PanelRow &r)
 
 // MT5 coupe le texte d'un label a 63 caracteres : chaque ligne est ecrite en morceaux de 60 caracteres
 // places cote a cote (police a chasse fixe). Une ligne vide recoit un espace (sinon MT5 affiche "Label").
-int PanelCharWidth()
+// Largeur reelle d'un caractere Consolas 9 pt sur cet ecran, mesuree par MT5 (sinon estimee selon le DPI).
+double g_char_width=0;
+double PanelCharW()
 {
-   long dpi=TerminalInfoInteger(TERMINAL_SCREEN_DPI);
-   if(dpi<72) dpi=96;
-   return (int)MathRound(7.0*dpi/96.0);
+   if(g_char_width>0) return g_char_width;
+   uint w=0,h=0;
+   if(TextSetFont("Consolas",-90) && TextGetSize("MMMMMMMMMMMMMMMMMMMM",w,h) && w>0) g_char_width=w/20.0;
+   else
+   {
+      long dpi=TerminalInfoInteger(TERMINAL_SCREEN_DPI);
+      if(dpi<72) dpi=96;
+      g_char_width=7.0*dpi/96.0;
+   }
+   return g_char_width;
 }
+
+int PanelCharWidth(){ return (int)MathCeil(PanelCharW()); }
+
+int PanelX(const double chars){ return DashboardX+10+(int)MathRound(chars*PanelCharW()); }
 
 int g_panel_maxlen=0;
 void PanelText(const int line,const string text,const color clr,const int size=9)
 {
    if(StringLen(text)>g_panel_maxlen) g_panel_maxlen=StringLen(text);
    string shown=text==""?" ":text;
-   int parts=(StringLen(shown)+59)/60;
-   for(int p=0;p<4;p++)
+   int len=StringLen(shown),start=0,p=0;
+   // morceaux de 60 caracteres au plus, coupes entre deux mots, places a leur colonne exacte
+   for(;p<6 && start<len;p++)
    {
+      int cut=len;
+      if(len-start>60)
+      {
+         cut=start+60;
+         for(int k=start+60;k>start+20;k--) if(StringGetCharacter(shown,k)==' '){ cut=k; break; }
+      }
       string name="SERA_PANEL_L"+IntegerToString(line);
       if(p>0) name+="_"+IntegerToString(p);
-      if(p>=parts){ if(ObjectFind(0,name)>=0) ObjectDelete(0,name); continue; }
       if(ObjectFind(0,name)<0)
       {
          ObjectCreate(0,name,OBJ_LABEL,0,0,0);
@@ -1359,11 +1378,17 @@ void PanelText(const int line,const string text,const color clr,const int size=9
          ObjectSetInteger(0,name,OBJPROP_HIDDEN,true);
          ObjectSetString(0,name,OBJPROP_FONT,"Consolas");
       }
-      ObjectSetInteger(0,name,OBJPROP_XDISTANCE,DashboardX+10+p*60*PanelCharWidth());
+      ObjectSetInteger(0,name,OBJPROP_XDISTANCE,PanelX(start*size/9.0));   // largeur proportionnelle a la taille de police
       ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY+8+line*16);
       ObjectSetInteger(0,name,OBJPROP_FONTSIZE,size);
       ObjectSetInteger(0,name,OBJPROP_COLOR,clr);
-      ObjectSetString(0,name,OBJPROP_TEXT,StringSubstr(shown,p*60,60));
+      ObjectSetString(0,name,OBJPROP_TEXT,StringSubstr(shown,start,cut-start));
+      start=cut;
+   }
+   for(;p<6;p++)
+   {
+      string name="SERA_PANEL_L"+IntegerToString(line)+"_"+IntegerToString(p);
+      if(ObjectFind(0,name)>=0) ObjectDelete(0,name);
    }
 }
 
@@ -1380,7 +1405,7 @@ void PanelBackground(const int lines)
    }
    ObjectSetInteger(0,name,OBJPROP_XDISTANCE,DashboardX);
    ObjectSetInteger(0,name,OBJPROP_YDISTANCE,DashboardY);
-   ObjectSetInteger(0,name,OBJPROP_XSIZE,(int)MathMax(420,g_panel_maxlen*PanelCharWidth()+24));
+   ObjectSetInteger(0,name,OBJPROP_XSIZE,(int)MathMax(420,(int)MathRound(g_panel_maxlen*PanelCharW())+24));
    ObjectSetInteger(0,name,OBJPROP_YSIZE,lines*16+14);
    ObjectSetInteger(0,name,OBJPROP_BGCOLOR,Rgb(10,20,32));
    ObjectSetInteger(0,name,OBJPROP_COLOR,Rgb(40,70,100));
@@ -1475,7 +1500,7 @@ void PanelOpenButton(const int index,const string symbol,const ENUM_TIMEFRAMES t
    if(index>=ArraySize(g_open_symbols)){ ArrayResize(g_open_symbols,index+1); ArrayResize(g_open_tfs,index+1); }
    g_open_symbols[index]=symbol;
    g_open_tfs[index]=tf;
-   PanelButton("SERA_PANEL_BTN_OPEN_"+IntegerToString(index),"Ouvrir",DashboardX+10+DASH_BAR_COLUMN*PanelCharWidth(),line,62);
+   PanelButton("SERA_PANEL_BTN_OPEN_"+IntegerToString(index),"Ouvrir",PanelX(DASH_BAR_COLUMN),line,62);
 }
 
 void PanelOpenButtonDelete(const int index)
@@ -1487,7 +1512,7 @@ void PanelOpenButtonDelete(const int index)
 // [-] [+] (lignes par page) et [<] [>] (pages) sur la ligne de titre des positions possibles.
 void PanelSetupButtons(const int line)
 {
-   int x=DashboardX+10+DASH_BAR_COLUMN*PanelCharWidth();
+   int x=PanelX(DASH_BAR_COLUMN);
    PanelButton("SERA_PANEL_BTN_MINUS","-",x,line);
    PanelButton("SERA_PANEL_BTN_PLUS","+",x+34,line);
    PanelButton("SERA_PANEL_BTN_PREV","<",x+76,line);
@@ -1558,7 +1583,7 @@ string Pad(const string text,const int width)
 int g_bar_count=0;
 void PanelBar(const int line,const double percent,const color clr)
 {
-   int x=DashboardX+10+DASH_BAR_COLUMN*PanelCharWidth();
+   int x=PanelX(DASH_BAR_COLUMN);
    int y=DashboardY+8+line*16+3;
    string names[2];
    names[0]="SERA_PANEL_B"+IntegerToString(g_bar_count)+"_BG";
@@ -1784,7 +1809,7 @@ void RenderDashboard()
 
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.61",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.62",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -1849,7 +1874,7 @@ void RenderDashboard()
    }
    PanelBackground(line);
    for(int k=line;k<400;k++)
-      for(int p=0;p<4;p++)
+      for(int p=0;p<6;p++)
       {
          string name="SERA_PANEL_L"+IntegerToString(k);
          if(p>0) name+="_"+IntegerToString(p);
@@ -2150,7 +2175,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.61"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.61");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.62"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.62");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -2219,7 +2244,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.61: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.62: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),

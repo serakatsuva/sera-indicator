@@ -8,7 +8,7 @@ import sys
 
 BUILTIN_FUNCS = set("""Print Alert Comment SendNotification StringFind StringSubstr StringLen StringReplace StringToUpper
 StringTrimLeft StringTrimRight StringSplit StringGetCharacter StringToDouble StringToTime IntegerToString DoubleToString
-CharArrayToString MathMax MathMin MathAbs MathFloor MathRound MathSqrt ArrayResize ArraySize ArraySetAsSeries CopyRates
+CharArrayToString MathMax MathMin MathAbs MathFloor MathCeil MathRound MathSqrt ArrayResize ArraySize ArraySetAsSeries CopyRates
 CopyClose CopyBuffer SymbolInfoDouble SymbolInfoInteger SymbolInfoTick SymbolSelect SymbolsTotal SymbolName
 AccountInfoDouble AccountInfoInteger PositionsTotal PositionGetTicket PositionGetInteger PositionGetDouble PositionGetString
 PositionSelect OrdersTotal OrderGetTicket OrderGetInteger OrderGetString OrderGetDouble OrderCalcMargin HistorySelect
@@ -17,7 +17,7 @@ GlobalVariableSet TimeCurrent TimeGMT TimeToStruct StructToTime iTime EventSetTi
 ResetLastError TerminalInfoInteger MQLInfoInteger WebRequest NormalizeDouble IndicatorRelease iMA iRSI iATR iADX iMACD
 Buy Sell BuyLimit SellLimit PositionClose PositionClosePartial PositionModify OrderDelete SetExpertMagicNumber
 SetDeviationInPoints SetAsyncMode ResultRetcodeDescription ObjectCreate ObjectSetInteger ObjectSetString ObjectFind
-ObjectDelete ObjectsDeleteAll ChartRedraw ChartGetInteger ChartOpen ChartID GlobalVariablesTotal GlobalVariableName GlobalVariableDel""".split())
+ObjectDelete ObjectsDeleteAll ChartRedraw ChartGetInteger TextSetFont TextGetSize ChartOpen ChartID GlobalVariablesTotal GlobalVariableName GlobalVariableDel""".split())
 KEYWORDS = set("if for while return else switch case break continue sizeof new delete void bool int long ulong uint "
                "double string datetime char ushort short".split())
 KNOWN_TYPES = {"CTrade", "MqlTick", "MqlRates", "MqlDateTime", "Trade", "PanelRow", "ScalpView", "TfState"}

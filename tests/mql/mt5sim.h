@@ -63,7 +63,7 @@ bool SendNotification(const string&){ return true; }
 template<class A,class B> auto MathMax(A a,B b)->decltype(a+b){ return a>b?a:b; }
 template<class A,class B> auto MathMin(A a,B b)->decltype(a+b){ return a<b?a:b; }
 double MathAbs(double v){ return std::fabs(v); } double MathFloor(double v){ return std::floor(v); }
-double MathRound(double v){ return std::round(v); } double MathSqrt(double v){ return std::sqrt(v); }
+double MathRound(double v){ return std::round(v); } double MathCeil(double v){ return std::ceil(v); } double MathSqrt(double v){ return std::sqrt(v); }
 template<class T> int ArrayResize(std::vector<T>& v,int n){ v.resize(n); return n; }
 template<class T> int ArraySize(const std::vector<T>& v){ return (int)v.size(); }
 template<class T> bool ArraySetAsSeries(std::vector<T>&,bool){ return true; }
@@ -166,6 +166,8 @@ int ObjectFind(long,const string& n){ return SIM_OBJ.count(n)?0:-1; }
 bool ObjectDelete(long,const string& n){ return SIM_OBJ.erase(n)>0; }
 int ObjectsDeleteAll(long,const string& prefix){ int k=0; for(auto it=SIM_OBJ.begin();it!=SIM_OBJ.end();){ if(it->first.rfind(prefix,0)==0){ it=SIM_OBJ.erase(it); k++; } else ++it; } return k; }
 void ChartRedraw(long){}
+bool TextSetFont(const string&,int){ return true; }
+bool TextGetSize(const string& s,uint& w,uint& h){ w=(uint)(s.size()*7); h=14; return true; }
 long ChartOpen(const string& s,ENUM_TIMEFRAMES tf){ SIM_LOG.push_back("CHARTOPEN "+s+" "+std::to_string((long)tf)); return 1; }
 long SIM_CHART_H=0; const int CHART_HEIGHT_IN_PIXELS=1; long ChartGetInteger(long,int,int=0){ return SIM_CHART_H; }
 
