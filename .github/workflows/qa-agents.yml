@@ -74,6 +74,8 @@ jobs:
         run: python scripts/qa_ea_dashboard.py
       - name: Weltrade EA dashboard and execution simulation
         run: python scripts/qa_ea_dashboard_weltrade.py --quiet
+      - name: Scalping EA full session simulation (entries, stacking, profit, reversal, netting, emergency stop)
+        run: python scripts/qa_ea_scalping.py --quiet
       - name: MT5 presets (.set) match the EA inputs
         run: python scripts/build_ea_set.py --check
 

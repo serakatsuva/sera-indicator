@@ -163,6 +163,18 @@ L’EA résout le symbole MT5 à partir du nom de marché et du code Deriv avant
 
 GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le terminal MT5 déjà authentifié et lit les signaux publiés dans `data/signals.json`.
 
+## Sera EA Scalping Intelligent — Volatility, Forex et crypto
+
+`mt5/Sera_EA_Scalping_Intelligent_v1.00.mq5` est un EA de **scalping** indépendant des signaux du site : toute l’analyse se fait **dans MT5**, sur les bougies du broker (Deriv, Weltrade ou autre). Installation : un seul graphique (n’importe lequel, M1 conseillé), Algo Trading activé, aucune adresse WebRequest nécessaire.
+
+- **Marchés** : tous les symboles compatibles de la *Market Watch* (ou la liste `SymbolsList`) — indices **Volatility** (10 à 300, versions 1s, FX Vol / SFX Vol Weltrade), **Forex**, **crypto** (BTC, ETH, LTC, XRP, SOL…). **Boom, Crash, GainX et PainX sont exclus** ; métaux et Jump/Step désactivés par défaut.
+- **Entrée** : la tendance **M15** (prix et EMA50 qui monte/descend), la tendance **M5** (EMA9/EMA21, ADX) et la **bougie M1** cloturée (corps franc au-delà de l’EMA9) doivent aller dans le même sens, avec un score ≥ 70/100 (RSI, cassure de la bougie précédente, pas d’épuisement ni de prix trop étiré). Spread ≤ 25 % de l’ATR.
+- **Plusieurs positions** : plusieurs symboles en même temps, et jusqu’à **3 positions par symbole** — une nouvelle position n’est ajoutée que lorsque les précédentes sont **sécurisées** (SL au prix d’entrée). Compte netting : 1 position par symbole.
+- **Sortie intelligente** : à +0,6 R le SL passe au prix d’entrée ; à **+1 R** l’EA **encaisse**, sauf si la tendance continue — il reste alors avec un **SL suiveur** (1 ATR) pour prendre plusieurs gains ; si le prix rend 50 % du meilleur gain, il ferme. **Retournement** (bougie M1 franche contre + tendance M5 contre ou RSI de l’autre côté de 50) : **coupure immédiate**, en gain comme en perte. Position qui n’avance pas en 15 min : fermée.
+- **Risque** : 0,30 % de l’équité par position (lot calculé sur la distance du SL), risque cumulé ≤ 10 %, perte du jour ≤ 5 % (reprise le lendemain), pause de 30 min après 4 pertes de suite, **arrêt d’urgence** à −15 % d’équité. Forex/métaux : pas d’entrée autour de minuit serveur ni le vendredi soir.
+- **Tableau de bord** : état du bot, compte, résultat du jour, positions (lot, SL, résultat, R, état), marchés scannés avec tendance M15/M5, bougie M1, score et barre, dernières actions.
+- **Tests** : `scripts/qa_ea_scalping.py` rejoue une séance complète dans le simulateur MT5 (filtre des marchés, entrées dans le sens de la tendance, ajouts sécurisés, SL suiveur, coupure au retournement, prise de bénéfice, compte netting, arrêt d’urgence).
+
 ## Sera EA Swing Intelligent Weltrade — indices synthétiques Weltrade
 
 `mt5/Sera_EA_Swing_Intelligent_Weltrade_v1.70.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ni GitHub.

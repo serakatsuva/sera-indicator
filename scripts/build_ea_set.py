@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from ea_files import FAMILIES, ea_path  # noqa: E402
+from ea_files import FAMILIES, PREFIX, ea_path  # noqa: E402
 
 INPUT = re.compile(r'^\s*input\s+(\w+)\s+(\w+)\s*=\s*(.+?)\s*;\s*(?://\s*(.*))?$')
 
@@ -45,7 +45,7 @@ def main() -> int:
             if not target.exists() or target.read_bytes() != b"\xff\xfe" + content.encode("utf-16-le"):
                 stale.append(target.name)
             continue
-        for old in ea.parent.glob(f"Sera_EA_Swing_Intelligent_{family}_v*.set"):
+        for old in ea.parent.glob(f"{PREFIX[family]}_v*.set"):
             if old != target:
                 old.unlink()
         target.write_bytes(b"\xff\xfe" + content.encode("utf-16-le"))

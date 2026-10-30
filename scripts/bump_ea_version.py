@@ -31,7 +31,7 @@ def main() -> int:
         (new_path.parent / "Sera_Swing_Executor.mq5").write_text(text, encoding="utf-8")
     index = Path("index.html")
     html = index.read_text(encoding="utf-8")
-    html = html.replace(f"Sera_EA_Swing_Intelligent_{family}_v{old}.mq5", new_path.name)
+    html = html.replace(old_path.name, new_path.name)
     html = html.replace(f"EA {family} v{old}<", f"EA {family} v{new}<").replace(f"{family} v{old}", f"{family} v{new}")
     index.write_text(html, encoding="utf-8")
     print(f"{family}: v{old} -> v{new} ({new_path.name})")

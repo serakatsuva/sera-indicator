@@ -4,14 +4,15 @@
 #include <climits>
 typedef std::string string; typedef long datetime; typedef unsigned long ulong; typedef unsigned int uint; typedef unsigned short ushort;
 #define input
-enum ENUM_TIMEFRAMES{PERIOD_H1,PERIOD_H4,PERIOD_D1};
+enum ENUM_TIMEFRAMES{PERIOD_M1,PERIOD_M5,PERIOD_M15,PERIOD_H1,PERIOD_H4,PERIOD_D1};
 enum ENUM_ORDER_TYPE{ORDER_TYPE_BUY,ORDER_TYPE_SELL,ORDER_TYPE_BUY_LIMIT,ORDER_TYPE_SELL_LIMIT};
 enum ENUM_POSITION_TYPE{POSITION_TYPE_BUY,POSITION_TYPE_SELL};
 enum ENUM_ORDER_TYPE_TIME{ORDER_TIME_SPECIFIED};
 enum ENUM_DEAL_ENTRY{DEAL_ENTRY_IN,DEAL_ENTRY_OUT,DEAL_ENTRY_OUT_BY};
-enum E_INT{POSITION_MAGIC,POSITION_TYPE,POSITION_TIME,POSITION_TICKET,ORDER_MAGIC,ORDER_TYPE,DEAL_MAGIC,DEAL_ENTRY,SYMBOL_DIGITS,SYMBOL_TRADE_STOPS_LEVEL,ACCOUNT_TRADE_MODE,ACCOUNT_TRADE_MODE_DEMO,TERMINAL_TRADE_ALLOWED,MQL_TRADE_ALLOWED};
+enum E_INT{POSITION_MAGIC,POSITION_TYPE,POSITION_TIME,POSITION_TICKET,ORDER_MAGIC,ORDER_TYPE,DEAL_MAGIC,DEAL_ENTRY,SYMBOL_DIGITS,SYMBOL_TRADE_STOPS_LEVEL,ACCOUNT_TRADE_MODE,ACCOUNT_TRADE_MODE_DEMO,TERMINAL_TRADE_ALLOWED,MQL_TRADE_ALLOWED,ACCOUNT_MARGIN_MODE,DEAL_TIME};
+const long ACCOUNT_MARGIN_MODE_RETAIL_NETTING=0, ACCOUNT_MARGIN_MODE_EXCHANGE=1, ACCOUNT_MARGIN_MODE_RETAIL_HEDGING=2;
 enum E_DBL{POSITION_PRICE_OPEN,POSITION_SL,POSITION_TP,POSITION_VOLUME,POSITION_PROFIT,POSITION_SWAP,ORDER_PRICE_OPEN,ORDER_SL,ORDER_TP,ORDER_VOLUME_CURRENT,DEAL_PROFIT,DEAL_SWAP,DEAL_COMMISSION,
-  SYMBOL_POINT,SYMBOL_TRADE_TICK_SIZE,SYMBOL_TRADE_TICK_VALUE_LOSS,SYMBOL_VOLUME_MIN,SYMBOL_VOLUME_MAX,SYMBOL_VOLUME_STEP,ACCOUNT_BALANCE,ACCOUNT_EQUITY,ACCOUNT_MARGIN_FREE,ACCOUNT_MARGIN};
+  SYMBOL_POINT,SYMBOL_TRADE_TICK_SIZE,SYMBOL_TRADE_TICK_VALUE_LOSS,SYMBOL_TRADE_TICK_VALUE,SYMBOL_VOLUME_MIN,SYMBOL_VOLUME_MAX,SYMBOL_VOLUME_STEP,ACCOUNT_BALANCE,ACCOUNT_EQUITY,ACCOUNT_MARGIN_FREE,ACCOUNT_MARGIN};
 enum E_STR{POSITION_SYMBOL,ORDER_SYMBOL};
 const int INIT_SUCCEEDED=0; const double EMPTY_VALUE=1e308; const int WHOLE_ARRAY=-1; const int CP_UTF8=65001;
 struct MqlTick{datetime time;double bid,ask,last;};
@@ -19,7 +20,7 @@ struct MqlRates{datetime time;double open,high,low,close;long tick_volume;int sp
 struct MqlDateTime{int year,mon,day,hour,min,sec,day_of_week,day_of_year;};
 struct CTrade{bool Buy(double,const string&,double,double,double,const string&);bool Sell(double,const string&,double,double,double,const string&);
  bool BuyLimit(double,double,const string&,double,double,ENUM_ORDER_TYPE_TIME,datetime,const string&);bool SellLimit(double,double,const string&,double,double,ENUM_ORDER_TYPE_TIME,datetime,const string&);
- bool PositionClose(const string&);bool PositionClose(ulong);bool PositionClosePartial(ulong,double);bool PositionModify(const string&,double,double);bool OrderDelete(ulong);
+ bool PositionClose(const string&);bool PositionClose(ulong);bool PositionClosePartial(ulong,double);bool PositionModify(const string&,double,double);bool PositionModify(ulong,double,double);bool OrderDelete(ulong);
  void SetExpertMagicNumber(long);void SetDeviationInPoints(ulong);void SetAsyncMode(bool);string ResultRetcodeDescription();};
 template<class A,class B> auto MathMax(A a,B b)->decltype(a+b); template<class A,class B> auto MathMin(A a,B b)->decltype(a+b);
 double MathAbs(double);double MathFloor(double);double MathRound(double);double MathSqrt(double);

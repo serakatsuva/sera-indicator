@@ -20,7 +20,7 @@ SetDeviationInPoints SetAsyncMode ResultRetcodeDescription ObjectCreate ObjectSe
 ObjectDelete ObjectsDeleteAll ChartRedraw ChartGetInteger ChartID GlobalVariablesTotal GlobalVariableName GlobalVariableDel""".split())
 KEYWORDS = set("if for while return else switch case break continue sizeof new delete void bool int long ulong uint "
                "double string datetime char ushort short".split())
-KNOWN_TYPES = {"CTrade", "MqlTick", "MqlRates", "MqlDateTime", "Trade", "PanelRow"}
+KNOWN_TYPES = {"CTrade", "MqlTick", "MqlRates", "MqlDateTime", "Trade", "PanelRow", "ScalpView", "TfState"}
 
 
 def strip(text: str) -> str:

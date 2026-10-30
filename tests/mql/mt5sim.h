@@ -14,14 +14,15 @@
 typedef std::string string; typedef long datetime; typedef unsigned long ulong; typedef unsigned int uint; typedef unsigned short ushort;
 typedef unsigned int color;
 #define input
-enum ENUM_TIMEFRAMES{PERIOD_H1=3600,PERIOD_H4=14400,PERIOD_D1=86400};
+enum ENUM_TIMEFRAMES{PERIOD_M1=60,PERIOD_M5=300,PERIOD_M15=900,PERIOD_H1=3600,PERIOD_H4=14400,PERIOD_D1=86400};
 enum ENUM_ORDER_TYPE{ORDER_TYPE_BUY,ORDER_TYPE_SELL,ORDER_TYPE_BUY_LIMIT,ORDER_TYPE_SELL_LIMIT};
 enum ENUM_POSITION_TYPE{POSITION_TYPE_BUY,POSITION_TYPE_SELL};
 enum ENUM_ORDER_TYPE_TIME{ORDER_TIME_SPECIFIED};
 enum ENUM_DEAL_ENTRY{DEAL_ENTRY_IN,DEAL_ENTRY_OUT,DEAL_ENTRY_OUT_BY};
-enum E_INT{POSITION_MAGIC,POSITION_TYPE,POSITION_TIME,POSITION_TICKET,ORDER_MAGIC,ORDER_TYPE,DEAL_MAGIC,DEAL_ENTRY,SYMBOL_DIGITS,SYMBOL_TRADE_STOPS_LEVEL,ACCOUNT_TRADE_MODE,ACCOUNT_TRADE_MODE_DEMO,TERMINAL_TRADE_ALLOWED,MQL_TRADE_ALLOWED};
+enum E_INT{POSITION_MAGIC,POSITION_TYPE,POSITION_TIME,POSITION_TICKET,ORDER_MAGIC,ORDER_TYPE,DEAL_MAGIC,DEAL_ENTRY,SYMBOL_DIGITS,SYMBOL_TRADE_STOPS_LEVEL,ACCOUNT_TRADE_MODE,ACCOUNT_TRADE_MODE_DEMO,TERMINAL_TRADE_ALLOWED,MQL_TRADE_ALLOWED,ACCOUNT_MARGIN_MODE,DEAL_TIME};
+const long ACCOUNT_MARGIN_MODE_RETAIL_NETTING=0, ACCOUNT_MARGIN_MODE_EXCHANGE=1, ACCOUNT_MARGIN_MODE_RETAIL_HEDGING=2;
 enum E_DBL{POSITION_PRICE_OPEN,POSITION_SL,POSITION_TP,POSITION_VOLUME,POSITION_PROFIT,POSITION_SWAP,ORDER_PRICE_OPEN,ORDER_SL,ORDER_TP,ORDER_VOLUME_CURRENT,DEAL_PROFIT,DEAL_SWAP,DEAL_COMMISSION,
-  SYMBOL_POINT,SYMBOL_TRADE_TICK_SIZE,SYMBOL_TRADE_TICK_VALUE_LOSS,SYMBOL_VOLUME_MIN,SYMBOL_VOLUME_MAX,SYMBOL_VOLUME_STEP,ACCOUNT_BALANCE,ACCOUNT_EQUITY,ACCOUNT_MARGIN_FREE,ACCOUNT_MARGIN};
+  SYMBOL_POINT,SYMBOL_TRADE_TICK_SIZE,SYMBOL_TRADE_TICK_VALUE_LOSS,SYMBOL_TRADE_TICK_VALUE,SYMBOL_VOLUME_MIN,SYMBOL_VOLUME_MAX,SYMBOL_VOLUME_STEP,ACCOUNT_BALANCE,ACCOUNT_EQUITY,ACCOUNT_MARGIN_FREE,ACCOUNT_MARGIN};
 enum E_STR{POSITION_SYMBOL,ORDER_SYMBOL};
 const int INIT_SUCCEEDED=0; const double EMPTY_VALUE=1e308; const int WHOLE_ARRAY=-1; const int CP_UTF8=65001;
 const int INVALID_HANDLE=-1; enum ENUM_MA_METHOD{MODE_EMA}; enum ENUM_APPLIED_PRICE{PRICE_CLOSE};
@@ -94,7 +95,8 @@ string SymbolName(int i,bool){ auto it=SIM_PRICE.begin(); std::advance(it,i); re
 double sim_floating(){ double f=0; for(auto& p:SIM_POS){ double px=SIM_PRICE[p.symbol]; f+=(p.type==POSITION_TYPE_BUY?px-p.open:p.open-px)/0.001*0.001*p.volume; } return f; }
 double AccountInfoDouble(E_DBL p){ double eq=SIM_BALANCE+sim_floating(); double m=0; for(auto& x:SIM_POS) m+=x.volume*x.open*0.01;
   switch(p){ case ACCOUNT_BALANCE: return SIM_BALANCE; case ACCOUNT_EQUITY: return eq; case ACCOUNT_MARGIN_FREE: return eq-m; case ACCOUNT_MARGIN: return m; default: return 0; } }
-long AccountInfoInteger(E_INT p){ return p==ACCOUNT_TRADE_MODE?ACCOUNT_TRADE_MODE_REAL:0; }
+long SIM_MARGIN_MODE=2;
+long AccountInfoInteger(E_INT p){ return p==ACCOUNT_TRADE_MODE?ACCOUNT_TRADE_MODE_REAL:p==ACCOUNT_MARGIN_MODE?SIM_MARGIN_MODE:0; }
 long TerminalInfoInteger(E_INT){ return SIM_ALGO?1:0; } long MQLInfoInteger(E_INT){ return SIM_ALGO?1:0; }
 
 int PositionsTotal(){ return (int)SIM_POS.size(); }
@@ -127,13 +129,22 @@ bool TimeToStruct(datetime t,MqlDateTime& s){ time_t tt=t; struct tm g; gmtime_r
 datetime StructToTime(MqlDateTime& s){ struct tm g{}; g.tm_year=s.year-1900; g.tm_mon=s.mon-1; g.tm_mday=s.day; g.tm_hour=s.hour; g.tm_min=s.min; g.tm_sec=s.sec; return timegm(&g); }
 datetime iTime(const string&,ENUM_TIMEFRAMES tf,int shift){ return (SIM_NOW/(long)tf-shift)*(long)tf; }
 // Broker candles: a clean trend per symbol (SIM_TREND) ending at the current price.
+// "Wave" symbols (scalping tests): trend of SIM_STEP per bar + a wave peaking on the last closed bar + wicks.
+std::map<string,bool> SIM_WAVE; double SIM_STEP=0.0002, SIM_AMP=0.0016, SIM_WICK=0.0003, SIM_PULL_SIZE=0.002;
+std::map<string,int> SIM_PULL, SIM_PULLDIR;   // last N bars pulled back against the trend (essoufflement)
 int CopyClose(const string& s,ENUM_TIMEFRAMES tf,int start,int count,std::vector<double>& out){
   double px=SIM_PRICE.count(s)?SIM_PRICE[s]:100; int dir=SIM_TREND.count(s)?SIM_TREND[s]:1; out.resize(count);
+  if(SIM_WAVE.count(s)){ int pull=SIM_PULL.count(s)?SIM_PULL[s]:0; int tdir=SIM_PULLDIR.count(s)?SIM_PULLDIR[s]:dir;
+    for(int i=0;i<count;i++){ int k=count-1-i; out[i]=px*(1.0-dir*SIM_STEP*k+dir*SIM_AMP*(std::cos(0.9*k)-1.0)+tdir*SIM_PULL_SIZE*std::min(k,pull)); } return count; }
   for(int i=0;i<count;i++) out[i]=px*(1.0-dir*0.002*(count-i)); return count; }
 int CopyRates(const string& s,ENUM_TIMEFRAMES tf,int start,int count,std::vector<MqlRates>& out){
   std::vector<double> c; CopyClose(s,tf,start,count,c); out.resize(count);
-  for(int i=0;i<count;i++){ out[i].time=iTime(s,tf,start+count-1-i); out[i].open=i?c[i-1]:c[i]; out[i].close=c[i]; out[i].high=std::max(out[i].open,c[i])*1.0005; out[i].low=std::min(out[i].open,c[i])*0.9995; }
+  double px=SIM_PRICE.count(s)?SIM_PRICE[s]:100; bool wave=SIM_WAVE.count(s)>0;
+  for(int i=0;i<count;i++){ out[i].time=iTime(s,tf,start+count-1-i); out[i].open=i?c[i-1]:c[i]; out[i].close=c[i];
+    out[i].high=wave?std::max(out[i].open,c[i])+px*SIM_WICK:std::max(out[i].open,c[i])*1.0005;
+    out[i].low=wave?std::min(out[i].open,c[i])-px*SIM_WICK:std::min(out[i].open,c[i])*0.9995; }
   return count; }
+std::string SymbolInfoString(const string&,int){ return ""; }
 int iMA(const string&,ENUM_TIMEFRAMES,int,int,ENUM_MA_METHOD,ENUM_APPLIED_PRICE){ return INVALID_HANDLE; }
 int iRSI(const string&,ENUM_TIMEFRAMES,int,ENUM_APPLIED_PRICE){ return INVALID_HANDLE; }
 int iATR(const string&,ENUM_TIMEFRAMES,int){ return INVALID_HANDLE; } int iADX(const string&,ENUM_TIMEFRAMES,int){ return INVALID_HANDLE; }
@@ -165,6 +176,7 @@ struct CTrade{
   bool PositionClose(const string& s){ for(size_t i=0;i<SIM_POS.size();i++) if(SIM_POS[i].symbol==s){ SIM_POS.erase(SIM_POS.begin()+i); return true; } return false; }
   bool PositionClose(ulong t){ for(size_t i=0;i<SIM_POS.size();i++) if(SIM_POS[i].ticket==t){ SIM_POS.erase(SIM_POS.begin()+i); return true; } return false; }
   bool PositionClosePartial(ulong t,double v){ for(auto& p:SIM_POS) if(p.ticket==t){ p.volume-=v; return true; } return false; }
+  bool PositionModify(ulong t,double sl,double tp){ for(auto& p:SIM_POS) if(p.ticket==t){ p.sl=sl; p.tp=tp; return true; } return false; }
   bool PositionModify(const string& s,double sl,double tp){ for(auto& p:SIM_POS) if(p.symbol==s){ p.sl=sl; p.tp=tp; return true; } return false; }
   bool OrderDelete(ulong t){ for(size_t i=0;i<SIM_ORD.size();i++) if(SIM_ORD[i].ticket==t){ SIM_ORD.erase(SIM_ORD.begin()+i); return true; } return false; }
 };

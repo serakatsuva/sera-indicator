@@ -13,11 +13,13 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FAMILIES = ("Deriv", "Weltrade")
+FAMILIES = ("Deriv", "Weltrade", "Scalping")
+PREFIX = {"Deriv": "Sera_EA_Swing_Intelligent_Deriv", "Weltrade": "Sera_EA_Swing_Intelligent_Weltrade",
+          "Scalping": "Sera_EA_Scalping_Intelligent"}
 
 
 def ea_path(family: str) -> Path:
-    found = sorted((ROOT / "mt5").glob(f"Sera_EA_Swing_Intelligent_{family}_v*.mq5"))
+    found = sorted((ROOT / "mt5").glob(f"{PREFIX[family]}_v*.mq5"))
     if len(found) != 1:
         raise SystemExit(f"expected exactly one versioned {family} EA in mt5/, found {[p.name for p in found]}")
     return found[0]
