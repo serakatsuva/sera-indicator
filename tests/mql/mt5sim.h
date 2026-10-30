@@ -118,6 +118,10 @@ ulong HistoryDealGetTicket(int){ return 0; } long HistoryDealGetInteger(ulong,E_
 
 bool GlobalVariableCheck(const string& k){ return SIM_GV.count(k)>0; } double GlobalVariableGet(const string& k){ return SIM_GV[k]; }
 datetime GlobalVariableSet(const string& k,double v){ SIM_GV[k]=v; return SIM_NOW; }
+int GlobalVariablesTotal(){ return (int)SIM_GV.size(); }
+string GlobalVariableName(int i){ auto it=SIM_GV.begin(); std::advance(it,i); return it->first; }
+bool GlobalVariableDel(const string& k){ return SIM_GV.erase(k)>0; }
+long SIM_CHART_ID=1001; long ChartID(){ return SIM_CHART_ID; }
 datetime TimeCurrent(){ return SIM_NOW; } datetime TimeGMT(){ return SIM_NOW; }
 bool TimeToStruct(datetime t,MqlDateTime& s){ time_t tt=t; struct tm g; gmtime_r(&tt,&g); s.year=g.tm_year+1900; s.mon=g.tm_mon+1; s.day=g.tm_mday; s.hour=g.tm_hour; s.min=g.tm_min; s.sec=g.tm_sec; s.day_of_week=g.tm_wday; s.day_of_year=g.tm_yday; return true; }
 datetime StructToTime(MqlDateTime& s){ struct tm g{}; g.tm_year=s.year-1900; g.tm_mon=s.mon-1; g.tm_mday=s.day; g.tm_hour=s.hour; g.tm_min=s.min; g.tm_sec=s.sec; return timegm(&g); }

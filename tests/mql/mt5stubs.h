@@ -35,6 +35,7 @@ int PositionsTotal(); ulong PositionGetTicket(int); long PositionGetInteger(E_IN
 int OrdersTotal(); ulong OrderGetTicket(int); long OrderGetInteger(E_INT); string OrderGetString(E_STR); double OrderGetDouble(E_DBL); bool OrderCalcMargin(ENUM_ORDER_TYPE,const string&,double,double,double&);
 bool HistorySelect(datetime,datetime); int HistoryDealsTotal(); ulong HistoryDealGetTicket(int); long HistoryDealGetInteger(ulong,E_INT); double HistoryDealGetDouble(ulong,E_DBL);
 bool GlobalVariableCheck(const string&); double GlobalVariableGet(const string&); datetime GlobalVariableSet(const string&,double);
+int GlobalVariablesTotal(); string GlobalVariableName(int); bool GlobalVariableDel(const string&); long ChartID();
 datetime TimeCurrent(); datetime TimeGMT(); bool TimeToStruct(datetime,MqlDateTime&); datetime StructToTime(MqlDateTime&); datetime iTime(const string&,ENUM_TIMEFRAMES,int);
 bool EventSetTimer(int); void EventKillTimer(); int GetLastError(); void ResetLastError(); long TerminalInfoInteger(E_INT); long MQLInfoInteger(E_INT);
 double NormalizeDouble(double,int); string CharArrayToString(const std::vector<char>&,int,int,int);

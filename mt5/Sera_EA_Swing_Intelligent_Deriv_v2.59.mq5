@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.58"
+#property version   "2.59"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -237,6 +237,37 @@ datetime g_last_feed_ok=0;
 string   g_4014_hosts="";        // adresses deja signalees comme bloquees (un seul message par adresse)
 bool     g_raw_blocked=false;    // 2e source (raw.githubusercontent.com) non autorisee dans WebRequest
 string   g_feed_source="";
+bool     g_memory_conflict=false;   // un autre EA ecrit dans la meme memoire Sera (ancienne version, 2e graphique...)
+int      g_other_instances=0;
+string   g_alert_ids[];             // dernier etat d'alerte connu de CE graphique (anti-repetition)
+int      g_alert_vals[];
+string   g_reason_logged[];         // raisons "non execute" deja ecrites dans le journal
+
+int MemoryAlertState(const string id)
+{
+   for(int i=0;i<ArraySize(g_alert_ids);i++) if(g_alert_ids[i]==id) return g_alert_vals[i];
+   return -999;
+}
+
+void RememberAlertState(const string id,const int value)
+{
+   for(int i=0;i<ArraySize(g_alert_ids);i++) if(g_alert_ids[i]==id){ g_alert_vals[i]=value; return; }
+   int n=ArraySize(g_alert_ids);
+   ArrayResize(g_alert_ids,n+1); ArrayResize(g_alert_vals,n+1);
+   g_alert_ids[n]=id; g_alert_vals[n]=value;
+}
+
+// Ecrit une seule fois dans le journal pourquoi un signal pret n'a pas ete execute.
+void LogNotExecutedOnce(const string id,const string market,const string verdict,const string why)
+{
+   string key=id+"|"+verdict+"|"+why;
+   for(int i=0;i<ArraySize(g_reason_logged);i++) if(g_reason_logged[i]==key) return;
+   int n=ArraySize(g_reason_logged);
+   if(n>=500){ ArrayResize(g_reason_logged,0); n=0; }
+   ArrayResize(g_reason_logged,n+1);
+   g_reason_logged[n]=key;
+   Print("Sera: ",market," ",verdict," pret mais non execute - ",why);
+}
 
 bool FetchUrl(const string url,string &json)
 {
@@ -673,8 +704,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.58")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.58");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.59")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.59");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -1334,6 +1365,25 @@ void PanelBackground(const int lines)
 
 void PanelClear(){ ObjectsDeleteAll(0,"SERA_PANEL_"); }
 
+// Plusieurs EA Sera sur le meme compte se genent (memoire commune, ordres annules) : chaque graphique
+// signale sa presence toutes les 30 s et le tableau de bord avertit s'il y en a d'autres.
+int OtherSeraInstances()
+{
+   string mine="SERA_HB_"+IntegerToString((long)(ChartID()%1000000));
+   GlobalVariableSet(mine,(double)TimeCurrent());
+   int others=0;
+   for(int i=GlobalVariablesTotal()-1;i>=0;i--)
+   {
+      string name=GlobalVariableName(i);
+      if(StringFind(name,"SERA_HB_")!=0 || name==mine) continue;
+      long age=(long)(TimeCurrent()-(datetime)GlobalVariableGet(name));
+      if(age<=180) others++;
+      else if(age>86400) GlobalVariableDel(name);
+   }
+   return others;
+}
+
+
 // Boutons + / - du tableau : nombre de positions possibles affichees (memorise dans MT5 par EA).
 #define PANEL_STEP 5
 string PanelShownKey(){ return "SERA_PANEL_SHOWN_"+IntegerToString((long)MagicNumber); }
@@ -1634,7 +1684,7 @@ void RenderDashboard()
 
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.58",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.59",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -1644,6 +1694,10 @@ void RenderDashboard()
    if(g_feed_ok)
       PanelText(line++,"Signaux : recus il y a "+IntegerToString(MathMax(0,g_feed_age_min))+" min ("+g_feed_source+")  |  "+IntegerToString(g_markets_seen)+
                 " analyses  |  "+IntegerToString(g_setups_seen)+" setups  |  "+IntegerToString(g_signals_seen)+" signaux",green);
+   g_other_instances=OtherSeraInstances();
+   if(g_other_instances>0 || g_memory_conflict)
+      PanelText(line++,"ATTENTION : "+(g_other_instances>0?IntegerToString(g_other_instances)+" autre(s) EA Sera actif(s) sur ce compte":"un autre EA Sera (ancienne version ?) modifie la memoire")+
+                " -> n'en garder qu'un seul",red);
    if(g_feed_ok && g_raw_blocked)
       PanelText(line++,"  -> source de secours bloquee : ajoutez https://raw.githubusercontent.com dans Outils > Options > Expert Advisors > WebRequest",amber);
    if(!g_feed_ok)
@@ -1805,7 +1859,18 @@ void Evaluate(const string json)
          int alert_state=state*10+(execution_ready?1:0);
 
          int previous_alert_state=StoredState("SERA_ALERTSTATE_",setup_id);
-         if(directional_confirmed && alert_state!=previous_alert_state) SendTrendAlert(market_name,verdict,confidence,execution_state,mode);
+         // Ce graphique se souvient de ce qu'il a ecrit : si la memoire MT5 a change entre deux cycles,
+         // un autre EA Sera ecrit au meme endroit (il peut aussi marquer les signaux comme deja trades).
+         int remembered=MemoryAlertState(setup_id);
+         if(remembered!=-999 && previous_alert_state!=remembered && !g_memory_conflict)
+         {
+            g_memory_conflict=true;
+            Print("Sera: ATTENTION - un autre EA Sera modifie la memoire de ce compte (ancienne version ou 2e graphique). ",
+                  "Retirez tous les autres EA Sera : ils peuvent empecher l'ouverture des positions.");
+         }
+         int known=remembered!=-999?remembered:previous_alert_state;
+         if(directional_confirmed && alert_state!=known) SendTrendAlert(market_name,verdict,confidence,execution_state,mode);
+         RememberAlertState(setup_id,alert_state);
          if(alert_state!=previous_alert_state) StoreState("SERA_ALERTSTATE_",setup_id,alert_state);
 
          int previous_trade_state=StoredState("SERA_TRADESTATE_",setup_id);
@@ -1970,7 +2035,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.58"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.58");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.59"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.59");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -2007,6 +2072,19 @@ void Evaluate(const string json)
                   pr.decision=block!=""?"ATTENTE : "+block:"ATTENTE : entree au prochain cycle";
                }
             }
+            // Signal pret pour une entree au marche mais pas de position : raison claire, une fois, dans le journal.
+            if(directional_confirmed && execution_ready && !pr.opened && symbol!="" && !HasSeraPositionOn(symbol)
+               && StringFind(pr.decision,"LIMITE")<0)
+            {
+               string why=PanelFirstBlock(pr);
+               if(state==previous_trade_state && why=="")
+               {
+                  why="ce signal est deja marque comme trade dans la memoire Sera";
+                  pr.decision="DEJA TRADE : "+why;
+               }
+               if(why=="") why=pr.decision;
+               if(why!="") LogNotExecutedOnce(setup_id,market_name,verdict,why);
+            }
             int n=ArraySize(g_rows);
             ArrayResize(g_rows,n+1);
             g_rows[n]=pr;
@@ -2026,7 +2104,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.58: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.59: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),

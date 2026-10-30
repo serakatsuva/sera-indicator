@@ -52,10 +52,14 @@ int main(int argc,char** argv){
   while(w>>std::quoted(sym)>>px>>tr){ SIM_PRICE[sym]=px; SIM_TREND[sym]=tr; }
   SIM_NOW=atol(argv[3]);
   string json=slurp(argv[1]);
+  string json2=argc>4?slurp(argv[4]):json;
+  string mode=argc>5?argv[5]:"";
+  // "conflict" : un ancien EA Sera a marque le signal comme deja trade et tourne sur un autre graphique.
+  if(mode=="conflict"){ GlobalVariableSet(StateKey("SERA_TRADESTATE_",argv[6]),atof(argv[7])); SIM_GV["SERA_HB_424242"]=SIM_NOW; }
   OnInit();
   Evaluate(json);
   dump("CYCLE 1 (flux publie)");
-  string json2=argc>4?slurp(argv[4]):json;
+  if(mode=="conflict"){ for(auto& kv:SIM_GV) if(kv.first.rfind("SERA_ALERTSTATE_",0)==0) kv.second=12345; SIM_GV["SERA_HB_424242"]=SIM_NOW+30; }
   SIM_NOW+=30; Evaluate(json2);
   dump("CYCLE 2 (30 s plus tard)");
   click("PLUS"); dump("BOUTON + (5 marches de plus)");
@@ -243,6 +247,33 @@ def main() -> int:
     vetoes = re.findall(r"non execute - les modeles IA", log)
     if len(vetoes) > len(set(re.findall(r"Sera: (.+?) (?:BUY|SELL) non execute", log))):
         errors.append("the same model veto is logged on every cycle")
+    # Scenario: an old Sera EA on another chart marked the signal as already traded and rewrites the shared memory
+    # -> no position, the reason is written once in the journal and the dashboard warns about the other EA.
+    if rows:
+        clash = json.loads(json.dumps(feed))
+        target = next(m for m in clash["markets"] if m["id"] == rows[0]["id"])
+        target.update(execution_state="EXECUTE_NOW", execution_score=92, final_confidence=92,
+                      condition_pass_percent=max(85, target["condition_pass_percent"]),
+                      model_ensemble_direction=target["final_verdict"], model_ensemble_consensus=80, model_models_available=4)
+        cp = BUILD / "ea-signals-conflict.json"
+        cp.write_text(json.dumps(clash, separators=(",", ":")), encoding="utf-8")
+        state = "1" if target["final_verdict"] == "BUY" else "-1"
+        out7 = subprocess.run([str(exe), str(cp), str(world(clash)), str(now), str(cp), "conflict", target["id"], state],
+                              capture_output=True, text=True, timeout=120)
+        log7 = out7.stdout.split("=== LOG ===")[-1]
+        cyc2 = out7.stdout.split("=== CYCLE 2")[-1].split("=== BOUTON")[0]
+        if not quiet:
+            print(f"=== SCENARIO AUTRE EA SERA ({target['market']}) ===")
+            print("\n".join(l for l in (cyc2 + log7).splitlines() if "ATTENTION" in l or "non execute" in l))
+        if "POS " + target["market"] in out7.stdout.split("=== CYCLE 2")[0]:
+            errors.append("conflict scenario: the signal marked as traded by another EA was traded again")
+        if log7.count(f"{target['market']} {target['final_verdict']} pret mais non execute - ce signal est deja marque") != 1:
+            errors.append("conflict scenario: the reason is not written exactly once in the journal")
+        if "[red] ATTENTION :" not in cyc2:
+            errors.append("conflict scenario: the dashboard does not warn about the other Sera EA")
+        if len(re.findall(rf"^Sera Trend Watch: {re.escape(target['market'])} ", log7, re.M)) > 1:
+            errors.append("conflict scenario: the trend alert is repeated although nothing changed for this chart")
+
     # Scenario: confirmed Day signal waiting for confirmation (not confident enough for the fast entry)
     # -> a limit order is placed at once; next cycle the AI models turn against it -> cancelled before it fills.
     if day_rows:

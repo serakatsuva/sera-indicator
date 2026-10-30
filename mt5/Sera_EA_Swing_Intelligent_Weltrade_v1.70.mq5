@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "1.60"
+#property version   "1.70"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -1313,7 +1313,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.60"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.60");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.70"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v1.70");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -1422,6 +1422,25 @@ void PanelBackground(const int lines)
 }
 
 void PanelClear(){ ObjectsDeleteAll(0,"SWX_PANEL_"); }
+
+// Plusieurs EA Sera sur le meme compte se genent (memoire commune, ordres annules) : chaque graphique
+// signale sa presence toutes les 30 s et le tableau de bord avertit s'il y en a d'autres.
+int OtherSeraInstances()
+{
+   string mine="SWX_HB_"+IntegerToString((long)(ChartID()%1000000));
+   GlobalVariableSet(mine,(double)TimeCurrent());
+   int others=0;
+   for(int i=GlobalVariablesTotal()-1;i>=0;i--)
+   {
+      string name=GlobalVariableName(i);
+      if(StringFind(name,"SWX_HB_")!=0 || name==mine) continue;
+      long age=(long)(TimeCurrent()-(datetime)GlobalVariableGet(name));
+      if(age<=180) others++;
+      else if(age>86400) GlobalVariableDel(name);
+   }
+   return others;
+}
+
 
 // Boutons + / - du tableau : nombre de positions possibles affichees (memorise dans MT5 par EA).
 #define PANEL_STEP 5
@@ -1703,7 +1722,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.60",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v1.70",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -1726,6 +1745,8 @@ void RenderDashboard(const bool can_trade,const string mode_label)
       PanelText(line++,"Analyse dans MT5 (sans internet) : "+IntegerToString(valid)+"/"+IntegerToString(n)+" indices  |  "+IntegerToString(setups)+
                 " tendances alignees  |  "+IntegerToString(signals)+" signaux  |  derniere bougie H1 "+at,valid>0?green:amber);
    }
+   int others=OtherSeraInstances();
+   if(others>0) PanelText(line++,"ATTENTION : "+IntegerToString(others)+" autre(s) EA Sera Weltrade actif(s) sur ce compte -> n'en garder qu'un seul",red);
    double balance=AccountInfoDouble(ACCOUNT_BALANCE),equity=AccountInfoDouble(ACCOUNT_EQUITY),risk=OpenSeraRiskUSD();
    PanelText(line++,"Compte : balance "+DoubleToString(balance,2)+"  equite "+DoubleToString(equity,2)+"  |  positions "+
              PositionsText()+"  |  risque ouvert "+DoubleToString(risk,2)+" ("+
@@ -1829,7 +1850,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v1.60: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v1.70: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)
