@@ -43,6 +43,12 @@ static void dump(const char* title){
   for(auto& p:SIM_POS) printf("POS %s %s vol=%.2f open=%.5f sl=%.5f\n",p.symbol.c_str(),p.type==POSITION_TYPE_BUY?"BUY":"SELL",p.volume,p.open,p.sl);
 }
 static void move(const string& s,double pct){ SIM_PRICE[s]*=1.0+pct; }
+// Le broker execute les stops : une position dont le SL est touche est fermee au prix du SL.
+static void hit_stops(){
+  for(size_t i=0;i<SIM_POS.size();){ auto& p=SIM_POS[i]; double px=SIM_PRICE[p.symbol];
+    bool hit=p.sl>0 && (p.type==POSITION_TYPE_BUY?px<=p.sl:px>=p.sl);
+    if(hit){ double pnl=(p.type==POSITION_TYPE_BUY?p.sl-p.open:p.open-p.sl)*p.volume; printf("STOPHIT %s %.2f\n",p.symbol.c_str(),pnl); SIM_BALANCE+=pnl; SIM_POS.erase(SIM_POS.begin()+i); }
+    else i++; } }
 int main(int argc,char** argv){
   string mode=argc>1?argv[1]:"";
   if(mode=="netting") SIM_MARGIN_MODE=ACCOUNT_MARGIN_MODE_RETAIL_NETTING;
@@ -58,6 +64,14 @@ int main(int argc,char** argv){
   OnInit();
   dump("DEMARRAGE");
   for(int i=0;i<ArraySize(g_views);i++) printf("VIEW %s class=%s score=%d side=%d reason=%s\n",g_views[i].symbol.c_str(),g_views[i].klass.c_str(),g_views[i].score,g_views[i].side,g_views[i].reason.c_str());
+  if(mode=="be"){
+    // petit gain (+0,30 $ < objectif 0,50 $) -> SL au prix d'entree ; puis chute brutale -> la position sort a 0 ou en gain
+    double open=0; for(auto& p:SIM_POS) if(p.symbol=="Volatility 75 Index") open=p.open;
+    SIM_PRICE["Volatility 75 Index"]=open+0.30/0.67; SIM_NOW+=10; OnTimer(); dump("PETIT GAIN");
+    SIM_PRICE["Volatility 75 Index"]=open*0.99; hit_stops(); SIM_NOW+=10; OnTimer(); dump("CHUTE APRES PETIT GAIN");
+    printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
+    return 0;
+  }
   if(mode==""){ SIM_PRICE["Volatility 50 Index"]*=1.004; SIM_NOW+=20; OnTimer(); dump("CASSURE PENDANT LA BOUGIE"); }
   for(int step=1;step<=4;step++){
     move("Volatility 75 Index",0.0025); move("BTCUSD",0.0025); move("EURUSD",-0.0025); move("Volatility 100 (1s) Index",-0.0025);
@@ -172,6 +186,14 @@ def main() -> int:
         errors.append("small account: a minimum lot risking more than 3 % of the equity was accepted")
     if "BTCUSD pret mais pas d'entree - BUY : lot min. risque" not in small:
         errors.append("small account: the refused entry is not explained in the journal")
+    be = subprocess.run([str(exe), "be"], capture_output=True, text=True, timeout=300).stdout
+    small_gain = be.split("=== PETIT GAIN ===")[-1].split("=== CHUTE")[0]
+    m = re.search(r"^POS Volatility 75 Index BUY vol=\S+ open=([0-9.]+) sl=([0-9.]+)", small_gain, re.M)
+    if not m or float(m.group(2)) < float(m.group(1)):
+        errors.append("after a +0.30 $ gain the stop loss was not moved to the entry price")
+    hits = [float(x) for x in re.findall(r"^STOPHIT Volatility 75 Index (-?[0-9.]+)", be, re.M)]
+    if not hits or min(hits) < 0:
+        errors.append(f"a position that was in gain finished with a loss after the market turned ({hits})")
     spread = subprocess.run([str(exe), "spread"], capture_output=True, text=True, timeout=300).stdout
     first = spread.split("=== TENDANCE")[0].split("=== CASSURE")[0]
     if not re.search(r"^POS Volatility 75 Index BUY", first, re.M):

@@ -37,6 +37,13 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
 
+### Scalping v1.04 — priorité aux gains
+
+- **Objectif en dollars** (`TakeProfitMoney`, 0,50 $ par position) ou **+1 R**, le premier atteint : la position est **encaissée**. Si la tendance continue (`LetProfitsRun`), elle reste ouverte mais le SL **verrouille 70 % du gain** (`LockProfitPercent`) et suit le prix : le gain ne peut plus disparaître.
+- **Plus de perte après un gain** : dès **+0,20 $** (`BreakEvenMoney`) ou +0,3 R, le SL passe au **prix d’entrée + spread**.
+- **Gain qui retombe** : si la position rend 40 % de son meilleur gain (`GiveBackPercent`), elle est fermée en gain.
+- Un retournement détecté sur une position en gain est noté « gain encaissé ». Test : `qa_ea_scalping.py` (scénario *be*) vérifie qu’une position passée à +0,30 $ puis prise dans une chute brutale sort à 0 ou en gain.
+
 ### Scalping v1.03 — filtre de spread adapté aux indices (1s)
 
 Le spread est comparé à la **distance du stop loss** (il ne doit pas coûter plus de 25 % du risque, `MaximumSpreadRiskPercent`) au lieu de l’ATR d’une seule bougie M1. Les indices Volatility (1s) de Deriv, dont le spread fixe valait 30–35 % de l’ATR M1, étaient tous refusés alors que leurs signaux étaient les meilleurs.
@@ -180,7 +187,7 @@ GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le termi
 
 ## Sera EA Scalping Intelligent — Volatility, Forex et crypto
 
-`mt5/Sera_EA_Scalping_Intelligent_v1.03.mq5` est un EA de **scalping** indépendant des signaux du site : toute l’analyse se fait **dans MT5**, sur les bougies du broker (Deriv, Weltrade ou autre). Installation : un seul graphique (n’importe lequel, M1 conseillé), Algo Trading activé, aucune adresse WebRequest nécessaire.
+`mt5/Sera_EA_Scalping_Intelligent_v1.04.mq5` est un EA de **scalping** indépendant des signaux du site : toute l’analyse se fait **dans MT5**, sur les bougies du broker (Deriv, Weltrade ou autre). Installation : un seul graphique (n’importe lequel, M1 conseillé), Algo Trading activé, aucune adresse WebRequest nécessaire.
 
 - **Marchés** : tous les symboles compatibles de la *Market Watch* (ou la liste `SymbolsList`) — indices **Volatility** (10 à 300, versions 1s, FX Vol / SFX Vol Weltrade), **Forex**, **crypto** (BTC, ETH, LTC, XRP, SOL…). **Boom, Crash, GainX et PainX sont exclus** ; métaux et Jump/Step désactivés par défaut.
 - **Entrée** : la tendance **M15** (prix et EMA50 qui monte/descend), la tendance **M5** (EMA9/EMA21, ADX) et la **bougie M1** cloturée (corps franc au-delà de l’EMA9) doivent aller dans le même sens, avec un score ≥ 70/100 (RSI, cassure de la bougie précédente, pas d’épuisement ni de prix trop étiré). Spread ≤ 25 % de la distance du stop loss.

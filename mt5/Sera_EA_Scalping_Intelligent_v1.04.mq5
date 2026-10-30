@@ -1,5 +1,5 @@
 #property copyright "Sera EA Scalping Intelligent"
-#property version   "1.03"
+#property version   "1.04"
 #property strict
 #property description "Scalping M1 qui suit la bougie et la tendance (M5, M15) sur les indices Volatility, le Forex et la crypto (sans Boom/Crash). Plusieurs positions, benefice encaisse ou laisse courir, coupure au retournement."
 
@@ -42,10 +42,14 @@ input double MaximumTotalRiskPercent=10.0;   // risque cumule maximum (positions
 input int MinimumSecondsBetweenEntries=60;   // par symbole
 
 // --- Sortie intelligente
-input double SecureAtR=0.6;                  // a +0,6 R : SL au prix d'entree (+0,1 R)
-input double TakeProfitR=1.0;                // a +1 R : encaisser, sauf si la tendance continue
-input double TrailATR=1.0;                   // tendance qui continue : SL suiveur a 1 ATR M1
-input double GiveBackPercent=50.0;           // fermer si la position rend plus de 50 % du meilleur gain
+input double TakeProfitMoney=0.50;           // v1.04 : objectif de gain par position en $ (0 = desactive) - encaisser des +0,50 $
+input double BreakEvenMoney=0.20;            // v1.04 : des +0,20 $ le SL passe au prix d'entree + spread : plus de perte possible
+input double SecureAtR=0.3;                  // ou des +0,3 R (le premier atteint)
+input double TakeProfitR=1.0;                // objectif aussi atteint a +1 R (le premier atteint : $ ou R)
+input bool LetProfitsRun=true;               // a l'objectif, si la tendance continue : rester, mais LockProfitPercent du gain verrouille
+input double LockProfitPercent=70.0;         // part du gain garantie par le SL quand on laisse courir
+input double TrailATR=1.0;                   // tendance qui continue : SL suiveur a 1 ATR M1 (jamais sous le gain verrouille)
+input double GiveBackPercent=40.0;           // fermer si la position rend plus de 40 % de son meilleur gain
 input bool CutOnReversal=true;               // couper des que la bougie et la tendance M5 se retournent
 input int MaximumMinutesWithoutProgress=15;  // fermer une position qui n'avance pas
 
@@ -607,6 +611,7 @@ bool ClosePosition(const ulong ticket,const string symbol,const string why,const
    Note(symbol+" ferme ("+DoubleToString(r,2)+" R) - "+why);
    GlobalVariableDel(RKey(ticket));
    GlobalVariableDel(MaxRKey(ticket));
+   GlobalVariableDel("SCALP_MAXM_"+IntegerToString((long)ticket));
    return true;
 }
 
@@ -617,6 +622,9 @@ void MoveStop(const ulong ticket,const string symbol,const double sl,const doubl
    if(trade.PositionModify(ticket,NormalizeDouble(sl,digits),tp)) Note(symbol+" "+why+" (SL "+DoubleToString(sl,digits)+")");
 }
 
+string MaxMKey(const ulong ticket){ return "SCALP_MAXM_"+IntegerToString((long)ticket); }
+
+// Priorite au gain : un gain atteint est encaisse ou verrouille, une position en gain ne repasse jamais en perte.
 void ManagePositions()
 {
    for(int i=PositionsTotal()-1;i>=0;i--)
@@ -626,10 +634,13 @@ void ManagePositions()
       string symbol=PositionGetString(POSITION_SYMBOL);
       int dir=PositionGetInteger(POSITION_TYPE)==POSITION_TYPE_BUY?1:-1;
       double open=PositionGetDouble(POSITION_PRICE_OPEN),sl=PositionGetDouble(POSITION_SL),tp=PositionGetDouble(POSITION_TP);
+      double money=PositionGetDouble(POSITION_PROFIT)+PositionGetDouble(POSITION_SWAP);
       datetime opened=(datetime)PositionGetInteger(POSITION_TIME);
       MqlTick tick;
       if(!SymbolInfoTick(symbol,tick)) continue;
       double price=dir>0?tick.bid:tick.ask;
+      double spread=tick.ask-tick.bid;
+      double point=SymbolInfoDouble(symbol,SYMBOL_POINT);
 
       int vi=ViewIndex(symbol);
       if(vi<0){ AddSymbol(symbol); vi=ViewIndex(symbol); }
@@ -646,45 +657,55 @@ void ManagePositions()
       double pr=(dir>0?price-open:open-price)/r;
       double best=GlobalVariableCheck(MaxRKey(ticket))?GlobalVariableGet(MaxRKey(ticket)):0.0;
       if(pr>best){ best=pr; GlobalVariableSet(MaxRKey(ticket),best); }
+      double bestMoney=GlobalVariableCheck(MaxMKey(ticket))?GlobalVariableGet(MaxMKey(ticket)):0.0;
+      if(money>bestMoney){ bestMoney=money; GlobalVariableSet(MaxMKey(ticket),bestMoney); }
+      string gain=(money>=0?"+":"")+DoubleToString(money,2)+" $";
 
-      // 1. Changement de direction detecte : on coupe tout de suite, en gain comme en perte.
+      // 1. Changement de direction detecte : on coupe tout de suite (en gain on encaisse, en perte on limite).
       if(CutOnReversal && ReversalAgainst(g_views[vi],dir))
       {
-         if(ClosePosition(ticket,symbol,"retournement detecte (bougie M1 et tendance contre)",pr))
+         string why="retournement detecte (bougie M1 et tendance contre) "+gain;
+         if(money>0) why="gain encaisse : "+why;
+         if(ClosePosition(ticket,symbol,why,pr))
             GlobalVariableSet(BarKey(symbol),(double)FormingBar(symbol));   // pas de nouvelle entree sur cette bougie
          continue;
       }
 
-      // 2. Le gain retombe trop : on garde le reste.
-      if(best>=TakeProfitR && pr<best*(1.0-GiveBackPercent/100.0))
-      { ClosePosition(ticket,symbol,"gain protege (le prix rend "+DoubleToString(GiveBackPercent,0)+"% du meilleur gain)",pr); continue; }
+      bool target=(TakeProfitMoney>0 && money>=TakeProfitMoney) || pr>=TakeProfitR;
+      bool wasTarget=(TakeProfitMoney>0 && bestMoney>=TakeProfitMoney) || best>=TakeProfitR;
 
-      // 3. Benefice atteint : encaisser, sauf si la tendance continue (alors SL suiveur et on reste).
-      if(pr>=TakeProfitR)
+      // 2. Le gain retombe : on encaisse ce qui reste avant qu'il disparaisse.
+      if(wasTarget && money>0 && money<bestMoney*(1.0-GiveBackPercent/100.0))
+      { ClosePosition(ticket,symbol,"gain protege "+gain+" (meilleur +"+DoubleToString(bestMoney,2)+" $)",pr); continue; }
+
+      // 3. Objectif atteint ($ ou R) : encaisser, sauf si la tendance continue (alors gain verrouille + SL suiveur).
+      if(target)
       {
-         if(!MomentumWith(g_views[vi],dir))
-         { ClosePosition(ticket,symbol,"benefice encaisse",pr); continue; }
-         double lock=open+dir*r*0.3;
+         if(!LetProfitsRun || !MomentumWith(g_views[vi],dir))
+         { ClosePosition(ticket,symbol,"benefice encaisse "+gain+" (objectif atteint)",pr); continue; }
+         double locked=open+(price-open)*LockProfitPercent/100.0;      // LockProfitPercent du gain actuel
          double trail=price-dir*atr*TrailATR;
-         double target=dir>0?MathMax(lock,trail):MathMin(lock,trail);
-         double room=StopsDistance(symbol);
-         bool better=dir>0?(sl<=0 || target>sl+SymbolInfoDouble(symbol,SYMBOL_POINT)):(sl<=0 || target<sl-SymbolInfoDouble(symbol,SYMBOL_POINT));
-         if(better && MathAbs(price-target)>room) MoveStop(ticket,symbol,target,tp,"la tendance continue : SL suiveur");
+         double want=dir>0?MathMax(locked,trail):MathMin(locked,trail);
+         bool better=dir>0?(sl<=0 || want>sl+point):(sl<=0 || want<sl-point);
+         if(better && MathAbs(price-want)>StopsDistance(symbol))
+            MoveStop(ticket,symbol,want,tp,"objectif atteint "+gain+", la tendance continue : "+DoubleToString(LockProfitPercent,0)+"% du gain verrouille");
+         else if(better)
+         { ClosePosition(ticket,symbol,"benefice encaisse "+gain+" (SL impossible a rapprocher)",pr); continue; }
          continue;
       }
 
-      // 4. Securiser : SL au prix d'entree des +SecureAtR.
-      if(pr>=SecureAtR)
+      // 4. Des le premier petit gain : SL au prix d'entree + spread -> la position ne peut plus finir en perte.
+      if((BreakEvenMoney>0 && money>=BreakEvenMoney) || pr>=SecureAtR)
       {
-         double be=open+dir*r*0.1;
-         bool better=dir>0?(sl<=0 || be>sl):(sl<=0 || be<sl);
-         if(better && MathAbs(price-be)>StopsDistance(symbol)) MoveStop(ticket,symbol,be,tp,"position securisee");
+         double be=open+dir*(spread+2*point);
+         bool better=dir>0?(sl<=0 || be>sl+point):(sl<=0 || be<sl-point);
+         if(better && MathAbs(price-be)>StopsDistance(symbol)) MoveStop(ticket,symbol,be,tp,"position securisee "+gain+" (SL au prix d'entree)");
          continue;
       }
 
-      // 5. Position qui n'avance pas.
+      // 5. Position qui n'avance pas : on sort, en petit gain si possible.
       if(MaximumMinutesWithoutProgress>0 && TimeCurrent()-opened>=MaximumMinutesWithoutProgress*60 && pr<0.3)
-         ClosePosition(ticket,symbol,"pas de progression en "+IntegerToString(MaximumMinutesWithoutProgress)+" min",pr);
+         ClosePosition(ticket,symbol,"pas de progression en "+IntegerToString(MaximumMinutesWithoutProgress)+" min ("+gain+")",pr);
    }
 }
 
@@ -750,7 +771,7 @@ bool TryEntry(ScalpView &v,const bool can_trade)
 
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   string comment="Sera Scalping v1.03";
+   string comment="Sera Scalping v1.04";
    bool sent=dir>0?trade.Buy(volume,v.symbol,0,sl,tp,comment):trade.Sell(volume,v.symbol,0,sl,tp,comment);
    if(!sent){ v.reason="ordre refuse : "+trade.ResultRetcodeDescription(); Print("Sera Scalping: ordre refuse ",v.symbol," ",trade.ResultRetcodeDescription()); return false; }
    GlobalVariableSet(LastKey(v.symbol),(double)TimeCurrent());
@@ -958,7 +979,7 @@ void RenderDashboard(const bool can_trade,const string pause)
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
    string account=demo?"DEMO":"REEL";
-   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.03",amber,10);
+   PanelText(line++,"SERA EA SCALPING INTELLIGENT v1.04",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  scalping M1 : cloture + cassure"+(EnterIntraBar?"":" (cassure off)"),green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(pause!="") PanelText(line++,"BOT EN PAUSE  |  "+pause,red);
@@ -969,8 +990,8 @@ void RenderDashboard(const bool can_trade,const string pause)
              "  |  risque ouvert "+DoubleToString(risk,2)+" ("+DoubleToString(equity>0?risk/equity*100.0:0.0,1)+"% / max "+DoubleToString(MaximumTotalRiskPercent,0)+"%)",white);
    double day=g_day_pnl+FloatingPnl();
    string dayText=day>=0?"+":"";
-   PanelText(line++,"Jour : "+dayText+DoubleToString(day,2)+" (limite -"+DoubleToString(DailyLossLimitPercent,1)+"%)  |  pertes de suite "+
-             IntegerToString(g_consecutive_losses)+"/"+IntegerToString(MaximumConsecutiveLosses)+"  |  risque "+DoubleToString(RiskPercent,2)+"% par position"+
+   PanelText(line++,"Jour : "+dayText+DoubleToString(day,2)+" (limite -"+DoubleToString(DailyLossLimitPercent,1)+"%)  |  objectif +"+DoubleToString(TakeProfitMoney,2)+
+             " $ par position, SL a l'entree des +"+DoubleToString(BreakEvenMoney,2)+" $  |  pertes de suite "+IntegerToString(g_consecutive_losses)+"/"+IntegerToString(MaximumConsecutiveLosses)+
              (Netting()?"  |  compte netting : 1 position par symbole":""),grey);
 
    // Positions
@@ -994,7 +1015,8 @@ void RenderDashboard(const bool can_trade,const string pause)
       double pr=0;
       if(r>0 && SymbolInfoTick(sym,tick)) pr=(buy?tick.bid-op:op-tick.ask)/r;
       bool secured=sl>0 && (buy?sl>=op:sl<=op);
-      string state=secured?(pr>=TakeProfitR?"gain qui court (SL suiveur)":"securisee"):"en cours";
+      bool reached=pr>=TakeProfitR || (TakeProfitMoney>0 && pnl>=TakeProfitMoney);
+      string state=secured?(reached?"gain verrouille, il court":"securisee (plus de perte)"):"en cours";
       PanelText(line++,"  "+Pad(sym,27)+Pad(buy?"BUY":"SELL",6)+Pad(DoubleToString(PositionGetDouble(POSITION_VOLUME),2),8)+Pad(DoubleToString(op,digits),13)+
                 Pad(DoubleToString(sl,digits),13)+Pad((pnl>=0?"+":"")+DoubleToString(pnl,2),11)+Pad(DoubleToString(pr,2),7)+state,pnl>=0?blue:red);
       shown++;
@@ -1072,7 +1094,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(1,TimerSeconds));
-   Print("Sera EA Scalping Intelligent v1.03 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
+   Print("Sera EA Scalping Intelligent v1.04 : ",ArraySize(g_views)," symboles (Volatility / Forex / crypto), risque ",
          DoubleToString(RiskPercent,2),"% par position, ",MaximumPositionsPerSymbol," position(s) max par symbole");
    if(ArraySize(g_views)==0)
       Print("Sera Scalping: aucun symbole compatible. Ajoutez des symboles a la Market Watch ou renseignez SymbolsList.");
