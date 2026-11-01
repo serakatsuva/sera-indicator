@@ -208,8 +208,9 @@ def main() -> int:
         plus_sec = sections.get("BOUTON + (5 marches de plus)", "")
         lv = first["levels"]
         drawn = {m.group(1): (float(m.group(2)), float(m.group(3))) for m in re.finditer(r"^SIG (\w+) (\S+) (\S+)", plus_sec, re.M)}
-        ok = (abs(drawn.get("ENTRY", (0, 0))[0] - lv["entry"]) < 1e-6 and abs(drawn.get("SL", (0, 0))[0] - lv["sl"]) < 1e-6
-              and abs(drawn.get("TP3", (0, 0))[0] - lv["tp3"]) < 1e-6 and "RISK" in drawn and "REWARD" in drawn)
+        near = lambda a, b: abs(a - b) <= 1e-5 + 1e-9 * abs(b)   # the simulator prints prices with 5 decimals
+        ok = (near(drawn.get("ENTRY", (0, 0))[0], lv["entry"]) and near(drawn.get("SL", (0, 0))[0], lv["sl"])
+              and near(drawn.get("TP3", (0, 0))[0], lv["tp3"]) and "RISK" in drawn and "REWARD" in drawn)
         if not ok:
             errors.append(f"the opened chart does not show entry / SL / TP zones at the signal levels ({drawn})")
     c4014 = sections.get("WEBREQUEST NON AUTORISE (erreur 4014)", "")
