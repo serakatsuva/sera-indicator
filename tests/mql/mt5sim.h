@@ -11,7 +11,7 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
-typedef std::string string; typedef long datetime; typedef unsigned long ulong; typedef unsigned int uint; typedef unsigned short ushort;
+typedef std::string string; typedef long datetime; typedef unsigned long ulong; typedef unsigned int uint; typedef unsigned short ushort; typedef unsigned char uchar;
 typedef unsigned int color;
 #define input
 enum ENUM_TIMEFRAMES{PERIOD_M1=60,PERIOD_M5=300,PERIOD_M15=900,PERIOD_H1=3600,PERIOD_H4=14400,PERIOD_D1=86400};
@@ -160,6 +160,21 @@ bool EventSetTimer(int){ return true; } void EventKillTimer(){}
 int g_last_error=0; int GetLastError(){ return g_last_error; } void ResetLastError(){ g_last_error=0; }
 double NormalizeDouble(double v,int d){ double f=std::pow(10.0,d); return std::round(v*f)/f; }
 int WebRequest(const string&,const string&,const string&,const string&,int,const std::vector<char>&,int,std::vector<char>&,string&){ g_last_error=4014; return -1; }
+// API GitHub simulee : GET -> 404 (fichier absent), PUT -> 201 ; le contenu envoye est garde dans SIM_PUBLISHED.
+string SIM_PUBLISHED, SIM_PUBLISH_HEADERS; int SIM_PUBLISH_CALLS=0;
+int WebRequest(const string& method,const string& url,const string& headers,int,const std::vector<char>& data,std::vector<char>& result,string&){
+  SIM_LOG.push_back("HTTP "+method+" "+url); SIM_PUBLISH_HEADERS=headers;
+  if(method=="GET"){ result.clear(); return 404; }
+  SIM_PUBLISHED=string(data.begin(),data.end()); SIM_PUBLISH_CALLS++;
+  string r="{\"content\":{\"name\":\"weltrade-signals.json\",\"sha\":\"abc123\"}}"; result.assign(r.begin(),r.end()); return 201; }
+enum ENUM_CRYPT_METHOD{CRYPT_BASE64};
+int StringToCharArray(const string& s,std::vector<uchar>& a,int,int,int){ a.assign(s.begin(),s.end()); a.push_back(0); return (int)a.size(); }
+int CryptEncode(ENUM_CRYPT_METHOD,const std::vector<uchar>& d,const std::vector<uchar>&,std::vector<uchar>& out){
+  static const char* T="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; out.clear(); size_t i=0;
+  for(;i+2<d.size();i+=3){ unsigned v=(d[i]<<16)|(d[i+1]<<8)|d[i+2]; out.push_back(T[v>>18]); out.push_back(T[(v>>12)&63]); out.push_back(T[(v>>6)&63]); out.push_back(T[v&63]); }
+  if(i<d.size()){ unsigned v=d[i]<<16; if(i+1<d.size()) v|=d[i+1]<<8; out.push_back(T[v>>18]); out.push_back(T[(v>>12)&63]); out.push_back(i+1<d.size()?T[(v>>6)&63]:'='); out.push_back('='); }
+  return (int)out.size(); }
+string CharArrayToString(const std::vector<uchar>& a,int,int,int){ string s(a.begin(),a.end()); auto z=s.find('\0'); return z==string::npos?s:s.substr(0,z); }
 
 bool ObjectCreate(long,const string& n,ENUM_OBJECT t,int,datetime t1,double p1,datetime t2=0,double p2=0){ SIM_OBJ[n].type=t; SIM_OBJ[n].order=++SIM_OBJ_SEQ; SIM_OBJ[n].prices[0]=p1; SIM_OBJ[n].prices[1]=p2; return true; }
 bool ObjectSetInteger(long,const string& n,ENUM_OBJECT_PROPERTY_INTEGER p,int idx,long v){ SIM_OBJ[n].ints[p*10+idx]=v; return true; }

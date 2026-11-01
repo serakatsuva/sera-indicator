@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
   <link rel="stylesheet" href="./chart.css?v=chart-20261021">
+  <link rel="stylesheet" href="./weltrade.css?v=weltrade-20261101">
 </head>
 <body>
   <div class="welcome-overlay" id="welcomePopup" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -58,6 +59,10 @@
           </div>
         </div>
       </div>
+      <div class="voice-controls">
+        <button class="voice-toggle" id="voiceToggle" type="button" aria-pressed="false">🔈 Voix</button>
+        <button class="voice-read" id="voiceReadAll" type="button" aria-label="Lire les signaux en cours">Lire</button>
+      </div>
       <div class="status-row" aria-live="polite">
         <span class="status-pill" id="marketStatus"><i></i>Deriv : connexion</span>
         <span class="status-pill" id="aiStatus"><i></i>OpenAI : vérification</span>
@@ -70,6 +75,7 @@
       <span><b>Deriv Live + Forex indicatif</b> · Day M15/H1 · Swing haute conviction H1/H4/D1</span>
       <span>Décision : <b>BUY / SELL / WAIT</b></span>
       <a href="#scanner">Voir les signaux</a>
+      <a href="#weltrade">Weltrade</a>
     </section>
 
     <section class="execution-panel panel compact-execution" id="mt5Execution">
@@ -81,7 +87,7 @@
         </div>
         <div class="compact-exec-links">
           <a class="text-link" href="./mt5/Sera_EA_Swing_Intelligent_Deriv_v2.63.mq5" download>Deriv v2.63</a>
-          <a class="text-link" href="./mt5/Sera_EA_Swing_Intelligent_Weltrade_v2.10.mq5" download>Weltrade v2.10</a>
+          <a class="text-link" href="./mt5/Sera_EA_Swing_Intelligent_Weltrade_v2.20.mq5" download>Weltrade v2.20</a>
           <a class="text-link" href="./mt5/Sera_EA_Scalping_Intelligent_v1.08.mq5" download>Scalping v1.08</a>
           <button class="text-link" id="showMt5Setup" type="button">Installation</button>
         </div>
@@ -157,6 +163,20 @@
 
       <div id="notice" class="notice loading">Chargement des analyses multi-marchés…</div>
       <div id="results" class="results-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="scanner-panel panel weltrade-panel" id="weltrade">
+      <div class="wt-heading">
+        <div><span class="eyebrow cyan">Weltrade · indices SyntX</span><h2>Analyses Weltrade</h2></div>
+        <div class="wt-actions" role="tablist" aria-label="Filtre Weltrade">
+          <button class="wt-tab active" data-wt-filter="all" type="button" role="tab" aria-selected="true">Tous</button>
+          <button class="wt-tab" data-wt-filter="signals" type="button" role="tab" aria-selected="false">Signaux</button>
+          <button class="wt-tab" id="wtRefresh" type="button">↻</button>
+        </div>
+      </div>
+      <div class="wt-meta-strip" id="wtMeta"></div>
+      <div id="wtNotice" class="notice loading">Chargement des analyses Weltrade…</div>
+      <div id="wtResults" class="wt-grid" aria-live="polite"></div>
     </section>
 
     <div class="signal-modal" id="signalModal" hidden aria-hidden="true">
@@ -264,6 +284,7 @@
           </div>
         </div>
         <div class="audit-list"><h3>Contrôles du setup</h3><div id="checks"></div></div>
+        <button class="speak-selected" id="speakSelected" type="button">🔊 Lire cette analyse</button>
         <div class="signal-actions" id="signalActions" hidden><button id="copySignal" type="button">Copier le signal</button><button id="shareSignal" type="button">Partager</button></div>
         <p class="manual-note">Sera EA Swing Intelligent v1.80 est configuré pour l’exécution automatique sur le compte MT5 réel connecté. Sans EA actif, aucun ordre n’est envoyé.</p>
       </aside>
@@ -278,5 +299,7 @@
   <script src="./vendor/lightweight-charts-4.1.3.standalone.js" defer></script>
   <script src="./chart-engine.js?v=forex-live-20261021" defer></script>
   <script src="./app.js?v=forex-live-20261021" defer></script>
+  <script src="./voice.js?v=voice-20261101" defer></script>
+  <script src="./weltrade.js?v=weltrade-20261101" defer></script>
 </body>
 </html>

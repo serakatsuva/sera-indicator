@@ -87,6 +87,12 @@ int main(int argc,char** argv){
   SIM_NOW+=30; OnTimer(); dump("LIMITE PENDANT LA CONFIRMATION");
   for(int i=0;i<ArraySize(g_symbols);i++) if(g_symbols[i]=="BreakX 1200"){ g_decisions[i].verdict="ATTENDRE"; g_decisions[i].entrySide="BUY"; }
   SIM_NOW+=30; OnTimer(); dump("ANNULATION AVANT EXECUTION");
+  // App Sera : publication des analyses (onglet Weltrade)
+  PublishToApp=true; GitHubToken="test-token";
+  SIM_NOW+=30; OnTimer(); dump("PUBLICATION APP");
+  printf("=== PUBLISHED ===\n%s\n=== HEADERS ===\n%s\n",SIM_PUBLISHED.c_str(),SIM_PUBLISH_HEADERS.c_str());
+  string first=SIM_PUBLISHED; SIM_NOW+=310; OnTimer();
+  printf("=== SECOND PUBLISH ===\n%s\ncalls=%d\n",SIM_PUBLISHED.c_str(),SIM_PUBLISH_CALLS);
   printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
   return 0;
 }
@@ -173,6 +179,29 @@ def main() -> int:
     folded_sec = sections.get("BOUTON - (liste repliee)", "")
     if not all(f"SIG {k} " in folded_sec for k in ("ENTRY", "SL", "TP1", "TP3", "RISK", "REWARD")):
         errors.append("the opened chart does not show the entry / SL / TP zones")
+    import base64, json as _json
+    pub = sections.get("PUBLISHED", "").strip()
+    try:
+        req = _json.loads(pub)
+        app = _json.loads(base64.b64decode(req["content"]).decode("utf-8"))
+        rows = {m["symbol"]: m for m in app["markets"]}
+        if "[skip ci]" not in req["message"] or req.get("branch") != "main" or "sha" in req:
+            errors.append("first publish: wrong commit message/branch, or a sha sent for a new file")
+        if rows.get("GainX 800", {}).get("verdict") != "SELL" or rows["GainX 800"]["entry"] <= 0 or rows["GainX 800"]["tp3"] <= 0:
+            errors.append(f"published GainX 800 signal is wrong: {rows.get('GainX 800')}")
+        if rows.get("PainX 800", {}).get("verdict") != "BUY" or not rows["PainX 800"]["since"].endswith("Z"):
+            errors.append("published PainX 800 signal missing its BUY / signal time")
+        if not all(len(m["closes"]) == 48 for m in app["markets"]) or not app["updated_at"].endswith("Z"):
+            errors.append("published analyses must carry 48 H1 closes per index and an UTC timestamp")
+    except Exception as exc:   # noqa: BLE001
+        errors.append(f"the EA did not publish valid JSON to GitHub: {exc} :: {pub[:200]}")
+    if "Authorization: Bearer test-token" not in sections.get("HEADERS", ""):
+        errors.append("GitHub token not sent in the Authorization header")
+    second = sections.get("SECOND PUBLISH", "")
+    if '"sha":"abc123"' not in second or "calls=2" not in second:
+        errors.append("second publish (5 min later) must update the file with its sha")
+    if "App Sera (onglet Weltrade) : analyses envoyees il y a 0 min" not in sections.get("PUBLICATION APP", ""):
+        errors.append("dashboard does not show the app publishing status")
     if "ZORDER BAD" in text:
         errors.append("dashboard background created after texts/bars: it would hide them")
     if errors:

@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "2.10"
+#property version   "2.20"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -29,6 +29,11 @@ input bool AllowRealAccount=true;
 input bool EnableTrendWatch=true;            // alerte a chaque nouveau signal confirme
 input bool EnableTerminalAlert=false;
 input bool EnablePushNotification=false;     // notifications sur l'appli MT5 du telephone (MetaQuotes ID)
+// --- App Sera (v2.20) : onglet Weltrade de https://serakatsuva.github.io/sera-indicator/
+input bool PublishToApp=false;               // envoyer les analyses Weltrade a l'app (onglet Weltrade)
+input string GitHubToken="";                 // cle GitHub fine-grained : ce depot seulement, Contents = Read and write. Ne la partagez jamais.
+input string GitHubRepository="serakatsuva/sera-indicator";
+input int PublishEveryMinutes=5;
 input bool DynamicFinalTarget=true;          // TP4 au lieu de TP3 si score >= 88
 input bool EnableSmartPendingLimits=true;
 // --- Entree rapide : signal confirme (2 bougies H1 deja exigees) et tres confiant, prix pas etendu -> au marche sans attendre EXECUTE_NOW
@@ -1144,6 +1149,10 @@ string   g_open_symbols[];         // bouton "Ouvrir" -> symbole et unite de tem
 ENUM_TIMEFRAMES g_open_tfs[];
 int      g_open_rows[];
 string   g_trade_block="";
+datetime g_last_publish=0;         // App Sera : publication des analyses (v2.20)
+datetime g_last_publish_ok=0;
+string   g_publish_status="";
+string   g_publish_sha="";
 datetime g_last_analysis=0;
 bool     g_dash_can_trade=false;
 string   g_dash_mode="";
@@ -1326,7 +1335,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.10"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.10");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.20"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.20");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -1909,7 +1918,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.10",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.20",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -1931,6 +1940,12 @@ void RenderDashboard(const bool can_trade,const string mode_label)
       if(g_last_analysis>0) at=(t.hour<10?"0":"")+IntegerToString(t.hour)+":"+(t.min<10?"0":"")+IntegerToString(t.min);
       PanelText(line++,"Analyse dans MT5 (sans internet) : "+IntegerToString(valid)+"/"+IntegerToString(n)+" indices  |  "+IntegerToString(setups)+
                 " tendances alignees  |  "+IntegerToString(signals)+" signaux  |  derniere bougie H1 "+at,valid>0?green:amber);
+   }
+   if(PublishToApp)
+   {
+      if(g_publish_status!="") PanelText(line++,"App Sera (onglet Weltrade) : "+g_publish_status,amber);
+      else if(g_last_publish_ok>0) PanelText(line++,"App Sera (onglet Weltrade) : analyses envoyees il y a "+IntegerToString((int)((TimeCurrent()-g_last_publish_ok)/60))+" min",green);
+      else PanelText(line++,"App Sera (onglet Weltrade) : premier envoi en cours...",grey);
    }
    int others=OtherSeraInstances();
    if(others>0) PanelText(line++,"ATTENTION : "+IntegerToString(others)+" autre(s) EA Sera Weltrade actif(s) sur ce compte -> n'en garder qu'un seul",red);
@@ -2000,6 +2015,143 @@ void ProcessDecision(const int i,const bool can_trade,bool &entered)
    else g_rows[i].decision="EN ATTENTE : "+g_decisions[i].state;
 }
 
+// ===================================================================================
+//  APP SERA (v2.20) : publication des analyses Weltrade dans data/weltrade-signals.json
+//  (API GitHub, autoriser https://api.github.com dans WebRequest)
+// ===================================================================================
+
+string JsonText(const string text)
+{
+   string out=text;
+   StringReplace(out,"\\","\\\\");
+   StringReplace(out,"\"","\\\"");
+   StringReplace(out,"\n"," ");
+   return "\""+out+"\"";
+}
+
+string IsoUtc(const datetime t)
+{
+   MqlDateTime d;
+   TimeToStruct(t,d);
+   return IntegerToString(d.year)+"-"+(d.mon<10?"0":"")+IntegerToString(d.mon)+"-"+(d.day<10?"0":"")+IntegerToString(d.day)+"T"+
+          (d.hour<10?"0":"")+IntegerToString(d.hour)+":"+(d.min<10?"0":"")+IntegerToString(d.min)+":"+(d.sec<10?"0":"")+IntegerToString(d.sec)+"Z";
+}
+
+// Valeur du premier champ "sha" d'une reponse GitHub.
+string ShaValue(const string body)
+{
+   int at=StringFind(body,"\"sha\"");
+   if(at<0) return "";
+   int q1=StringFind(body,"\"",StringFind(body,":",at)+1);
+   int q2=q1>=0?StringFind(body,"\"",q1+1):-1;
+   return (q1>=0 && q2>q1)?StringSubstr(body,q1+1,q2-q1-1):"";
+}
+
+// Heure serveur MT5 -> UTC (TimeGMT - TimeCurrent = decalage du serveur).
+datetime ServerToUtc(const datetime t){ return t<=0?0:t+(TimeGMT()-TimeCurrent()); }
+
+string BuildAppJson()
+{
+   bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
+   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.20\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
+               ",\"account\":"+JsonText(demo?"DEMO":"REEL")+",\"markets\":[";
+   int written=0;
+   for(int i=0;i<ArraySize(g_symbols);i++)
+   {
+      if(!g_decisions[i].valid) continue;
+      SwxDecision d=g_decisions[i];
+      int digits=(int)SymbolInfoInteger(d.symbol,SYMBOL_DIGITS);
+      double closes[];
+      ArraySetAsSeries(closes,false);
+      int nc=CopyClose(d.symbol,PERIOD_H1,1,48,closes);
+      string series="";
+      for(int k=0;k<nc;k++){ if(k>0) series+=","; series+=DoubleToString(closes[k],digits); }
+      bool signal=IsSignal(d.verdict);
+      string since=signal && i<ArraySize(g_rows) && g_rows[i].since>0?IsoUtc(ServerToUtc(g_rows[i].since)):"";
+      string decision=i<ArraySize(g_rows)?g_rows[i].decision:"";
+      if(written>0) json+=",";
+      json+="{\"symbol\":"+JsonText(d.symbol)+",\"family\":"+JsonText(d.family)+",\"verdict\":"+JsonText(d.verdict)+
+            ",\"bias\":"+JsonText(d.side)+",\"state\":"+JsonText(d.state)+",\"setup\":"+JsonText(d.setupType)+
+            ",\"score\":"+DoubleToString(d.score,0)+",\"consensus\":"+DoubleToString(d.consensus*100.0,0)+",\"conditions\":"+IntegerToString(d.conditionPct)+
+            ",\"confidence\":"+DoubleToString(d.confidence,0)+",\"exec_score\":"+DoubleToString(d.execScore,0)+",\"cycles\":"+IntegerToString(d.cycles)+
+            ",\"h1\":"+JsonText(d.entrySide)+",\"h4\":"+JsonText(d.confSide)+",\"d1\":"+JsonText(d.dailySide)+
+            ",\"digits\":"+IntegerToString(digits)+
+            ",\"entry\":"+DoubleToString(signal?d.entry:0,digits)+",\"sl\":"+DoubleToString(signal?d.sl:0,digits)+
+            ",\"tp1\":"+DoubleToString(signal?d.tp1:0,digits)+",\"tp2\":"+DoubleToString(signal?d.tp2:0,digits)+",\"tp3\":"+DoubleToString(signal?d.tp3:0,digits)+
+            ",\"since\":"+JsonText(since)+",\"decision\":"+JsonText(decision)+",\"closes\":["+series+"]}";
+      written++;
+   }
+   return json+"]}";
+}
+
+string GitHubHeaders()
+{
+   return "Authorization: Bearer "+GitHubToken+"\r\nAccept: application/vnd.github+json\r\nX-GitHub-Api-Version: 2022-11-28\r\nUser-Agent: Sera-EA-Weltrade\r\nContent-Type: application/json\r\n";
+}
+
+string PublishErrorText(const int code,const int error)
+{
+   if(code==-1 && error==4014) return "WebRequest bloque : ajoutez https://api.github.com dans Outils > Options > Expert Advisors";
+   if(code==401) return "cle GitHub invalide ou expiree (HTTP 401)";
+   if(code==403 || code==404) return "cle GitHub sans droit d'ecriture sur "+GitHubRepository+" (HTTP "+IntegerToString(code)+")";
+   if(code==409 || code==422) return "fichier modifie entre-temps (HTTP "+IntegerToString(code)+") : nouvel essai";
+   return "erreur HTTP "+IntegerToString(code)+(code==-1?" (erreur "+IntegerToString(error)+")":"");
+}
+
+// Envoie les analyses a GitHub : data/weltrade-signals.json (lu par l'app). Toutes les PublishEveryMinutes.
+void PublishToGitHub()
+{
+   if(!PublishToApp) return;
+   if(GitHubToken==""){ g_publish_status="activez la publication : renseignez GitHubToken"; return; }
+   if(g_last_publish>0 && TimeCurrent()-g_last_publish<MathMax(1,PublishEveryMinutes)*60) return;
+   g_last_publish=TimeCurrent();
+   string url="https://api.github.com/repos/"+GitHubRepository+"/contents/data/weltrade-signals.json";
+   char empty[],result[];
+   string headers="";
+   int code=0,error=0;
+   if(g_publish_sha=="")
+   {
+      ResetLastError();
+      code=WebRequest("GET",url+"?ref=main",GitHubHeaders(),15000,empty,result,headers);
+      error=GetLastError();
+      if(code==200)
+      {
+         string body=CharArrayToString(result,0,WHOLE_ARRAY,CP_UTF8);
+         g_publish_sha=ShaValue(body);
+      }
+      else if(code!=404){ g_publish_status=PublishErrorText(code,error); Print("Sera Weltrade app: ",g_publish_status); return; }
+   }
+   string json=BuildAppJson();
+   uchar raw[],key[],b64[];
+   int len=StringToCharArray(json,raw,0,WHOLE_ARRAY,CP_UTF8);
+   if(len>0) ArrayResize(raw,len-1);                       // sans le zero final
+   if(CryptEncode(CRYPT_BASE64,raw,key,b64)<=0){ g_publish_status="encodage impossible"; return; }
+   string content=CharArrayToString(b64,0,WHOLE_ARRAY,CP_UTF8);
+   StringReplace(content,"\r",""); StringReplace(content,"\n","");
+   string request="{\"message\":\"Weltrade : analyses MT5 [skip ci]\",\"branch\":\"main\",\"content\":\""+content+"\""+
+                  (g_publish_sha!=""?",\"sha\":\""+g_publish_sha+"\"":"")+"}";
+   uchar body8[];
+   int blen=StringToCharArray(request,body8,0,WHOLE_ARRAY,CP_UTF8);
+   char data[];
+   ArrayResize(data,MathMax(0,blen-1));
+   for(int i=0;i<blen-1;i++) data[i]=(char)body8[i];
+   ResetLastError();
+   code=WebRequest("PUT",url,GitHubHeaders(),20000,data,result,headers);
+   error=GetLastError();
+   if(code==200 || code==201)
+   {
+      string body=CharArrayToString(result,0,WHOLE_ARRAY,CP_UTF8);
+      int at=StringFind(body,"\"content\"");
+      g_publish_sha=at>=0?ShaValue(StringSubstr(body,at)):"";
+      g_last_publish_ok=TimeCurrent();
+      g_publish_status="";
+      return;
+   }
+   if(code==409 || code==422){ g_publish_sha=""; g_last_publish=0; }   // relire le sha et renvoyer au prochain cycle
+   g_publish_status=PublishErrorText(code,error);
+   Print("Sera Weltrade app: ",g_publish_status);
+}
+
 void ScanAndTrade()
 {
    if(TimeCurrent()-g_lastSymbolRefresh>3600 || ArraySize(g_symbols)==0) RefreshSymbols();
@@ -2036,6 +2188,7 @@ void ScanAndTrade()
       ProcessDecision(i,can_trade,entered);
    }
    g_dash_can_trade=can_trade; g_dash_mode=mode_label;
+   PublishToGitHub();
    RenderDashboard(can_trade,mode_label);
 }
 
@@ -2044,7 +2197,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v2.10: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v2.20: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)

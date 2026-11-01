@@ -2,7 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <climits>
-typedef std::string string; typedef long datetime; typedef unsigned long ulong; typedef unsigned int uint; typedef unsigned short ushort;
+typedef std::string string; typedef long datetime; typedef unsigned long ulong; typedef unsigned int uint; typedef unsigned short ushort; typedef unsigned char uchar;
 #define input
 enum ENUM_TIMEFRAMES{PERIOD_M1,PERIOD_M5,PERIOD_M15,PERIOD_H1,PERIOD_H4,PERIOD_D1};
 enum ENUM_ORDER_TYPE{ORDER_TYPE_BUY,ORDER_TYPE_SELL,ORDER_TYPE_BUY_LIMIT,ORDER_TYPE_SELL_LIMIT};
@@ -45,6 +45,9 @@ int iMA(const string&,ENUM_TIMEFRAMES,int,int,ENUM_MA_METHOD,ENUM_APPLIED_PRICE)
 int iATR(const string&,ENUM_TIMEFRAMES,int); int iADX(const string&,ENUM_TIMEFRAMES,int); int iMACD(const string&,ENUM_TIMEFRAMES,int,int,int,ENUM_APPLIED_PRICE);
 int CopyBuffer(int,int,int,int,std::vector<double>&); bool IndicatorRelease(int);
 int WebRequest(const string&,const string&,const string&,const string&,int,const std::vector<char>&,int,std::vector<char>&,string&);
+int WebRequest(const string&,const string&,const string&,int,const std::vector<char>&,std::vector<char>&,string&);
+enum ENUM_CRYPT_METHOD{CRYPT_BASE64}; int StringToCharArray(const string&,std::vector<uchar>&,int,int,int); int CryptEncode(ENUM_CRYPT_METHOD,const std::vector<uchar>&,const std::vector<uchar>&,std::vector<uchar>&);
+string CharArrayToString(const std::vector<uchar>&,int,int,int);
 extern string _Symbol; const long ACCOUNT_TRADE_MODE_REAL=2;
 // Forward use already present in the original v1.80 code (MQL5 allows it, C++ needs prototypes):
 double StoredLevel(const string&,const string&); void StoreLevel(const string&,const string&,const double); double AdaptiveRiskPercent(); double SafeVolume(const string&,const double,const double);
