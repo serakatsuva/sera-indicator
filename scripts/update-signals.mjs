@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
@@ -1131,4 +1132,8 @@ async function main(){
   console.log(`Wrote ${markets.length} analyses; ${trendChanges} trend change(s), ${trendFlips} flip(s); ${payload.confirmed_signals} confirmed signals.`);
 }
 
-main().catch(error=>{console.error(error instanceof Error?error.message:error);process.exit(1);});
+// Importable by the backtester (scripts/backtest.mjs): run only when executed directly.
+export {inspectCandles,technicalSetup,attachTrendMemory,buildFamilyContexts,attachFamilyContext,autonomousDecision,finalize,
+  buildLevels,aggregateCandles,onlyClosedCandles,MODES,marketFamilyFromName,marketSpikeBias};
+if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href)
+  main().catch(error=>{console.error(error instanceof Error?error.message:error);process.exit(1);});

@@ -11,7 +11,7 @@ on:
         default: '6'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   fetch:
@@ -24,8 +24,14 @@ jobs:
           node-version: '24'
       - name: Download Deriv history
         run: node scripts/fetch-history.mjs --pages-h1 "${{ inputs.pages_h1 }}" --pages-m15 "${{ inputs.pages_m15 }}"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: deriv-history
-          path: research/deriv-history.json.gz
-          retention-days: 30
+      - name: Publish on the research-data branch (kept out of main and of the web app)
+        run: |
+          cp research/deriv-history.json.gz /tmp/deriv-history.json.gz
+          git config user.name "sera-research-bot"
+          git config user.email "sera-research-bot@users.noreply.github.com"
+          git checkout --orphan research-data
+          git rm -rfq .
+          cp /tmp/deriv-history.json.gz deriv-history.json.gz
+          git add deriv-history.json.gz
+          git commit -qm "Deriv history for the backtester [skip ci]"
+          git push -f origin research-data
