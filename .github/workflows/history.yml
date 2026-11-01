@@ -9,6 +9,9 @@ on:
       pages_m15:
         description: 'Pages de 1000 bougies M15'
         default: '6'
+      set:
+        description: 'synthetic (indices synthetiques) ou real (Forex, metaux, indices, crypto)'
+        default: 'synthetic'
 
 permissions:
   contents: write
@@ -23,15 +26,16 @@ jobs:
         with:
           node-version: '24'
       - name: Download Deriv history
-        run: node scripts/fetch-history.mjs --pages-h1 "${{ inputs.pages_h1 }}" --pages-m15 "${{ inputs.pages_m15 }}"
+        run: node scripts/fetch-history.mjs --pages-h1 "${{ inputs.pages_h1 }}" --pages-m15 "${{ inputs.pages_m15 }}" --set "${{ inputs.set }}"
       - name: Publish on the research-data branch (kept out of main and of the web app)
         run: |
-          cp research/deriv-history.json.gz /tmp/deriv-history.json.gz
+          FILE=$(ls research/deriv-*history.json.gz | head -1); NAME=$(basename "$FILE")
+          cp "$FILE" /tmp/$NAME
           git config user.name "sera-research-bot"
           git config user.email "sera-research-bot@users.noreply.github.com"
-          git checkout --orphan research-data
-          git rm -rfq .
-          cp /tmp/deriv-history.json.gz deriv-history.json.gz
-          git add deriv-history.json.gz
-          git commit -qm "Deriv history for the backtester [skip ci]"
+          # keep the other data set already on the branch (synthetic / real)
+          if git fetch --depth 1 origin research-data; then git checkout -f -B research-data FETCH_HEAD; else git checkout --orphan research-data; git rm -rfq .; fi
+          cp /tmp/$NAME $NAME
+          git add $NAME
+          git commit -qm "Deriv history ($NAME) for the backtester [skip ci]"
           git push -f origin research-data

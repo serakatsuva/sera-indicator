@@ -7,6 +7,7 @@ import {writeFileSync,mkdirSync} from 'node:fs';
 const WS='wss://api.derivws.com/trading/v1/options/ws/public?app_id=1089';
 const arg=(k,d)=>{const i=process.argv.indexOf(k);return i>0?Number(process.argv[i+1]):d;};
 const PAGES={H1:arg('--pages-h1',3),M15:arg('--pages-m15',2),D1:1};
+const SET=process.argv.includes('--set')?process.argv[process.argv.indexOf('--set')+1]:'synthetic';   // synthetic | real
 const GRAN={M15:900,H1:3600,D1:86400};
 
 function synthetic(item){
@@ -47,18 +48,21 @@ async function candles(c,symbol,tf){
 
 const c=client();
 const act=await c.call({active_symbols:'brief'});
-const markets=(act.active_symbols||[]).filter(synthetic).map(i=>({symbol:String(i.underlying_symbol||i.symbol),name:String(i.underlying_symbol_name||i.display_name||i.symbol)}))
+// "real": Forex, metals, stock indices, crypto offered by Deriv (everything that is not a synthetic index).
+const real=i=>/^(frx|cry|otc_|wld)/i.test(String(i.underlying_symbol||i.symbol||''))&&!synthetic(i);
+const markets=(act.active_symbols||[]).filter(SET==='real'?real:synthetic).map(i=>({symbol:String(i.underlying_symbol||i.symbol),name:String(i.underlying_symbol_name||i.display_name||i.symbol)}))
   .filter((m,i,a)=>a.findIndex(x=>x.symbol===m.symbol)===i);
 console.log(`${markets.length} synthetic markets`);
-const out={fetched_at:new Date().toISOString(),format:'[epoch,open,high,low,close]',markets:[]};
+const out={fetched_at:new Date().toISOString(),set:SET,format:'[epoch,open,high,low,close]',markets:[]};
 for(const m of markets){
-  const row={...m};
+  const row={...m,market:String(act.active_symbols.find(i=>String(i.underlying_symbol||i.symbol)===m.symbol)?.market||'')};
   for(const tf of ['H1','M15','D1']){row[tf]=await candles(c,m.symbol,tf);}
   console.log(m.name,'H1',row.H1.length,'M15',row.M15.length,'D1',row.D1.length);
   out.markets.push(row);
 }
 c.close();
 mkdirSync('research',{recursive:true});
-writeFileSync('research/deriv-history.json.gz',gzipSync(JSON.stringify(out)));
-console.log('saved research/deriv-history.json.gz');
+const FILE=SET==='real'?'research/deriv-real-history.json.gz':'research/deriv-history.json.gz';
+writeFileSync(FILE,gzipSync(JSON.stringify(out)));
+console.log('saved '+FILE);
 process.exit(0);
