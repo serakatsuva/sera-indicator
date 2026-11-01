@@ -18,7 +18,7 @@
   }
 
   function groupTile(key,g){
-    const a=g.all||{},t=g.test||{};
+    const a=g.all||{},t=g.test||{},pr=stats?.precision?.groups?.[key]?.all;
     return `<article class="pb-tile ${key}" data-pb-group="${esc(key)}">
       <h3>${esc(g.label)}</h3>
       <div class="pb-big">${pct(a.tp1_rate)}<small>des trades atteignent TP1</small></div>
@@ -28,6 +28,7 @@
         <li><b>${esc(a.trades)}</b> trades · <b>${esc(a.positive_months)}/${esc(a.months)}</b> mois gagnants</li>
         <li>Hors échantillon (30 % les plus récents) : TP1 <b>${pct(t.tp1_rate)}</b>, ${rr(t.expectancy_r)}</li>
       </ul>
+      ${pr?`<div class="pb-precision" data-pb-precision="${esc(key)}"><b>Mode précision SMC</b> (réglage par défaut des EA) : TP1 <b>${pct(pr.tp1_rate)}</b> · perdants ${pct(pr.losing_rate)} · ${rr(pr.expectancy_r)} / trade · ${esc(pr.trades)} trades</div>`:""}
     </article>`;
   }
 
@@ -42,6 +43,7 @@
         <div><small>TP2</small><strong>${price(lv.tp2)}</strong></div>
         <div><small>TP3</small><strong>${price(lv.tp3)}</strong></div>
       </div>
+      <div class="pb-sweep ${m.liquidity_sweep?"ok":"no"}">${m.liquidity_sweep?"✓ Balayage de liquidité (SMC) : pris par les EA en mode précision":"Sans balayage de liquidité : ignoré par les EA en mode précision"}</div>
       <div class="wt-meta"><span>Mesuré sur cet indice : TP1 ${pct(me.tp1_rate)}</span><span>${rr(me.expectancy_r)} / trade</span><span>RSI ${esc(m.rsi)}</span></div>
       <button class="wt-speak" type="button" data-pb-speak="${esc(m.market)}">🔊 Lire</button>
     </article>`;

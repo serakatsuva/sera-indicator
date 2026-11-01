@@ -6,7 +6,7 @@ const signals = {
   updated_at: new Date().toISOString(), strategy: 'Sera Drift Playbook', signals: 1,
   markets: [
     { id: 'BOOM1000:drift', market: 'Boom 1000 Index', symbol: 'BOOM1000', mode: 'drift', label: 'Boom / Crash · GainX / PainX',
-      final_verdict: 'SELL', final_confidence: 77, rsi: 59.8,
+      final_verdict: 'SELL', final_confidence: 77, rsi: 59.8, liquidity_sweep: 1,
       levels: { entry: 15365.0, sl: 15413.09, tp1: 15350.58, tp2: 15333.75, tp3: 15316.92, tp4: 15314.51, tp5: 15312.11 },
       measured: { tp1_rate: 77.4, expectancy_r: 0.069 } },
     { id: 'CRASH500:drift', market: 'Crash 500 Index', symbol: 'CRASH500', mode: 'drift', final_verdict: 'ATTENDRE', rsi: 52 }
@@ -29,6 +29,8 @@ test('measured strategy panel shows the real measured rates, not promises', asyn
   await expect(page.locator('[data-pb-group="spike"]')).toContainText('trades perdants');
   await expect(page.locator('#pbBaseline')).toContainText('Moteur Swing');
   await expect(page.locator('#pbPeriod')).toContainText(stats.period.from);
+  const prec = stats.precision.groups.bullbear.all;
+  await expect(page.locator('[data-pb-precision="bullbear"]')).toContainText(String(prec.tp1_rate).replace('.', ','));
 });
 
 test('current drift signals are listed with their levels', async ({ page }) => {
@@ -37,6 +39,7 @@ test('current drift signals are listed with their levels', async ({ page }) => {
   const card = page.locator('[data-pb-market="Boom 1000 Index"]');
   await expect(card.locator('.wt-signal')).toHaveText('SELL');
   await expect(card).toContainText('TP1 77,4');
+  await expect(card.locator('.pb-sweep.ok')).toContainText('Balayage de liquidité');
   await expect(page.locator('[data-pb-market="Crash 500 Index"]')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth) + 1);
 });

@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "2.52"
+#property version   "2.53"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -14,6 +14,7 @@ input bool TradeFlipX=false;                 // FlipX : marche sans tendance (50
 input bool TradeProgressionX=false;          // PlusX / FiboX / QuadX : progressions mathematiques
 input int MaximumScannedSymbols=60;
 input bool TradeDriftPlaybook=true;          // v2.50 : strategie "sens de la derive" (PainX BUY, GainX SELL, SwitchX/BreakX/TrendX selon le regime), mesuree sur Boom/Crash
+input bool DriftRequireLiquiditySweep=true;  // mode precision : signaux "derive" seulement apres un balayage de liquidite SMC (TP1 96 % Bull/Bear, 80 % Boom/Crash mesures)
 input bool AnalyseAllFamiliesForApp=true;    // analyser aussi FlipX / PlusX / FiboX / QuadX pour l'app (analyse seule : seules les familles activees ci-dessus sont tradees)
 input int AnalysisBars=1000;                 // bougies cloturees analysees par unite de temps (1000 = EMA200 exacte)
 input bool ShowDashboard=true;              // tableau de bord sur le graphique
@@ -571,7 +572,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Weltrade v2.52";
+string g_email_ea="Sera EA Swing Intelligent Weltrade v2.53";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -1299,7 +1300,7 @@ bool AnalysisOnly(const string symbol)
 // TP1 0,3 R (50 % encaisses + point mort), TP2 0,65 R, TP3 1 R. Sur Boom/Crash (Deriv, 1 an) : 78 % des trades atteignent TP1.
 struct DriftInfo
 {
-   bool     valid,active,pullback,trendOk;
+   bool     valid,active,pullback,trendOk,sweep;
    string   group,side;
    double   rsi,atr,entry,sl,tp1,tp2,tp3,tp4,tp5;
 };
@@ -1322,7 +1323,7 @@ string DriftGroup(const string name,string &side)
 // Calcul sur des bougies H1 cloturees (plus ancienne en premier).
 bool DriftCompute(const string name,const double &h[],const double &l[],const double &c[],const int n,DriftInfo &r)
 {
-   r.valid=false; r.active=false; r.pullback=false; r.trendOk=false; r.side="NEUTRE"; r.rsi=50; r.atr=0;
+   r.valid=false; r.active=false; r.pullback=false; r.trendOk=false; r.sweep=false; r.side="NEUTRE"; r.rsi=50; r.atr=0;
    r.entry=0; r.sl=0; r.tp1=0; r.tp2=0; r.tp3=0; r.tp4=0; r.tp5=0;
    string fixed_side="";
    r.group=DriftGroup(name,fixed_side);
@@ -1348,6 +1349,17 @@ bool DriftCompute(const string name,const double &h[],const double &l[],const do
    int dir=r.side=="BUY"?1:(r.side=="SELL"?-1:0);
    r.pullback=dir>0?r.rsi<rsiTh:(dir<0?r.rsi>100.0-rsiTh:false);
    r.trendOk=!needTrend || trendSide==r.side;
+   // Balayage de liquidite (SMC) sur l'une des 3 dernieres bougies : la meche prend le plus bas (BUY) / plus haut (SELL)
+   // des 20 bougies precedentes et la bougie cloture a l'interieur.
+   for(int b=0;b<3 && dir!=0 && !r.sweep;b++)
+   {
+      int k=n-1-b;
+      if(k-20<0) break;
+      double lo=l[k-20],hi=h[k-20];
+      for(int j=k-20;j<k;j++){ if(l[j]<lo) lo=l[j]; if(h[j]>hi) hi=h[j]; }
+      if(dir>0 && l[k]<lo && c[k]>lo) r.sweep=true;
+      if(dir<0 && h[k]>hi && c[k]<hi) r.sweep=true;
+   }
    r.valid=true;
    r.active=dir!=0 && r.pullback && r.trendOk && atr>0;
    if(!r.active) return true;
@@ -1381,10 +1393,12 @@ void ApplyDriftPlaybook(SwxDecision &d)
    if(!TradeDriftPlaybook || !d.valid || IsSignal(d.verdict) || AnalysisOnly(d.symbol)) return;
    DriftInfo p;
    if(!DriftPlaybook(d.symbol,p) || !p.active) return;
+   if(DriftRequireLiquiditySweep && !p.sweep) return;          // mode precision : balayage de liquidite exige
    d.verdict=p.side; d.side=p.side; d.state="EXECUTE_NOW"; d.setupType="DRIFT_PLAYBOOK";
    d.entry=p.entry; d.sl=p.sl; d.tp1=p.tp1; d.tp2=p.tp2; d.tp3=p.tp3; d.tp4=p.tp4; d.tp5=p.tp5; d.zoneEntry=p.entry;
    d.score=80; d.execScore=90; d.conditionPct=100;
-   d.confidence=p.group=="regime"?75:78;    // taux TP1 mesure sur Boom/Crash (Deriv) ; regime : estimation
+   if(p.sweep) d.setupType="DRIFT_PLAYBOOK_SMC_SWEEP";
+   d.confidence=p.group=="regime"?75:(p.sweep?80:78);    // taux TP1 mesure sur Boom/Crash (Deriv) ; regime : estimation
    d.gAligned=true; d.gQuality=true; d.gConfirm=true; d.gSetup=true; d.gStructure=true; d.gRisk=true; d.gScore=true;
 }
 
@@ -1598,7 +1612,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.52"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.52");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.53"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.53");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -2181,7 +2195,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.52",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.53",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -2328,7 +2342,7 @@ datetime ServerToUtc(const datetime t){ return t<=0?0:t+(TimeGMT()-TimeCurrent()
 string BuildAppJson()
 {
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
-   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.52\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
+   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.53\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
                ",\"account\":"+JsonText(demo?"DEMO":"REEL")+",\"markets\":[";
    int written=0;
    for(int i=0;i<ArraySize(g_symbols);i++)
@@ -2478,7 +2492,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v2.52: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v2.53: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)

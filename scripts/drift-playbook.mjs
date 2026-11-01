@@ -4,6 +4,10 @@
 //   Crash / PainX          : price drifts UP between down-spikes  -> BUY only
 //   Bull Market / Bear Market : built-in up / down drift          -> BUY / SELL only
 //   SwitchX / BreakX / TrendX : GainX regime then PainX regime    -> side of the current H1 trend
+// SMC confluence (measured, kept because it improves BOTH the training and the test periods): a liquidity sweep in the
+// drift direction on one of the last 3 closed H1 candles — the wick takes out the 20-candle low (BUY) / high (SELL) and
+// the candle closes back inside. "Precision mode" (default in the EAs) only trades signals with this sweep.
+// Support/resistance zones, FVG, order blocks and BOS were measured too and did not improve results: not used.
 // Volatility, Step, Jump, FX Vol, SFX Vol, FlipX, PlusX… are random walks: no measured edge, no playbook.
 // The same rules are coded in the Weltrade EA (DriftPlaybook) and checked value for value by scripts/qa_swx_engine.py.
 
@@ -53,6 +57,18 @@ export function rsiSeries(closes,period=14){
   return out;
 }
 
+// Liquidity sweep in direction dir (+1 BUY / -1 SELL) on one of the last `bars` candles, against the previous `look` candles.
+export function liquiditySweep(rows,dir,bars=3,look=20){
+  const i=rows.length-1;
+  for(let b=0;b<bars;b++){
+    const k=i-b;if(k-look<0)return false;
+    let lo=Infinity,hi=-Infinity;
+    for(let j=k-look;j<k;j++){if(rows[j].low<lo)lo=rows[j].low;if(rows[j].high>hi)hi=rows[j].high;}
+    if(dir>0?(rows[k].low<lo&&rows[k].close>lo):(rows[k].high>hi&&rows[k].close<hi))return true;
+  }
+  return false;
+}
+
 // rows: closed H1 candles (oldest first, >= 210). Returns the playbook state on the last closed candle.
 export function driftPlaybook(name,rows){
   const profile=driftProfile(name);
@@ -63,11 +79,12 @@ export function driftPlaybook(name,rows){
   const side=profile.side==='TREND'?trendSide:profile.side;
   const dir=side==='BUY'?1:side==='SELL'?-1:0;
   const pullback=dir>0?rsi[i]<p.rsi:dir<0?rsi[i]>100-p.rsi:false;
+  const sweep=dir!==0&&liquiditySweep(rows,dir);
   const trendOk=!p.trend||trendSide===side;
   const active=dir!==0&&pullback&&trendOk&&atr[i]>0;
   const entry=closes[i],risk=p.sl*atr[i];
   const at=r=>entry+dir*r*risk;
   const levels=active?{entry,sl:entry-dir*risk,tp1:at(p.tp1),tp2:at(p.tp2),tp3:at(p.tp3),tp4:at(p.tp3+0.05),tp5:at(p.tp3+0.1)}:null;
-  return {group:profile.group,label:p.label,side,active,pullback,trend_ok:trendOk,rsi:rsi[i],atr:atr[i],ema20:e20[i],ema50:e50[i],
+  return {group:profile.group,label:p.label,side,active,pullback,trend_ok:trendOk,liquidity_sweep:sweep,rsi:rsi[i],atr:atr[i],ema20:e20[i],ema50:e50[i],
     closed_at:rows[i].epoch,price:entry,levels,params:p};
 }

@@ -1155,6 +1155,7 @@ function playbookRows(candles,stats,markets=MARKETS){
       execution_state:active?'EXECUTE_NOW':'WAIT_CONFIRMATION',execution_score:active?90:0,
       setup_detected:active?1:0,setup_direction:active?pb.side:'NEUTRE',
       decision_engine:{condition_pass_percent:active?100:(pb.trend_ok?50:0),score:active?90:0,minimum_score:90,freshness_gate:fresh},
+      liquidity_sweep:pb.liquidity_sweep?1:0,measured_precision:stats?.precision?.markets?.[meta.market]||null,
       rsi:+pb.rsi.toFixed(1),rsi_threshold:pb.side==='BUY'?pb.params.rsi:100-pb.params.rsi,trend_ok:pb.trend_ok,pullback:pb.pullback,
       price:pb.price,closed_at:pb.closed_at,levels:active?pb.levels:null,measured,measured_group:group});
   }
@@ -1166,6 +1167,7 @@ async function writePlaybook(candles,updatedAt){
   try{stats=JSON.parse(await fs.readFile(PLAYBOOK_STATS,'utf8'));}catch{stats=null;}
   const rows=playbookRows(candles,stats);
   const out={updated_at:updatedAt,strategy:'Sera Drift Playbook',period:stats?.period||null,groups:stats?.groups||{},
+    precision_groups:stats?.precision?.groups||{},
     signals:rows.filter(r=>r.final_verdict!=='ATTENDRE').length,markets:rows};
   await fs.writeFile(PLAYBOOK_OUTPUT,JSON.stringify(out,null,1));
   console.log(`Drift Playbook: ${rows.length} markets, ${out.signals} active signal(s).`);

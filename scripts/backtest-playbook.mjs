@@ -7,6 +7,7 @@ import {readFileSync,writeFileSync} from 'node:fs';
 import {driftPlaybook,driftProfile,PLAYBOOKS} from './drift-playbook.mjs';
 
 const file=process.argv[2]||'research/deriv-history.json.gz';
+const PRECISION=process.argv.includes('--precision');
 const oi=process.argv.indexOf('--out');const OUT=oi>0?process.argv[oi+1]:'data/playbook-stats.json';
 const raw=JSON.parse(gunzipSync(readFileSync(file)).toString());
 const rows=a=>(a||[]).map(([epoch,open,high,low,close])=>({epoch,open,high,low,close}));
@@ -37,7 +38,7 @@ for(const m of raw.markets){
     const t=H1[i].epoch+3600;           // the H1 candle i is closed
     if(t<next)continue;
     const pb=driftPlaybook(m.name,H1.slice(i-WINDOW+1,i+1));
-    if(!pb?.active)continue;
+    if(!pb?.active||(PRECISION&&!pb.liquidity_sweep))continue;
     const useM15=M15.length&&M15[0].epoch<=t;
     const path=useM15?M15:H1;
     let k=0,lo=0,hi=path.length;while(lo<hi){const mid=(lo+hi)>>1;if(path[mid].epoch<t)lo=mid+1;else hi=mid;}k=lo;
@@ -56,7 +57,7 @@ const sum=list=>{
     positive_months:[...months.values()].filter(v=>v>0).length,months:months.size};
 };
 const ts=trades.map(x=>x.t).sort((a,b)=>a-b),split=ts[Math.floor(ts.length*0.7)]||0;
-const out={generated_at:new Date().toISOString(),source:'Historique H1/M15 Deriv réel (1 an) — scripts/backtest-playbook.mjs',
+const out={precision:PRECISION,generated_at:new Date().toISOString(),source:'Historique H1/M15 Deriv réel (1 an) — scripts/backtest-playbook.mjs',
   period:{from:new Date(ts[0]*1000).toISOString().slice(0,10),to:new Date(ts.at(-1)*1000).toISOString().slice(0,10)},
   management:'50 % encaissés à TP1 + stop au point d’entrée, stop à TP1 quand TP2 est touché, reste à TP3 ; stop vérifié en premier',
   groups:{},markets:{}};

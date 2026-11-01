@@ -29,7 +29,7 @@ int main(int argc,char** argv){
     for(int i=0;i<n;i++) in>>h[i]>>l[i]>>c[i];
     in.ignore(1000,'\n');
     DriftInfo r; bool ok=DriftCompute(name,h,l,c,n,r);
-    printf("%s|%d|%d|%s|%s|%.10g|%.10g|%.10g|%.10g|%.10g|%.10g|%.10g\n",name.c_str(),ok?1:0,r.active?1:0,r.group.c_str(),r.side.c_str(),
+    printf("%s|%d|%d|%s|%s|%d|%.10g|%.10g|%.10g|%.10g|%.10g|%.10g|%.10g\n",name.c_str(),ok?1:0,r.active?1:0,r.group.c_str(),r.side.c_str(),r.sweep?1:0,
            r.rsi,r.atr,r.entry,r.sl,r.tp1,r.tp3,r.tp5);
   }
   return 0;
@@ -44,7 +44,7 @@ for(const k of cases){
   const rows=k.h.map((h,i)=>({high:h,low:k.l[i],close:k.c[i],open:k.c[i],epoch:i*3600}));
   const p=driftPlaybook(k.name,rows);
   const lv=p?.levels||{};
-  console.log([k.name,p?1:0,p?.active?1:0,p?.group||'',p?.side||'NEUTRE',p?.rsi??50,p?.atr??0,lv.entry??0,lv.sl??0,lv.tp1??0,lv.tp3??0,lv.tp5??0].join('|'));
+  console.log([k.name,p?1:0,p?.active?1:0,p?.group||'',p?.side||'NEUTRE',p?.liquidity_sweep?1:0,p?.rsi??50,p?.atr??0,lv.entry??0,lv.sl??0,lv.tp1??0,lv.tp3??0,lv.tp5??0].join('|'));
 }
 '''
 
@@ -88,16 +88,17 @@ def main() -> int:
     finally:
         (ROOT / "scripts" / "_drift_parity.mjs").unlink(missing_ok=True)
     mq = subprocess.run([str(exe), str(txt)], capture_output=True, text=True, check=True).stdout.split("\n")
-    errors, active = [], 0
+    errors, active, sweeps = [], 0, 0
     for a, b in zip([x for x in mq if x], [x for x in js if x]):
         ma, jb = a.split("|"), b.split("|")
         if ma[1] == "0" and jb[1] == "0" and ma[0] == jb[0]:
             continue                       # too few candles / no playbook on both sides
-        if ma[:5] != jb[:5]:
-            errors.append(f"MQL {ma[:5]} != JS {jb[:5]}")
+        if ma[:6] != jb[:6]:
+            errors.append(f"MQL {ma[:6]} != JS {jb[:6]}")
             continue
         active += ma[2] == "1"
-        for x, y in zip(ma[5:], jb[5:]):
+        sweeps += ma[5] == "1"
+        for x, y in zip(ma[6:], jb[6:]):
             x, y = float(x), float(y)
             if abs(x - y) > 1e-6 * max(1.0, abs(y)):
                 errors.append(f"{ma[0]}: value {x} != {y}")
@@ -117,7 +118,12 @@ def main() -> int:
     if errors:
         print("\n".join("ERROR: " + e for e in errors[:20]))
         return 1
-    print(f"Drift Playbook parity passed: {len(cases)} cases, {active} active signals, EA == online engine")
+    if sweeps < 3:
+        errors.append(f"only {sweeps} liquidity sweeps in the test cases: the SMC sweep is not exercised")
+    if errors:
+        print("\n".join("ERROR: " + e for e in errors[:20]))
+        return 1
+    print(f"Drift Playbook parity passed: {len(cases)} cases, {active} active signals, {sweeps} liquidity sweeps, EA == online engine")
     return 0
 
 

@@ -196,11 +196,14 @@ def main() -> int:
         errors.append("page 2 shows the same markets as page 1")
     if possible_rows(p1) > 30:
         errors.append(f"the list does not fit a 720 px chart ({possible_rows(p1)} rows)")
-    n_sig = len([m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels") and m["mode"] in ("swing", "day", "drift")])
+    # Drift rows count only with an SMC liquidity sweep (precision mode, EA default).
+    n_sig = len([m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels")
+                 and (m["mode"] in ("swing", "day") or (m["mode"] == "drift" and m.get("liquidity_sweep") == 1))])
     if f"SIGNAUX EN COURS ({n_sig})" not in c2s:
         errors.append(f"signals table missing or wrong count (expected {n_sig})")
     if n_sig:
-        first = next(m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels"))
+        first = next(m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels")
+                     and (m["mode"] != "drift" or m.get("liquidity_sweep") == 1))
         if not re.search(rf"^\[(green|red)\]   {re.escape(first['market'][:24])}.*(\^ BUY|v SELL)", c2s, re.M) or "BTN Ouvrir" not in c2s:
             errors.append("signal row (market, direction, levels) or its 'Ouvrir' button missing")
         if "CHARTOPEN " not in text.split("=== LOG ===")[-1]:
@@ -314,7 +317,7 @@ def main() -> int:
         "asset_class": "synthetic", "final_verdict": "SELL", "final_confidence": 77, "condition_pass_percent": 100,
         "engine_score": 90, "engine_minimum_score": 90, "execution_state": "EXECUTE_NOW", "execution_score": 90,
         "setup_detected": 1, "setup_direction": "SELL", "model_ensemble_direction": "BUY", "model_ensemble_consensus": 100,
-        "model_models_available": 4, "freshness_gate": True,
+        "model_models_available": 4, "freshness_gate": True, "liquidity_sweep": 1,
         "levels": {"entry": 15000.0, "sl": 15050.0, "tp1": 14985.0, "tp2": 14967.5, "tp3": 14950.0, "tp4": 14947.5, "tp5": 14945.0}})
     dp = BUILD / "ea-signals-drift.json"
     dp.write_text(json.dumps(drift, separators=(",", ":")), encoding="utf-8")
@@ -325,6 +328,12 @@ def main() -> int:
         print("\n".join(l for l in cd1.splitlines() if "Boom 1000" in l or l.startswith("POS ") or "Horizons" in l)[:1200])
     if outd.returncode != 0 or "POS Boom 1000 Index SELL" not in cd1 and "POS BOOM1000 SELL" not in cd1:
         errors.append("drift playbook row (mode drift, EXECUTE_NOW) did not open a SELL position")
+    # Precision mode (default): the same drift signal WITHOUT an SMC liquidity sweep is not traded.
+    drift["markets"][-1]["liquidity_sweep"] = 0
+    dp.write_text(json.dumps(drift, separators=(",", ":")), encoding="utf-8")
+    outn = subprocess.run([str(exe), str(dp), str(world(drift)), str(now)], capture_output=True, text=True, timeout=120)
+    if "POS Boom 1000 Index" in outn.stdout.split("=== CYCLE 2")[0]:
+        errors.append("precision mode: a drift signal without liquidity sweep must not be traded")
     if "Derive" not in cd1:
         errors.append("drift playbook signals are not labelled 'Derive' on the dashboard")
     if "non execute - les modeles IA" in outd.stdout.split("=== LOG ===")[-1] and "Boom 1000" in outd.stdout.split("=== LOG ===")[-1].split("non execute")[0][-80:]:

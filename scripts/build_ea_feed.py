@@ -54,6 +54,9 @@ def compact_row(row: dict) -> dict:
         "model_models_available": number(row.get("model_models_available")),
         "freshness_gate": engine.get("freshness_gate") is not False,
     }
+    if row.get("mode") == "drift":
+        # Drift Playbook: SMC liquidity sweep confluence (precision mode of the EA trades only these).
+        out["liquidity_sweep"] = 1 if row.get("liquidity_sweep") else 0
     for key in ("entry_tf", "confirmation_tf"):
         tf = row.get(key) or {}
         if tf.get("side") in ("BUY", "SELL"):
@@ -162,11 +165,12 @@ def self_test() -> None:
     playbook = {"markets": [
         {"id": "BOOM1000:drift", "market": "Boom 1000 Index", "symbol": "BOOM1000", "mode": "drift", "final_verdict": "SELL",
          "final_confidence": 77, "execution_state": "EXECUTE_NOW", "execution_score": 90, "setup_detected": 1, "setup_direction": "SELL",
-         "decision_engine": {"condition_pass_percent": 100, "score": 90, "freshness_gate": True},
+         "decision_engine": {"condition_pass_percent": 100, "score": 90, "freshness_gate": True}, "liquidity_sweep": 1,
          "levels": {"entry": 100.0, "sl": 101.0, "tp1": 99.7, "tp2": 99.35, "tp3": 99.0, "tp4": 98.95, "tp5": 98.9}}]}
     with_drift = build(sample, playbook)
     assert not sanitize(with_drift) and not validate(with_drift), validate(with_drift)
     assert with_drift["markets"][-1]["mode"] == "drift" and with_drift["confirmed_signals"] == 2
+    assert with_drift["markets"][-1]["liquidity_sweep"] == 1 and "liquidity_sweep" not in with_drift["markets"][0]
     feed = build(sample)
     assert not sanitize(feed) and not validate(feed), validate(feed)
     # A confirmed SELL whose far target went negative must be neutralized, not block the feed.
