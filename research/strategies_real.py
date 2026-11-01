@@ -100,4 +100,4 @@ for (f, s, part), lst in sorted(rows.items()):
         v = np.array([x[rr] for x in lst]); win = (v > 0).mean() * 100; cells.append(f"{win:5.0f}% {v.mean():+.2f}")
         summary.append(dict(family=f, strategy=s, part=part, rr=rr, n=len(v), win=round(win, 1), exp=round(float(v.mean()), 3)))
     print(f"{f:10} {s:15} {part:5} {len(lst):5}  " + "  ".join(cells))
-json.dump(summary, open("research/strategies_summary.json", "w"))
+json.dump(summary, open("research/strategies_real_summary.json", "w"))
