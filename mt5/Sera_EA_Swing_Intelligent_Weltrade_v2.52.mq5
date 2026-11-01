@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "2.51"
+#property version   "2.52"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -395,6 +395,14 @@ bool TotalRiskAllows(const double new_risk_usd)
    return OpenSeraRiskUSD()+new_risk_usd<=budget;
 }
 
+// Pourquoi le budget de risque bloque une entree : risque de ce trade + risque deja ouvert, face au maximum autorise.
+string RiskBudgetText(const double new_risk_usd)
+{
+   double budget=AccountInfoDouble(ACCOUNT_EQUITY)*MaximumTotalOpenRiskPercent/100.0;
+   return "risque "+DoubleToString(new_risk_usd,2)+" + ouvert "+DoubleToString(OpenSeraRiskUSD(),2)+" > max "+
+          DoubleToString(budget,2)+" ("+DoubleToString(MaximumTotalOpenRiskPercent,0)+"% equite)";
+}
+
 uint SeraHash(const string id)
 {
    uint hash=2166136261;
@@ -563,7 +571,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Weltrade v2.51";
+string g_email_ea="Sera EA Swing Intelligent Weltrade v2.52";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -1582,14 +1590,15 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    double margin=0.0;
    if(!OrderCalcMargin(d.verdict=="BUY"?ORDER_TYPE_BUY:ORDER_TYPE_SELL,d.symbol,volume,price,margin) || margin>AccountInfoDouble(ACCOUNT_MARGIN_FREE)*0.50)
    { PanelGate(r,11,false,"marge libre insuffisante"); PrintOnce("SyntX: "+d.symbol+" marge libre insuffisante"); return false; }
-   if(!TotalRiskAllows(PositionRiskUSD(d.symbol,d.verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,price,d.sl,volume)))
-   { PanelGate(r,11,false,"risque total maximum atteint"); PrintOnce("SyntX: "+d.symbol+" reporte — risque cumule maximum atteint"); return false; }
+   double trade_risk=PositionRiskUSD(d.symbol,d.verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,price,d.sl,volume);
+   if(!TotalRiskAllows(trade_risk))
+   { PanelGate(r,11,false,RiskBudgetText(trade_risk)); PrintOnce("SyntX: "+d.symbol+" reporte (lot "+DoubleToString(volume,2)+") — "+RiskBudgetText(trade_risk)); return false; }
    PanelGate(r,11,true,"lot "+DoubleToString(volume,2));
 
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.51"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.51");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.52"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.52");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -1640,9 +1649,9 @@ bool ManagePendingEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    if(!stops_ok) return false;
    double volume=SafeVolume(d.symbol,entry,d.sl);
    bool had_order=FindSeraPendingOrder(d.symbol)>0;
-   bool risk_ok=volume>0 && (had_order ||
-      TotalRiskAllows(PositionRiskUSD(d.symbol,d.verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,entry,d.sl,volume)));
-   PanelGate(r,11,risk_ok,volume<=0?"volume nul (lot minimum ou SL)":!risk_ok?"risque total maximum atteint":"lot "+DoubleToString(volume,2));
+   double limit_risk=PositionRiskUSD(d.symbol,d.verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,entry,d.sl,volume);
+   bool risk_ok=volume>0 && (had_order || TotalRiskAllows(limit_risk));
+   PanelGate(r,11,risk_ok,volume<=0?"volume nul (lot minimum ou SL)":!risk_ok?RiskBudgetText(limit_risk):"lot "+DoubleToString(volume,2));
    if(!risk_ok) return false;
    if(PlaceOrUpdatePendingLimit(d.symbol,d.symbol,d.verdict,entry,d.sl,final_tp,volume))
    {
@@ -2172,7 +2181,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.51",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.52",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -2319,7 +2328,7 @@ datetime ServerToUtc(const datetime t){ return t<=0?0:t+(TimeGMT()-TimeCurrent()
 string BuildAppJson()
 {
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
-   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.51\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
+   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.52\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
                ",\"account\":"+JsonText(demo?"DEMO":"REEL")+",\"markets\":[";
    int written=0;
    for(int i=0;i<ArraySize(g_symbols);i++)
@@ -2469,7 +2478,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v2.51: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v2.52: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)

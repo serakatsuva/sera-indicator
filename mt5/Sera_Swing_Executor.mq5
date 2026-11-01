@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.66"
+#property version   "2.67"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -717,8 +717,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.66")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.66");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.67")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.67");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -886,6 +886,14 @@ bool TotalRiskAllows(const double new_risk_usd)
    if(!EnableBalanceScaling) return true;
    double budget=AccountInfoDouble(ACCOUNT_EQUITY)*MaximumTotalOpenRiskPercent/100.0;
    return OpenSeraRiskUSD()+new_risk_usd<=budget;
+}
+
+// Pourquoi le budget de risque bloque une entree : risque de ce trade + risque deja ouvert, face au maximum autorise.
+string RiskBudgetText(const double new_risk_usd)
+{
+   double budget=AccountInfoDouble(ACCOUNT_EQUITY)*MaximumTotalOpenRiskPercent/100.0;
+   return "risque "+DoubleToString(new_risk_usd,2)+" + ouvert "+DoubleToString(OpenSeraRiskUSD(),2)+" > max "+
+          DoubleToString(budget,2)+" ("+DoubleToString(MaximumTotalOpenRiskPercent,0)+"% equite)";
 }
 
 uint SeraHash(const string id)
@@ -1127,7 +1135,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Deriv v2.66";
+string g_email_ea="Sera EA Swing Intelligent Deriv v2.67";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -2027,7 +2035,7 @@ void RenderDashboard()
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
    if(TradeDriftPlaybook) horizons+=" + Derive H1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.66",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.67",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -2385,8 +2393,9 @@ void Evaluate(const string json)
                   string broker_why="";
                   bool broker_trend_ok=trial_volume>0 && BrokerConfirms(symbol,verdict,broker_why);
                   if(trial_volume>0) PanelGate(pr,9,broker_trend_ok,broker_why);
-                  bool risk_ok=volume>0 && TotalRiskAllows(PositionRiskUSD(symbol,verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,price,sl,volume));
-                  if(trial_volume>0) PanelGate(pr,10,margin_ok&&risk_ok,!margin_ok?"marge libre insuffisante":!risk_ok?"risque total maximum atteint":"lot "+DoubleToString(volume,2));
+                  double trade_risk=PositionRiskUSD(symbol,verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,price,sl,volume);
+                  bool risk_ok=volume>0 && TotalRiskAllows(trade_risk);
+                  if(trial_volume>0) PanelGate(pr,10,margin_ok&&risk_ok,!margin_ok?"marge libre insuffisante":!risk_ok?RiskBudgetText(trade_risk):"lot "+DoubleToString(volume,2));
                   if(volume>0 && !broker_trend_ok)
                   {
                      PrintOnce("Sera: entree "+verdict+" "+symbol+" reportee — "+broker_why);
@@ -2395,7 +2404,7 @@ void Evaluate(const string json)
                   }
                   if(volume>0 && !TotalRiskAllows(PositionRiskUSD(symbol,verdict=="BUY"?POSITION_TYPE_BUY:POSITION_TYPE_SELL,price,sl,volume)))
                   {
-                     PrintOnce("Sera: entree "+verdict+" "+symbol+" reportee — risque cumule maximum atteint ("+DoubleToString(MaximumTotalOpenRiskPercent,1)+"% de l'equite)");
+                     PrintOnce("Sera: entree "+verdict+" "+symbol+" reportee (lot "+DoubleToString(volume,2)+") — "+RiskBudgetText(trade_risk));
                      volume=0;
                      broker_why="skip";
                   }
@@ -2404,7 +2413,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.66"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.66");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.67"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.67");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -2473,7 +2482,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.66: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.67: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),

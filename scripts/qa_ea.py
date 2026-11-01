@@ -109,7 +109,7 @@ if swx_path.exists():
         "SyntX: emergency equity stop first": "if(EmergencyEquityStop()) return;",
         "SyntX: positions managed every cycle": "ManageAllSeraPositions();",
         "SyntX: reversal cut": "CutReversedPositions();",
-        "SyntX: total risk budget": "TotalRiskAllows(PositionRiskUSD(",
+        "SyntX: total risk budget": "TotalRiskAllows(trade_risk)",
         "SyntX: one trade per signal bar": "SWX_TRADEDBAR_",
         "SyntX: 2-candle confirmation": "cycles>=2",
         "SyntX: high-conviction score": "d.score>=84",
