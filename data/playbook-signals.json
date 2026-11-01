@@ -1,5 +1,5 @@
 {
- "updated_at": "2026-11-01T15:24:05.109Z",
+ "updated_at": "2026-11-01T15:27:17.399Z",
  "strategy": "Sera Drift Playbook",
  "period": {
   "from": "2025-12-11",
@@ -85,6 +85,86 @@
    }
   }
  },
+ "precision_groups": {
+  "bullbear": {
+   "label": "Bull / Bear Market",
+   "params": {
+    "label": "Bull / Bear Market",
+    "rsi": 40,
+    "sl": 2.5,
+    "tp1": 0.3,
+    "tp2": 0.9,
+    "tp3": 1.5,
+    "trend": false
+   },
+   "all": {
+    "trades": 251,
+    "tp1_rate": 96,
+    "losing_rate": 4,
+    "expectancy_r": 0.382,
+    "total_r": 95.9,
+    "positive_months": 11,
+    "months": 11
+   },
+   "train": {
+    "trades": 162,
+    "tp1_rate": 96.3,
+    "losing_rate": 3.7,
+    "expectancy_r": 0.385,
+    "total_r": 62.4,
+    "positive_months": 9,
+    "months": 9
+   },
+   "test": {
+    "trades": 89,
+    "tp1_rate": 95.5,
+    "losing_rate": 4.5,
+    "expectancy_r": 0.376,
+    "total_r": 33.5,
+    "positive_months": 3,
+    "months": 3
+   }
+  },
+  "spike": {
+   "label": "Boom / Crash · GainX / PainX",
+   "params": {
+    "label": "Boom / Crash · GainX / PainX",
+    "rsi": 45,
+    "sl": 1,
+    "tp1": 0.3,
+    "tp2": 0.65,
+    "tp3": 1,
+    "trend": true
+   },
+   "all": {
+    "trades": 1305,
+    "tp1_rate": 80.1,
+    "losing_rate": 19.9,
+    "expectancy_r": 0.096,
+    "total_r": 124.7,
+    "positive_months": 11,
+    "months": 12
+   },
+   "train": {
+    "trades": 927,
+    "tp1_rate": 80.6,
+    "losing_rate": 19.4,
+    "expectancy_r": 0.104,
+    "total_r": 96.5,
+    "positive_months": 8,
+    "months": 9
+   },
+   "test": {
+    "trades": 378,
+    "tp1_rate": 78.8,
+    "losing_rate": 21.2,
+    "expectancy_r": 0.075,
+    "total_r": 28.2,
+    "positive_months": 4,
+    "months": 4
+   }
+  }
+ },
  "signals": 1,
  "markets": [
   {
@@ -108,6 +188,16 @@
     "score": 90,
     "minimum_score": 90,
     "freshness_gate": true
+   },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 71,
+    "tp1_rate": 88.7,
+    "losing_rate": 11.3,
+    "expectancy_r": 0.263,
+    "total_r": 18.7,
+    "positive_months": 5,
+    "months": 5
    },
    "rsi": 62.6,
    "rsi_threshold": 60,
@@ -165,6 +255,16 @@
     "minimum_score": 90,
     "freshness_gate": true
    },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 97,
+    "tp1_rate": 75.3,
+    "losing_rate": 24.7,
+    "expectancy_r": 0.038,
+    "total_r": 3.7,
+    "positive_months": 6,
+    "months": 11
+   },
    "rsi": 65.3,
    "rsi_threshold": 55,
    "trend_ok": false,
@@ -212,6 +312,16 @@
     "score": 0,
     "minimum_score": 90,
     "freshness_gate": true
+   },
+   "liquidity_sweep": 1,
+   "measured_precision": {
+    "trades": 33,
+    "tp1_rate": 87.9,
+    "losing_rate": 12.1,
+    "expectancy_r": 0.23,
+    "total_r": 7.6,
+    "positive_months": 4,
+    "months": 5
    },
    "rsi": 52.4,
    "rsi_threshold": 55,
@@ -261,6 +371,16 @@
     "minimum_score": 90,
     "freshness_gate": true
    },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 116,
+    "tp1_rate": 78.4,
+    "losing_rate": 21.6,
+    "expectancy_r": 0.076,
+    "total_r": 8.8,
+    "positive_months": 7,
+    "months": 11
+   },
    "rsi": 45.8,
    "rsi_threshold": 55,
    "trend_ok": true,
@@ -308,6 +428,16 @@
     "score": 0,
     "minimum_score": 90,
     "freshness_gate": true
+   },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 114,
+    "tp1_rate": 85.1,
+    "losing_rate": 14.9,
+    "expectancy_r": 0.145,
+    "total_r": 16.5,
+    "positive_months": 8,
+    "months": 10
    },
    "rsi": 61.2,
    "rsi_threshold": 55,
@@ -357,6 +487,16 @@
     "minimum_score": 90,
     "freshness_gate": true
    },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 112,
+    "tp1_rate": 82.1,
+    "losing_rate": 17.9,
+    "expectancy_r": 0.153,
+    "total_r": 17.1,
+    "positive_months": 11,
+    "months": 12
+   },
    "rsi": 29.8,
    "rsi_threshold": 55,
    "trend_ok": true,
@@ -404,6 +544,16 @@
     "score": 0,
     "minimum_score": 90,
     "freshness_gate": true
+   },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 93,
+    "tp1_rate": 83.9,
+    "losing_rate": 16.1,
+    "expectancy_r": 0.146,
+    "total_r": 13.5,
+    "positive_months": 11,
+    "months": 11
    },
    "rsi": 40.5,
    "rsi_threshold": 55,
@@ -453,6 +603,16 @@
     "minimum_score": 90,
     "freshness_gate": true
    },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 40,
+    "tp1_rate": 77.5,
+    "losing_rate": 22.5,
+    "expectancy_r": 0.021,
+    "total_r": 0.9,
+    "positive_months": 3,
+    "months": 5
+   },
    "rsi": 41.4,
    "rsi_threshold": 55,
    "trend_ok": true,
@@ -500,6 +660,16 @@
     "score": 0,
     "minimum_score": 90,
     "freshness_gate": true
+   },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 180,
+    "tp1_rate": 98.9,
+    "losing_rate": 1.1,
+    "expectancy_r": 0.429,
+    "total_r": 77.2,
+    "positive_months": 11,
+    "months": 11
    },
    "rsi": 54.1,
    "rsi_threshold": 40,
@@ -549,6 +719,16 @@
     "minimum_score": 90,
     "freshness_gate": true
    },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 110,
+    "tp1_rate": 78.2,
+    "losing_rate": 21.8,
+    "expectancy_r": 0.08,
+    "total_r": 8.8,
+    "positive_months": 8,
+    "months": 12
+   },
    "rsi": 49.9,
    "rsi_threshold": 45,
    "trend_ok": true,
@@ -596,6 +776,16 @@
     "score": 0,
     "minimum_score": 90,
     "freshness_gate": true
+   },
+   "liquidity_sweep": 1,
+   "measured_precision": {
+    "trades": 120,
+    "tp1_rate": 74.2,
+    "losing_rate": 25.8,
+    "expectancy_r": 0.007,
+    "total_r": 0.8,
+    "positive_months": 7,
+    "months": 11
    },
    "rsi": 38.3,
    "rsi_threshold": 45,
@@ -645,6 +835,16 @@
     "minimum_score": 90,
     "freshness_gate": true
    },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 119,
+    "tp1_rate": 79,
+    "losing_rate": 21,
+    "expectancy_r": 0.066,
+    "total_r": 7.8,
+    "positive_months": 7,
+    "months": 11
+   },
    "rsi": 60.7,
    "rsi_threshold": 45,
    "trend_ok": true,
@@ -692,6 +892,16 @@
     "score": 0,
     "minimum_score": 90,
     "freshness_gate": true
+   },
+   "liquidity_sweep": 1,
+   "measured_precision": {
+    "trades": 87,
+    "tp1_rate": 78.2,
+    "losing_rate": 21.8,
+    "expectancy_r": 0.067,
+    "total_r": 5.8,
+    "positive_months": 6,
+    "months": 10
    },
    "rsi": 37.5,
    "rsi_threshold": 45,
@@ -741,6 +951,16 @@
     "minimum_score": 90,
     "freshness_gate": true
    },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 43,
+    "tp1_rate": 76.7,
+    "losing_rate": 23.3,
+    "expectancy_r": 0.05,
+    "total_r": 2.1,
+    "positive_months": 2,
+    "months": 4
+   },
    "rsi": 57.1,
    "rsi_threshold": 45,
    "trend_ok": true,
@@ -789,6 +1009,16 @@
     "minimum_score": 90,
     "freshness_gate": true
    },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 115,
+    "tp1_rate": 86.1,
+    "losing_rate": 13.9,
+    "expectancy_r": 0.183,
+    "total_r": 21.1,
+    "positive_months": 8,
+    "months": 11
+   },
    "rsi": 47.3,
    "rsi_threshold": 45,
    "trend_ok": true,
@@ -836,6 +1066,16 @@
     "score": 0,
     "minimum_score": 90,
     "freshness_gate": true
+   },
+   "liquidity_sweep": 0,
+   "measured_precision": {
+    "trades": 106,
+    "tp1_rate": 80.2,
+    "losing_rate": 19.8,
+    "expectancy_r": 0.096,
+    "total_r": 10.1,
+    "positive_months": 9,
+    "months": 11
    },
    "rsi": 42.8,
    "rsi_threshold": 45,
