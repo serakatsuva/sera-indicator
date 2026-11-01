@@ -64,6 +64,34 @@ for(const m of markets){
   out.markets.push(row);
 }
 c.close();
+// Deriv keeps only a few weeks of H1 for some Forex / metals / stock indices: complete with Yahoo Finance hourly (2 years).
+const YAHOO={OTC_AEX:'^AEX',OTC_AS51:'^AXJO',OTC_DJI:'^DJI',OTC_FCHI:'^FCHI',OTC_FTSE:'^FTSE',OTC_GDAXI:'^GDAXI',OTC_HSI:'^HSI',
+  OTC_N225:'^N225',OTC_NDX:'^NDX',OTC_SPC:'^GSPC',OTC_SSMI:'^SSMI',OTC_SX5E:'^STOXX50E',
+  frxXAUUSD:'GC=F',frxXAGUSD:'SI=F',frxXPTUSD:'PL=F',frxXPDUSD:'PA=F'};
+async function yahooH1(sym){
+  for(const host of ['https://query1.finance.yahoo.com','https://query2.finance.yahoo.com']){
+    try{
+      const r=await fetch(`${host}/v8/finance/chart/${encodeURIComponent(sym)}?interval=1h&range=730d&includePrePost=false`,{headers:{'User-Agent':'Mozilla/5.0 SeraIndicator/4.0'},signal:AbortSignal.timeout(30000)});
+      if(!r.ok)continue;
+      const res=(await r.json())?.chart?.result?.[0],q=res?.indicators?.quote?.[0],ts=res?.timestamp||[];
+      if(!q)continue;
+      const n=v=>v===null||v===undefined?NaN:Number(v);
+      return ts.map((e,i)=>[n(e),n(q.open[i]),n(q.high[i]),n(q.low[i]),n(q.close[i])]).filter(x=>x.every(Number.isFinite)&&x[1]>0&&x[4]>0&&x[2]>=x[3]);
+    }catch{/* host suivant */}
+  }
+  return [];
+}
+if(SET==='real'){
+  for(const row of out.markets){
+    if(row.H1.length>=4000)continue;
+    const fx=/^frx([A-Z]{3})([A-Z]{3})$/.exec(row.symbol);
+    const ysym=YAHOO[row.symbol]||(fx&&!/^X(AU|AG|PT|PD)$/.test(fx[1])?`${fx[1]}${fx[2]}=X`:null);
+    if(!ysym)continue;
+    const y=await yahooH1(ysym);
+    if(y.length>row.H1.length){console.log(`${row.name}: H1 Yahoo ${ysym} ${y.length} (Deriv ${row.H1.length})`);row.H1=y;row.H1_source=`Yahoo ${ysym}`;}
+    await sleep(400);
+  }
+}
 mkdirSync('research',{recursive:true});
 const FILE=SET==='real'?'research/deriv-real-history.json.gz':'research/deriv-history.json.gz';
 writeFileSync(FILE,gzipSync(JSON.stringify(out)));
