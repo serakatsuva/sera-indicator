@@ -38,9 +38,12 @@ async function candles(c,symbol,tf){
     }
     if(m.error||!Array.isArray(m.candles)||!m.candles.length){if(m.error)console.warn(symbol,tf,m.error.message);break;}
     const rows=m.candles.map(x=>[+x.epoch,+x.open,+x.high,+x.low,+x.close]);
+    const before=all.length?all[0][0]:Infinity;
     all=rows.concat(all.filter(r=>r[0]>rows[rows.length-1][0]));
+    if(all[0][0]>=before)break;
     end=rows[0][0]-1;
-    if(rows.length<990)break;
+    // Forex / indices pages are not full (market closed hours): keep going back while the history still moves back.
+    if(rows.length<50)break;
     await sleep(250);
   }
   const seen=new Set();return all.filter(r=>!seen.has(r[0])&&seen.add(r[0])).sort((a,b)=>a[0]-b[0]);
