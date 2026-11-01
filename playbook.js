@@ -67,6 +67,7 @@
     }
     list.innerHTML=rows.map(signalCard).join("");
     const period=stats?.period;
+    if($("pbSmc"))$("pbSmc").textContent=stats?.smc_tested||"";
     if($("pbPeriod"))$("pbPeriod").textContent=period?`Mesuré du ${period.from} au ${period.to} sur l’historique réel Deriv, avec la gestion de l’EA (50 % à TP1 puis point mort).`:"";
   }
 

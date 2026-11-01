@@ -37,6 +37,15 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
 
+### Recherche SMC (1er novembre 2026) — ce qui a été mesuré
+- `research/smc_model.py` : modèle SMC complet seul — balayage de liquidité → CHoCH → entrée limite à 50 % de la jambe (zone FVG / OB),
+  stop sous la mèche, objectifs 0,5 R / 1 R / 2 R / liquidité opposée — sur toutes les familles Deriv, H1 (1 an) et M15 (62 jours).
+  Une fois la bougie d'entrée comptée honnêtement (stop seulement sur cette bougie), le résultat est celui du hasard :
+  ~65 % à 0,5 R, ~50 % à 1 R, moyenne proche de 0 R. Il n'est donc pas ajouté aux robots.
+- `research/smc_stop.mjs` : stop SMC sous la mèche du balayage au lieu du stop ATR dans la stratégie « dérive » : moins bon (TP1 65-74 %).
+- Ce qui reste dans les robots : la stratégie « sens de la dérive » + le **balayage de liquidité** (mode précision), seul élément SMC
+  qui améliore la période d'apprentissage et la période de test.
+
 ### v2.68 (Deriv) / v2.53 (Weltrade) — mode précision SMC (balayage de liquidité)
 Filtres support/résistance et SMC mesurés sur la stratégie « sens de la dérive » (`research/smc_filters.mjs`, `research/sweep_robust.mjs`) :
 seul le **balayage de liquidité** améliore à la fois la période d'apprentissage et la période de test, et reste stable si on change
