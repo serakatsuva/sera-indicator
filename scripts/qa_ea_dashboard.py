@@ -63,6 +63,18 @@ int main(int argc,char** argv){
   // "conflict" : un ancien EA Sera a marque le signal comme deja trade et tourne sur un autre graphique.
   if(mode=="conflict"){ GlobalVariableSet(StateKey("SERA_TRADESTATE_",argv[6]),atof(argv[7])); SIM_GV["SERA_HB_424242"]=SIM_NOW; }
   OnInit();
+  if(mode=="email"){
+    // Emails : signal (une seule fois), position ouverte, position fermee avec le resultat, MT5 sans configuration email.
+    SIM_RECORD_DEALS=true; EmailTradeDeals();
+    Evaluate(json); SIM_NOW+=30; Evaluate(json); EmailTradeDeals();
+    for(auto& p:SIM_POS) SIM_PRICE[p.symbol]=p.type==POSITION_TYPE_BUY?p.open*1.01:p.open*0.99;
+    while(!SIM_POS.empty()){ CTrade t; t.PositionClose(SIM_POS[0].ticket); }
+    SIM_NOW+=30; EmailTradeDeals();
+    printf("=== MAILS ===\n"); for(auto& m:SIM_MAILS) printf("MAIL %s\n%s\n--\n",m.subject.c_str(),m.body.c_str());
+    SIM_EMAIL=false; SIM_NOW+=30; EmailSignalClear("x","Swing"); Evaluate(json); dump("EMAIL NON CONFIGURE");
+    printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
+    return 0;
+  }
   Evaluate(json);
   dump("CYCLE 1 (flux publie)");
   if(mode=="conflict"){ for(auto& kv:SIM_GV) if(kv.first.rfind("SERA_ALERTSTATE_",0)==0) kv.second=12345; SIM_GV["SERA_HB_424242"]=SIM_NOW+30; }
@@ -249,6 +261,46 @@ def main() -> int:
         log3 = out3.stdout.split("=== LOG ===")[-1]
         if "POS " + target["market"] in c3 or f"{target['market']} {target['final_verdict']} non execute - les modeles IA" not in log3:
             errors.append(f"AI veto on {target['market']} did not block the entry")
+    # Scenario: emails. Uses a confirmed signal of the feed, or a synthetic one when the feed has none right now.
+    mailfeed = json.loads(json.dumps(feed))
+    if rows:
+        target = next(m for m in mailfeed["markets"] if m["id"] == rows[0]["id"])
+    else:
+        target = next(m for m in mailfeed["markets"] if m["mode"] == "swing")
+        side = (target.get("entry_tf") or {}).get("side", "BUY")
+        px = 1000.0
+        sign = 1 if side == "BUY" else -1
+        target.update(final_verdict=side, freshness_gate=True, entry_tf={"side": side, "trendStrong": True},
+                      confirmation_tf={"side": side, "trendStrong": True},
+                      levels={"entry": px, "sl": px - sign * 10, "tp1": px + sign * 15, "tp2": px + sign * 24,
+                              "tp3": px + sign * 36, "tp4": px + sign * 48, "tp5": px + sign * 60})
+    target.update(execution_state="EXECUTE_NOW", execution_score=92, final_confidence=max(92, target["final_confidence"]),
+                  condition_pass_percent=max(85, target["condition_pass_percent"]),
+                  model_ensemble_direction=target["final_verdict"], model_ensemble_consensus=80, model_models_available=4)
+    forced_path = BUILD / "ea-signals-email.json"
+    forced_path.write_text(json.dumps(mailfeed, separators=(",", ":")), encoding="utf-8")
+    forced = mailfeed
+    oute = subprocess.run([str(exe), str(forced_path), str(world(forced)), str(now), str(forced_path), "email"],
+                          capture_output=True, text=True, timeout=120)
+    mails = oute.stdout.split("=== MAILS ===")[-1].split("=== EMAIL NON CONFIGURE")[0]
+    nocfg = oute.stdout.split("=== EMAIL NON CONFIGURE ===")[-1].split("=== LOG ===")[0]
+    horizon = "Day M15/H1" if target["mode"] == "day" else "Swing H1/H4/D1"
+    subject = f"MAIL Sera Deriv : {target['final_verdict']} {target['market']} ({horizon})"
+    if not quiet:
+        print("=== SCENARIO EMAILS (" + target["market"] + ") ===")
+        print(mails.strip()[:1500])
+    if oute.returncode != 0 or mails.count(subject) != 1:
+        errors.append(f"email scenario: expected exactly one signal email '{subject}' over two cycles")
+    body = mails.split(subject, 1)[-1].split("\n--\n", 1)[0]
+    if not all(k in body for k in ("Entree : ", "Stop loss : ", "TP1 : ", "TP3 : ", "Confiance : ", "https://serakatsuva.github.io/sera-indicator/")):
+        errors.append("email scenario: the signal email does not carry entry / SL / TP1-TP3 / confidence / app link")
+    if f"MAIL Sera : position {target['final_verdict']} ouverte sur {target['market']}" not in mails:
+        errors.append("email scenario: no email when the position opened")
+    if not re.search(rf"MAIL Sera : {re.escape(target['market'])} ferme \+\d", mails) or "Resultat : +" not in mails:
+        errors.append("email scenario: no email with the (positive) result when the position closed")
+    if not re.search(r"\[amber\] Emails : .*Outils > Options > Email", nocfg):
+        errors.append("email scenario: the dashboard does not explain that MT5 email must be configured")
+
     # Scenario: fast entry — a confirmed, very confident Day signal still in WAIT_CONFIRMATION enters at market.
     day_rows = [m for m in feed["markets"] if m["mode"] == "day" and m["final_verdict"] in ("BUY", "SELL") and m.get("levels")]
     if day_rows:

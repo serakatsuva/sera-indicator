@@ -9,11 +9,12 @@ enum ENUM_ORDER_TYPE{ORDER_TYPE_BUY,ORDER_TYPE_SELL,ORDER_TYPE_BUY_LIMIT,ORDER_T
 enum ENUM_POSITION_TYPE{POSITION_TYPE_BUY,POSITION_TYPE_SELL};
 enum ENUM_ORDER_TYPE_TIME{ORDER_TIME_SPECIFIED};
 enum ENUM_DEAL_ENTRY{DEAL_ENTRY_IN,DEAL_ENTRY_OUT,DEAL_ENTRY_OUT_BY};
-enum E_INT{POSITION_MAGIC,POSITION_TYPE,POSITION_TIME,POSITION_TICKET,ORDER_MAGIC,ORDER_TYPE,DEAL_MAGIC,DEAL_ENTRY,SYMBOL_DIGITS,SYMBOL_TRADE_STOPS_LEVEL,ACCOUNT_TRADE_MODE,ACCOUNT_TRADE_MODE_DEMO,TERMINAL_TRADE_ALLOWED,MQL_TRADE_ALLOWED,ACCOUNT_MARGIN_MODE,DEAL_TIME,TERMINAL_SCREEN_DPI};
+enum E_INT{POSITION_MAGIC,POSITION_TYPE,POSITION_TIME,POSITION_TICKET,ORDER_MAGIC,ORDER_TYPE,DEAL_MAGIC,DEAL_ENTRY,SYMBOL_DIGITS,SYMBOL_TRADE_STOPS_LEVEL,ACCOUNT_TRADE_MODE,ACCOUNT_TRADE_MODE_DEMO,TERMINAL_TRADE_ALLOWED,MQL_TRADE_ALLOWED,ACCOUNT_MARGIN_MODE,DEAL_TIME,TERMINAL_SCREEN_DPI,DEAL_TYPE,ACCOUNT_LOGIN,TERMINAL_EMAIL_ENABLED};
+const long DEAL_TYPE_BUY=0, DEAL_TYPE_SELL=1;
 const long ACCOUNT_MARGIN_MODE_RETAIL_NETTING=0, ACCOUNT_MARGIN_MODE_EXCHANGE=1, ACCOUNT_MARGIN_MODE_RETAIL_HEDGING=2;
-enum E_DBL{POSITION_PRICE_OPEN,POSITION_SL,POSITION_TP,POSITION_VOLUME,POSITION_PROFIT,POSITION_SWAP,ORDER_PRICE_OPEN,ORDER_SL,ORDER_TP,ORDER_VOLUME_CURRENT,DEAL_PROFIT,DEAL_SWAP,DEAL_COMMISSION,
+enum E_DBL{POSITION_PRICE_OPEN,POSITION_SL,POSITION_TP,POSITION_VOLUME,POSITION_PROFIT,POSITION_SWAP,ORDER_PRICE_OPEN,ORDER_SL,ORDER_TP,ORDER_VOLUME_CURRENT,DEAL_PROFIT,DEAL_SWAP,DEAL_COMMISSION,DEAL_VOLUME,DEAL_PRICE,
   SYMBOL_POINT,SYMBOL_TRADE_TICK_SIZE,SYMBOL_TRADE_TICK_VALUE_LOSS,SYMBOL_TRADE_TICK_VALUE,SYMBOL_VOLUME_MIN,SYMBOL_VOLUME_MAX,SYMBOL_VOLUME_STEP,ACCOUNT_BALANCE,ACCOUNT_EQUITY,ACCOUNT_MARGIN_FREE,ACCOUNT_MARGIN};
-enum E_STR{POSITION_SYMBOL,ORDER_SYMBOL};
+enum E_STR{POSITION_SYMBOL,ORDER_SYMBOL,DEAL_SYMBOL,ACCOUNT_SERVER,ACCOUNT_CURRENCY};
 const int INIT_SUCCEEDED=0; const double EMPTY_VALUE=1e308; const int WHOLE_ARRAY=-1; const int CP_UTF8=65001;
 struct MqlTick{datetime time;double bid,ask,last;};
 struct MqlRates{datetime time;double open,high,low,close;long tick_volume;int spread;long real_volume;};
@@ -26,7 +27,7 @@ template<class A,class B> auto MathMax(A a,B b)->decltype(a+b); template<class A
 double MathAbs(double);double MathFloor(double);double MathCeil(double);double MathRound(double);double MathSqrt(double);
 template<class T> int ArrayResize(std::vector<T>&,int); template<class T> int ArraySize(const std::vector<T>&); template<class T> bool ArraySetAsSeries(std::vector<T>&,bool);
 int CopyRates(const string&,ENUM_TIMEFRAMES,int,int,std::vector<MqlRates>&); int CopyClose(const string&,ENUM_TIMEFRAMES,int,int,std::vector<double>&);
-void Print(...); void Alert(const string&); void Comment(...); bool SendNotification(const string&);
+void Print(...); void Alert(const string&); void Comment(...); bool SendNotification(const string&); bool SendMail(const string&,const string&); string AccountInfoString(E_STR);
 int StringFind(const string&,const string&,int=0); string StringSubstr(const string&,int,int=-1); int StringLen(const string&); int StringReplace(string&,const string&,const string&);
 bool StringToUpper(string&); int StringTrimLeft(string&); int StringTrimRight(string&); int StringSplit(const string&,ushort,std::vector<string>&); ushort StringGetCharacter(const string&,int);
 double StringToDouble(const string&); datetime StringToTime(const string&); string IntegerToString(long); string DoubleToString(double,int=8);
@@ -34,7 +35,7 @@ double SymbolInfoDouble(const string&,E_DBL); long SymbolInfoInteger(const strin
 int SymbolsTotal(bool); string SymbolName(int,bool); double AccountInfoDouble(E_DBL); long AccountInfoInteger(E_INT);
 int PositionsTotal(); ulong PositionGetTicket(int); long PositionGetInteger(E_INT); double PositionGetDouble(E_DBL); string PositionGetString(E_STR); bool PositionSelect(const string&);
 int OrdersTotal(); ulong OrderGetTicket(int); long OrderGetInteger(E_INT); string OrderGetString(E_STR); double OrderGetDouble(E_DBL); bool OrderCalcMargin(ENUM_ORDER_TYPE,const string&,double,double,double&);
-bool HistorySelect(datetime,datetime); int HistoryDealsTotal(); ulong HistoryDealGetTicket(int); long HistoryDealGetInteger(ulong,E_INT); double HistoryDealGetDouble(ulong,E_DBL);
+bool HistorySelect(datetime,datetime); int HistoryDealsTotal(); ulong HistoryDealGetTicket(int); long HistoryDealGetInteger(ulong,E_INT); double HistoryDealGetDouble(ulong,E_DBL); string HistoryDealGetString(ulong,E_STR);
 bool GlobalVariableCheck(const string&); double GlobalVariableGet(const string&); datetime GlobalVariableSet(const string&,double);
 int GlobalVariablesTotal(); string GlobalVariableName(int); bool GlobalVariableDel(const string&); long ChartID();
 datetime TimeCurrent(); datetime TimeGMT(); bool TimeToStruct(datetime,MqlDateTime&); datetime StructToTime(MqlDateTime&); datetime iTime(const string&,ENUM_TIMEFRAMES,int);

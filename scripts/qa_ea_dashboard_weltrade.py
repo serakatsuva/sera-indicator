@@ -93,6 +93,21 @@ int main(int argc,char** argv){
   printf("=== PUBLISHED ===\n%s\n=== HEADERS ===\n%s\n",SIM_PUBLISHED.c_str(),SIM_PUBLISH_HEADERS.c_str());
   string first=SIM_PUBLISHED; SIM_NOW+=310; OnTimer();
   printf("=== SECOND PUBLISH ===\n%s\ncalls=%d\n",SIM_PUBLISHED.c_str(),SIM_PUBLISH_CALLS);
+  // Emails : signal envoye une seule fois, de nouveau apres un retour a ATTENDRE ; position ouverte puis fermee.
+  SIM_MAILS.clear(); SIM_RECORD_DEALS=true; SIM_NOW+=30; OnTimer();
+  for(int i=0;i<ArraySize(g_symbols);i++) if(g_symbols[i]=="GainX 1200"){ SwxDecision& d=g_decisions[i];
+    double px=SIM_PRICE[d.symbol];
+    for(int k=0;k<2;k++) EmailSignal("Weltrade",d.symbol,d.symbol,"BUY","Swing H1/H4/D1",91,"EXECUTE_NOW",px,px*0.99,px*1.015,px*1.024,px*1.036);
+    EmailSignalClear(d.symbol,"Swing H1/H4/D1");
+    EmailSignal("Weltrade",d.symbol,d.symbol,"BUY","Swing H1/H4/D1",91,"EXECUTE_NOW",px,px*0.99,px*1.015,px*1.024,px*1.036); }
+  { CTrade t; t.SetExpertMagicNumber(MagicNumber); t.Buy(0.2,"GainX 1200",0,SIM_PRICE["GainX 1200"]*0.99,SIM_PRICE["GainX 1200"]*1.03,"test"); }
+  SIM_NOW+=30; OnTimer();
+  for(size_t k=0;k<SIM_POS.size();k++) if(SIM_POS[k].symbol=="GainX 1200"){ SIM_PRICE["GainX 1200"]=SIM_POS[k].open*0.995; CTrade t; t.PositionClose(SIM_POS[k].ticket); break; }
+  SIM_NOW+=30; OnTimer();
+  printf("=== MAILS ===\n"); for(auto& m:SIM_MAILS) printf("MAIL %s\n%s\n--\n",m.subject.c_str(),m.body.c_str());
+  dump("EMAILS ACTIFS");
+  SIM_EMAIL=false; EmailSignal("Weltrade","PainX 600","PainX 600","SELL","Swing H1/H4/D1",88,"EXECUTE_NOW",1000,1010,985,976,964);
+  SIM_NOW+=30; OnTimer(); dump("EMAIL NON CONFIGURE");
   printf("=== LOG ===\n"); for(auto& l:SIM_LOG) printf("%s\n",l.c_str());
   return 0;
 }
@@ -202,6 +217,20 @@ def main() -> int:
         errors.append("second publish (5 min later) must update the file with its sha")
     if "App Sera (onglet Weltrade) : analyses envoyees il y a 0 min" not in sections.get("PUBLICATION APP", ""):
         errors.append("dashboard does not show the app publishing status")
+    mails = sections.get("MAILS", "")
+    sig = "MAIL Sera Weltrade : BUY GainX 1200 (Swing H1/H4/D1)"
+    if mails.count(sig) != 2:
+        errors.append(f"email: a signal must be sent once, and again after the market went back to ATTENDRE ({mails.count(sig)} sent)")
+    if not all(k in mails for k in ("Entree : ", "Stop loss : ", "TP1 : ", "TP3 : ", "Confiance : 91 %")):
+        errors.append("email: the Weltrade signal email does not carry entry / SL / TP1-TP3 / confidence")
+    if "MAIL Sera : position BUY ouverte sur GainX 1200" not in mails:
+        errors.append("email: no email when the position opened")
+    if not re.search(r"MAIL Sera : GainX 1200 ferme -\d", mails) or "(perte)" not in mails:
+        errors.append("email: no email with the (negative) result when the position closed")
+    if "[green] Emails : actifs  |  dernier envoi il y a 0 min" not in sections.get("EMAILS ACTIFS", ""):
+        errors.append("email: the dashboard does not show the email status")
+    if "Emails : email non configure : MT5 > Outils > Options > Email" not in sections.get("EMAIL NON CONFIGURE", ""):
+        errors.append("email: the dashboard does not explain that MT5 email must be configured")
     if "ZORDER BAD" in text:
         errors.append("dashboard background created after texts/bars: it would hide them")
     if errors:

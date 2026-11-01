@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "2.20"
+#property version   "2.30"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -29,6 +29,11 @@ input bool AllowRealAccount=true;
 input bool EnableTrendWatch=true;            // alerte a chaque nouveau signal confirme
 input bool EnableTerminalAlert=false;
 input bool EnablePushNotification=false;     // notifications sur l'appli MT5 du telephone (MetaQuotes ID)
+// --- Emails : configurer d'abord MT5 > Outils > Options > Email (serveur SMTP, identifiant, mot de passe d'application, adresse)
+input bool EnableEmailAlerts=true;           // recevoir les signaux et les trades par email
+input bool EmailNewSignals=true;             // un email par nouveau signal BUY/SELL (entree, SL, TP1-TP3)
+input bool EmailTrades=true;                 // un email a chaque position ouverte / fermee (avec le resultat)
+input int EmailMaximumPerHour=20;            // anti-spam : emails au maximum par heure
 // --- App Sera (v2.20) : onglet Weltrade de https://serakatsuva.github.io/sera-indicator/
 input bool PublishToApp=false;               // envoyer les analyses Weltrade a l'app (onglet Weltrade)
 input string GitHubToken="";                 // cle GitHub fine-grained : ce depot seulement, Contents = Read and write. Ne la partagez jamais.
@@ -555,6 +560,143 @@ void PrintOnce(const string message)
    Print(message);
 }
 
+// --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
+string g_email_ea="Sera EA Swing Intelligent Weltrade v2.30";
+string g_email_status="";
+int g_email_sent=0;
+datetime g_email_hour=0;
+datetime g_email_last_ok=0;
+datetime g_email_since=0;
+ulong g_email_last_deal=0;
+
+bool SendSeraEmail(const string subject,const string body)
+{
+   if(!EnableEmailAlerts) return false;
+   if(TerminalInfoInteger(TERMINAL_EMAIL_ENABLED)==0)
+   {
+      g_email_status="email non configure : MT5 > Outils > Options > Email (serveur SMTP, adresse)";
+      PrintOnce("Sera: email non envoye - configurez MT5 > Outils > Options > Email");
+      return false;
+   }
+   datetime hour=TimeCurrent()-TimeCurrent()%3600;
+   if(hour!=g_email_hour){ g_email_hour=hour; g_email_sent=0; }
+   if(EmailMaximumPerHour>0 && g_email_sent>=EmailMaximumPerHour)
+   {
+      g_email_status="limite de "+IntegerToString(EmailMaximumPerHour)+" emails par heure atteinte (EmailMaximumPerHour)";
+      return false;
+   }
+   ResetLastError();
+   if(!SendMail(subject,body))
+   {
+      int err=GetLastError();
+      g_email_status="email refuse par MT5 (erreur "+IntegerToString(err)+") : verifiez MT5 > Outils > Options > Email";
+      Print("Sera: email non envoye, erreur=",err);
+      return false;
+   }
+   g_email_sent++;
+   g_email_status="";
+   g_email_last_ok=TimeCurrent();
+   Print("Sera: email envoye - ",subject);
+   return true;
+}
+
+string EmailFooter()
+{
+   string text="\r\n\r\nCompte : "+IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN))+" ("+AccountInfoString(ACCOUNT_SERVER)+")";
+   text+="\r\nApp Sera : https://serakatsuva.github.io/sera-indicator/";
+   text+="\r\nEmail automatique de "+g_email_ea+". Ce n'est pas un conseil financier.";
+   return text;
+}
+
+string EmailPrice(const string symbol,const double price)
+{
+   int digits=symbol!=""?(int)SymbolInfoInteger(symbol,SYMBOL_DIGITS):0;
+   if(digits<=0) digits=price>=1000?2:(price>=10?3:5);
+   return DoubleToString(price,digits);
+}
+
+string EmailPriceLine(const string label,const string symbol,const double price)
+{
+   if(price<=0) return "";
+   return "\r\n"+label+" : "+EmailPrice(symbol,price);
+}
+
+string EmailSignalKey(const string market,const string horizon)
+{
+   return StringSubstr("SWX_MAIL_"+StringSubstr(horizon,0,3)+"_"+market,0,63);
+}
+
+// Un seul email par signal : le sens deja envoye est garde dans la memoire MT5 (meme apres un redemarrage).
+void EmailSignal(const string broker,const string market,const string symbol,const string verdict,const string horizon,
+                 const double confidence,const string state,const double entry,const double sl,const double tp1,const double tp2,const double tp3)
+{
+   if(!EnableEmailAlerts || !EmailNewSignals || (verdict!="BUY" && verdict!="SELL")) return;
+   string key=EmailSignalKey(market,horizon);
+   double side=verdict=="BUY"?1.0:-1.0;
+   if(GlobalVariableCheck(key) && GlobalVariableGet(key)==side) return;
+   string price_symbol=symbol!=""?symbol:market;
+   string subject="Sera "+broker+" : "+verdict+" "+market+" ("+horizon+")";
+   string body="Nouveau signal Sera "+broker;
+   body+="\r\n\r\nMarche : "+market;
+   if(symbol!="" && symbol!=market) body+=" (MT5 : "+symbol+")";
+   body+="\r\nSignal : "+(verdict=="BUY"?string("ACHAT (BUY)"):string("VENTE (SELL)"))+"  |  "+horizon;
+   body+="\r\nConfiance : "+DoubleToString(confidence,0)+" %";
+   if(state!="") body+="\r\nEtat : "+state;
+   body+=EmailPriceLine("Entree",price_symbol,entry)+EmailPriceLine("Stop loss",price_symbol,sl);
+   body+=EmailPriceLine("TP1",price_symbol,tp1)+EmailPriceLine("TP2",price_symbol,tp2)+EmailPriceLine("TP3",price_symbol,tp3);
+   body+=EmailFooter();
+   if(SendSeraEmail(subject,body)) GlobalVariableSet(key,side);
+}
+
+// Le marche n'a plus de signal : le prochain BUY/SELL sera de nouveau envoye.
+void EmailSignalClear(const string market,const string horizon)
+{
+   string key=EmailSignalKey(market,horizon);
+   if(GlobalVariableCheck(key)) GlobalVariableDel(key);
+}
+
+// Positions ouvertes / fermees par cet EA (historique MT5) : un email chacune, avec le resultat a la sortie.
+void EmailTradeDeals()
+{
+   if(!EnableEmailAlerts || !EmailTrades) return;
+   if(g_email_since==0){ g_email_since=TimeCurrent(); return; }
+   if(!HistorySelect(g_email_since-60,TimeCurrent()+60)) return;
+   ulong newest=g_email_last_deal;
+   for(int i=0;i<HistoryDealsTotal();i++)
+   {
+      ulong ticket=HistoryDealGetTicket(i);
+      if(ticket<=g_email_last_deal || HistoryDealGetInteger(ticket,DEAL_MAGIC)!=MagicNumber) continue;
+      if((datetime)HistoryDealGetInteger(ticket,DEAL_TIME)<g_email_since) continue;
+      if(ticket>newest) newest=ticket;
+      long entry=HistoryDealGetInteger(ticket,DEAL_ENTRY);
+      string symbol=HistoryDealGetString(ticket,DEAL_SYMBOL);
+      double volume=HistoryDealGetDouble(ticket,DEAL_VOLUME);
+      double price=HistoryDealGetDouble(ticket,DEAL_PRICE);
+      if(entry==DEAL_ENTRY_IN)
+      {
+         string side=HistoryDealGetInteger(ticket,DEAL_TYPE)==DEAL_TYPE_BUY?"BUY":"SELL";
+         string body="Position "+side+" ouverte par "+g_email_ea;
+         body+="\r\n\r\nMarche : "+symbol+"\r\nLot : "+DoubleToString(volume,2)+EmailPriceLine("Prix d'entree",symbol,price);
+         if(PositionSelect(symbol))
+            body+=EmailPriceLine("Stop loss",symbol,PositionGetDouble(POSITION_SL))+EmailPriceLine("Objectif final",symbol,PositionGetDouble(POSITION_TP));
+         body+=EmailFooter();
+         SendSeraEmail("Sera : position "+side+" ouverte sur "+symbol,body);
+      }
+      else if(entry==DEAL_ENTRY_OUT || entry==DEAL_ENTRY_OUT_BY)
+      {
+         double result=HistoryDealGetDouble(ticket,DEAL_PROFIT)+HistoryDealGetDouble(ticket,DEAL_SWAP)+HistoryDealGetDouble(ticket,DEAL_COMMISSION);
+         string amount=(result>=0?string("+"):string(""))+DoubleToString(result,2)+" "+AccountInfoString(ACCOUNT_CURRENCY);
+         string body="Position fermee (totalement ou en partie) par "+g_email_ea;
+         body+="\r\n\r\nMarche : "+symbol+"\r\nLot ferme : "+DoubleToString(volume,2)+EmailPriceLine("Prix de sortie",symbol,price);
+         body+="\r\nResultat : "+amount+(result>=0?string("  (gain)"):string("  (perte)"));
+         body+="\r\nBalance : "+DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE),2)+"  |  equite : "+DoubleToString(AccountInfoDouble(ACCOUNT_EQUITY),2);
+         body+=EmailFooter();
+         SendSeraEmail("Sera : "+symbol+" ferme "+amount,body);
+      }
+   }
+   g_email_last_deal=newest;
+}
+
 void StoreTradeLevels(const string setup_id,const string symbol,const double entry,const double tp1,const double tp2,
                       const double tp3,const double tp4,const double tp5,const double final_tp,const string mode)
 {
@@ -635,6 +777,8 @@ bool EmergencyEquityStop()
    }
    CancelAllSeraPendingOrders("arret d'urgence equite");
    if(EnablePushNotification) SendNotification("Sera: arret d'urgence, positions fermees (equite -"+DoubleToString(EmergencyEquityStopPercent,0)+"%)");
+   SendSeraEmail("Sera : ARRET D'URGENCE - positions fermees","Toutes les positions Sera ont ete fermees : l'equite est descendue de plus de "+
+                 DoubleToString(EmergencyEquityStopPercent,0)+"% sous la balance."+EmailFooter());
    return true;
 }
 
@@ -1335,7 +1479,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.20"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.20");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.30"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.30");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -1918,7 +2062,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.20",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.30",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -1946,6 +2090,13 @@ void RenderDashboard(const bool can_trade,const string mode_label)
       if(g_publish_status!="") PanelText(line++,"App Sera (onglet Weltrade) : "+g_publish_status,amber);
       else if(g_last_publish_ok>0) PanelText(line++,"App Sera (onglet Weltrade) : analyses envoyees il y a "+IntegerToString((int)((TimeCurrent()-g_last_publish_ok)/60))+" min",green);
       else PanelText(line++,"App Sera (onglet Weltrade) : premier envoi en cours...",grey);
+   }
+   if(EnableEmailAlerts)
+   {
+      if(g_email_status!="") PanelText(line++,"Emails : "+g_email_status,amber);
+      else if(TerminalInfoInteger(TERMINAL_EMAIL_ENABLED)==0) PanelText(line++,"Emails : a configurer dans MT5 > Outils > Options > Email",amber);
+      else if(g_email_last_ok>0) PanelText(line++,"Emails : actifs  |  dernier envoi il y a "+IntegerToString((int)((TimeCurrent()-g_email_last_ok)/60))+" min",green);
+      else PanelText(line++,"Emails : actifs (nouveaux signaux, positions ouvertes et fermees)",green);
    }
    int others=OtherSeraInstances();
    if(others>0) PanelText(line++,"ATTENTION : "+IntegerToString(others)+" autre(s) EA Sera Weltrade actif(s) sur ce compte -> n'en garder qu'un seul",red);
@@ -2053,7 +2204,7 @@ datetime ServerToUtc(const datetime t){ return t<=0?0:t+(TimeGMT()-TimeCurrent()
 string BuildAppJson()
 {
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
-   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.20\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
+   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.30\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
                ",\"account\":"+JsonText(demo?"DEMO":"REEL")+",\"markets\":[";
    int written=0;
    for(int i=0;i<ArraySize(g_symbols);i++)
@@ -2183,6 +2334,10 @@ void ScanAndTrade()
             string now=g_decisions[i].verdict;
             if(EnableTrendWatch && now!=before && IsSignal(now))
                SendSwxAlert("SyntX: signal "+now+" "+symbol+" · score "+DoubleToString(g_decisions[i].score,0)+" · "+g_decisions[i].state);
+            if(IsSignal(now))
+               EmailSignal("Weltrade",symbol,symbol,now,"Swing H1/H4/D1",g_decisions[i].confidence,g_decisions[i].state,
+                           g_decisions[i].entry,g_decisions[i].sl,g_decisions[i].tp1,g_decisions[i].tp2,g_decisions[i].tp3);
+            else EmailSignalClear(symbol,"Swing H1/H4/D1");
          }
       }
       ProcessDecision(i,can_trade,entered);
@@ -2197,7 +2352,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v2.20: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v2.30: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)
@@ -2210,6 +2365,7 @@ void OnDeinit(const int reason){ EventKillTimer(); PanelClear(); Comment(""); }
 
 void OnTimer()
 {
+   EmailTradeDeals();
    if(EmergencyEquityStop()) return;
    ManageAllSeraPositions();
    CutReversedPositions();

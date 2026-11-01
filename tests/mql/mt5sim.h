@@ -19,11 +19,12 @@ enum ENUM_ORDER_TYPE{ORDER_TYPE_BUY,ORDER_TYPE_SELL,ORDER_TYPE_BUY_LIMIT,ORDER_T
 enum ENUM_POSITION_TYPE{POSITION_TYPE_BUY,POSITION_TYPE_SELL};
 enum ENUM_ORDER_TYPE_TIME{ORDER_TIME_SPECIFIED};
 enum ENUM_DEAL_ENTRY{DEAL_ENTRY_IN,DEAL_ENTRY_OUT,DEAL_ENTRY_OUT_BY};
-enum E_INT{POSITION_MAGIC,POSITION_TYPE,POSITION_TIME,POSITION_TICKET,ORDER_MAGIC,ORDER_TYPE,DEAL_MAGIC,DEAL_ENTRY,SYMBOL_DIGITS,SYMBOL_TRADE_STOPS_LEVEL,ACCOUNT_TRADE_MODE,ACCOUNT_TRADE_MODE_DEMO,TERMINAL_TRADE_ALLOWED,MQL_TRADE_ALLOWED,ACCOUNT_MARGIN_MODE,DEAL_TIME,TERMINAL_SCREEN_DPI};
+enum E_INT{POSITION_MAGIC,POSITION_TYPE,POSITION_TIME,POSITION_TICKET,ORDER_MAGIC,ORDER_TYPE,DEAL_MAGIC,DEAL_ENTRY,SYMBOL_DIGITS,SYMBOL_TRADE_STOPS_LEVEL,ACCOUNT_TRADE_MODE,ACCOUNT_TRADE_MODE_DEMO,TERMINAL_TRADE_ALLOWED,MQL_TRADE_ALLOWED,ACCOUNT_MARGIN_MODE,DEAL_TIME,TERMINAL_SCREEN_DPI,DEAL_TYPE,ACCOUNT_LOGIN,TERMINAL_EMAIL_ENABLED};
+const long DEAL_TYPE_BUY=0, DEAL_TYPE_SELL=1;
 const long ACCOUNT_MARGIN_MODE_RETAIL_NETTING=0, ACCOUNT_MARGIN_MODE_EXCHANGE=1, ACCOUNT_MARGIN_MODE_RETAIL_HEDGING=2;
-enum E_DBL{POSITION_PRICE_OPEN,POSITION_SL,POSITION_TP,POSITION_VOLUME,POSITION_PROFIT,POSITION_SWAP,ORDER_PRICE_OPEN,ORDER_SL,ORDER_TP,ORDER_VOLUME_CURRENT,DEAL_PROFIT,DEAL_SWAP,DEAL_COMMISSION,
+enum E_DBL{POSITION_PRICE_OPEN,POSITION_SL,POSITION_TP,POSITION_VOLUME,POSITION_PROFIT,POSITION_SWAP,ORDER_PRICE_OPEN,ORDER_SL,ORDER_TP,ORDER_VOLUME_CURRENT,DEAL_PROFIT,DEAL_SWAP,DEAL_COMMISSION,DEAL_VOLUME,DEAL_PRICE,
   SYMBOL_POINT,SYMBOL_TRADE_TICK_SIZE,SYMBOL_TRADE_TICK_VALUE_LOSS,SYMBOL_TRADE_TICK_VALUE,SYMBOL_VOLUME_MIN,SYMBOL_VOLUME_MAX,SYMBOL_VOLUME_STEP,ACCOUNT_BALANCE,ACCOUNT_EQUITY,ACCOUNT_MARGIN_FREE,ACCOUNT_MARGIN};
-enum E_STR{POSITION_SYMBOL,ORDER_SYMBOL};
+enum E_STR{POSITION_SYMBOL,ORDER_SYMBOL,DEAL_SYMBOL,ACCOUNT_SERVER,ACCOUNT_CURRENCY};
 const int INIT_SUCCEEDED=0; const double EMPTY_VALUE=1e308; const int WHOLE_ARRAY=-1; const int CP_UTF8=65001;
 const int INVALID_HANDLE=-1; enum ENUM_MA_METHOD{MODE_EMA}; enum ENUM_APPLIED_PRICE{PRICE_CLOSE};
 const long ACCOUNT_TRADE_MODE_REAL=2;
@@ -42,6 +43,8 @@ struct MqlDateTime{int year,mon,day,hour,min,sec,day_of_week,day_of_year;};
 datetime SIM_NOW=0;
 double SIM_BALANCE=1000.0;
 bool SIM_ALGO=true;
+bool SIM_EMAIL=true;   // MT5 > Options > Email configure
+int g_last_error=0;
 std::map<string,double> SIM_PRICE;       // symbol -> price
 std::map<string,int> SIM_TREND;          // symbol -> +1 up / -1 down (broker candles)
 struct SimPos{ulong ticket;string symbol;long type;double open,sl,tp,volume;datetime time;long magic;};
@@ -100,8 +103,8 @@ double sim_floating(){ double f=0; for(auto& p:SIM_POS){ double px=SIM_PRICE[p.s
 double AccountInfoDouble(E_DBL p){ double eq=SIM_BALANCE+sim_floating(); double m=0; for(auto& x:SIM_POS) m+=x.volume*x.open*0.01;
   switch(p){ case ACCOUNT_BALANCE: return SIM_BALANCE; case ACCOUNT_EQUITY: return eq; case ACCOUNT_MARGIN_FREE: return eq-m; case ACCOUNT_MARGIN: return m; default: return 0; } }
 long SIM_MARGIN_MODE=2;
-long AccountInfoInteger(E_INT p){ return p==ACCOUNT_TRADE_MODE?ACCOUNT_TRADE_MODE_REAL:p==ACCOUNT_MARGIN_MODE?SIM_MARGIN_MODE:0; }
-long TerminalInfoInteger(E_INT){ return SIM_ALGO?1:0; } long MQLInfoInteger(E_INT){ return SIM_ALGO?1:0; }
+long AccountInfoInteger(E_INT p){ if(p==ACCOUNT_LOGIN) return 123456; return p==ACCOUNT_TRADE_MODE?ACCOUNT_TRADE_MODE_REAL:p==ACCOUNT_MARGIN_MODE?SIM_MARGIN_MODE:0; }
+long TerminalInfoInteger(E_INT p){ if(p==TERMINAL_EMAIL_ENABLED) return SIM_EMAIL?1:0; return SIM_ALGO?1:0; } long MQLInfoInteger(E_INT){ return SIM_ALGO?1:0; }
 
 int PositionsTotal(){ return (int)SIM_POS.size(); }
 ulong PositionGetTicket(int i){ if(i<0||i>=(int)SIM_POS.size()) return 0; SIM_SEL_POS=i; return SIM_POS[i].ticket; }
@@ -119,8 +122,22 @@ string OrderGetString(E_STR){ return SIM_SEL_ORD>=0&&SIM_SEL_ORD<(int)SIM_ORD.si
 double OrderGetDouble(E_DBL p){ if(SIM_SEL_ORD<0||SIM_SEL_ORD>=(int)SIM_ORD.size()) return 0; auto& o=SIM_ORD[SIM_SEL_ORD];
   switch(p){ case ORDER_PRICE_OPEN: return o.price; case ORDER_SL: return o.sl; case ORDER_TP: return o.tp; case ORDER_VOLUME_CURRENT: return o.volume; default: return 0; } }
 bool OrderCalcMargin(ENUM_ORDER_TYPE,const string&,double v,double px,double& m){ m=v*px*0.01; return true; }
-bool HistorySelect(datetime,datetime){ return false; } int HistoryDealsTotal(){ return 0; }
-ulong HistoryDealGetTicket(int){ return 0; } long HistoryDealGetInteger(ulong,E_INT){ return 0; } double HistoryDealGetDouble(ulong,E_DBL){ return 0; }
+// Historique des transactions : enregistre seulement si SIM_RECORD_DEALS (tests des emails), sinon vide comme avant.
+struct SimDeal{ulong ticket;string symbol;long entry,type,magic;datetime time;double volume,price,profit;};
+std::vector<SimDeal> SIM_DEALS; bool SIM_RECORD_DEALS=false;
+void sim_deal(const string& s,long entry,long type,long magic,double v,double px,double profit){ if(SIM_RECORD_DEALS) SIM_DEALS.push_back({++SIM_TICKET,s,entry,type,magic,SIM_NOW,v,px,profit}); }
+const SimDeal* sim_find_deal(ulong t){ for(auto& d:SIM_DEALS) if(d.ticket==t) return &d; return nullptr; }
+bool HistorySelect(datetime,datetime){ return SIM_RECORD_DEALS; } int HistoryDealsTotal(){ return (int)SIM_DEALS.size(); }
+ulong HistoryDealGetTicket(int i){ return i>=0&&i<(int)SIM_DEALS.size()?SIM_DEALS[i].ticket:0; }
+long HistoryDealGetInteger(ulong t,E_INT p){ auto d=sim_find_deal(t); if(!d) return 0;
+  switch(p){ case DEAL_MAGIC: return d->magic; case DEAL_ENTRY: return d->entry; case DEAL_TYPE: return d->type; case DEAL_TIME: return d->time; default: return 0; } }
+double HistoryDealGetDouble(ulong t,E_DBL p){ auto d=sim_find_deal(t); if(!d) return 0;
+  switch(p){ case DEAL_PROFIT: return d->profit; case DEAL_VOLUME: return d->volume; case DEAL_PRICE: return d->price; default: return 0; } }
+string HistoryDealGetString(ulong t,E_STR){ auto d=sim_find_deal(t); return d?d->symbol:""; }
+// Emails : SendMail est garde dans SIM_MAILS ; SIM_EMAIL=false simule un MT5 sans configuration email.
+struct SimMail{string subject,body;}; std::vector<SimMail> SIM_MAILS;
+bool SendMail(const string& subject,const string& body){ if(!SIM_EMAIL){ g_last_error=4510; return false; } SIM_MAILS.push_back({subject,body}); return true; }
+string AccountInfoString(E_STR p){ return p==ACCOUNT_CURRENCY?"USD":p==ACCOUNT_SERVER?"Sim-Server":""; }
 
 bool GlobalVariableCheck(const string& k){ return SIM_GV.count(k)>0; } double GlobalVariableGet(const string& k){ return SIM_GV[k]; }
 datetime GlobalVariableSet(const string& k,double v){ SIM_GV[k]=v; return SIM_NOW; }
@@ -157,7 +174,7 @@ int iATR(const string&,ENUM_TIMEFRAMES,int){ return INVALID_HANDLE; } int iADX(c
 int iMACD(const string&,ENUM_TIMEFRAMES,int,int,int,ENUM_APPLIED_PRICE){ return INVALID_HANDLE; }
 int CopyBuffer(int,int,int,int,std::vector<double>&){ return 0; } bool IndicatorRelease(int){ return true; }
 bool EventSetTimer(int){ return true; } void EventKillTimer(){}
-int g_last_error=0; int GetLastError(){ return g_last_error; } void ResetLastError(){ g_last_error=0; }
+int GetLastError(){ return g_last_error; } void ResetLastError(){ g_last_error=0; }
 double NormalizeDouble(double v,int d){ double f=std::pow(10.0,d); return std::round(v*f)/f; }
 int WebRequest(const string&,const string&,const string&,const string&,int,const std::vector<char>&,int,std::vector<char>&,string&){ g_last_error=4014; return -1; }
 // API GitHub simulee : GET -> 404 (fichier absent), PUT -> 201 ; le contenu envoye est garde dans SIM_PUBLISHED.
@@ -194,13 +211,14 @@ struct CTrade{
   long magic=0;
   void SetExpertMagicNumber(long m){ magic=m; } void SetDeviationInPoints(ulong){} void SetAsyncMode(bool){}
   string ResultRetcodeDescription(){ return "done"; }
-  bool open(long type,double v,const string& s,double sl,double tp){ SIM_POS.push_back({++SIM_TICKET,s,type,SIM_PRICE[s],sl,tp,v,SIM_NOW,magic}); return true; }
+  bool open(long type,double v,const string& s,double sl,double tp){ SIM_POS.push_back({++SIM_TICKET,s,type,SIM_PRICE[s],sl,tp,v,SIM_NOW,magic}); sim_deal(s,DEAL_ENTRY_IN,type==POSITION_TYPE_BUY?DEAL_TYPE_BUY:DEAL_TYPE_SELL,magic,v,SIM_PRICE[s],0); return true; }
   bool Buy(double v,const string& s,double,double sl,double tp,const string&){ return open(POSITION_TYPE_BUY,v,s,sl,tp); }
   bool Sell(double v,const string& s,double,double sl,double tp,const string&){ return open(POSITION_TYPE_SELL,v,s,sl,tp); }
   bool BuyLimit(double v,double px,const string& s,double sl,double tp,ENUM_ORDER_TYPE_TIME,datetime,const string&){ SIM_ORD.push_back({++SIM_TICKET,s,ORDER_TYPE_BUY_LIMIT,px,sl,tp,v,magic}); return true; }
   bool SellLimit(double v,double px,const string& s,double sl,double tp,ENUM_ORDER_TYPE_TIME,datetime,const string&){ SIM_ORD.push_back({++SIM_TICKET,s,ORDER_TYPE_SELL_LIMIT,px,sl,tp,v,magic}); return true; }
   bool PositionClose(const string& s){ for(size_t i=0;i<SIM_POS.size();i++) if(SIM_POS[i].symbol==s){ SIM_POS.erase(SIM_POS.begin()+i); return true; } return false; }
-  bool PositionClose(ulong t){ for(size_t i=0;i<SIM_POS.size();i++) if(SIM_POS[i].ticket==t){ SIM_POS.erase(SIM_POS.begin()+i); return true; } return false; }
+  bool PositionClose(ulong t){ for(size_t i=0;i<SIM_POS.size();i++) if(SIM_POS[i].ticket==t){ auto& p=SIM_POS[i]; double px=SIM_PRICE[p.symbol];
+    sim_deal(p.symbol,DEAL_ENTRY_OUT,p.type==POSITION_TYPE_BUY?DEAL_TYPE_SELL:DEAL_TYPE_BUY,p.magic,p.volume,px,(p.type==POSITION_TYPE_BUY?px-p.open:p.open-px)*p.volume); SIM_POS.erase(SIM_POS.begin()+i); return true; } return false; }
   bool PositionClosePartial(ulong t,double v){ for(auto& p:SIM_POS) if(p.ticket==t){ p.volume-=v; return true; } return false; }
   bool PositionModify(ulong t,double sl,double tp){ for(auto& p:SIM_POS) if(p.ticket==t){ p.sl=sl; p.tp=tp; return true; } return false; }
   bool PositionModify(const string& s,double sl,double tp){ for(auto& p:SIM_POS) if(p.symbol==s){ p.sl=sl; p.tp=tp; return true; } return false; }
