@@ -10,6 +10,11 @@
   let filter="all";
   let knownSignals=null;          // id|sens deja vus (annonces vocales)
   let timer=null;
+  let family="all";
+  // Familles d'indices Weltrade (SyntX) reconnues par l'EA ; les noms exacts viennent du compte MT5.
+  const FAMILIES=[["GAINX","GainX"],["PAINX","PainX"],["FXVOL","FX Vol"],["SFXVOL","SFX Vol"],["FLIPX","FlipX"],["SWITCHX","SwitchX"],
+                  ["BREAKX","BreakX"],["TRENDX","TrendX"],["PLUSX","PlusX"],["FIBOX","FiboX"],["QUADX","QuadX"]];
+  const familyLabel=k=>(FAMILIES.find(f=>f[0]===k)||[k,k||"SyntX"])[1];
 
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
@@ -58,7 +63,7 @@
     const progress=Math.max(0,Math.min(100,Math.min(Number(m.score)/84*100,Number(m.conditions)/80*100)));
     return `<article class="wt-card ${cls}" data-wt-symbol="${esc(m.symbol)}">
       <div class="wt-top">
-        <div><h3>${esc(m.symbol)}</h3><p>${esc(m.family||"SyntX")} · SWING H1/H4/D1</p></div>
+        <div><h3>${esc(m.symbol)}</h3><p>${esc(familyLabel(m.family))} · SWING H1/H4/D1</p></div>
         <span class="wt-signal ${cls}">${esc(sig?m.verdict:"ATTENDRE")}</span>
       </div>
       <div class="wt-row"><span>${esc(direction)}</span><b>${esc(m.state||"")}</b><strong>${Math.round(Number(m.confidence)||0)}%</strong></div>
@@ -89,20 +94,41 @@
     </ol></details>`;
   }
 
+  function waitingCard(f){
+    return `<article class="wt-card wt-waiting" data-wt-family="${esc(f[0])}">
+      <div class="wt-top"><div><h3>${esc(f[1])}</h3><p>Indices ${esc(f[1])} · SWING H1/H4/D1</p></div><span class="wt-signal wait">EN ATTENTE</span></div>
+      <p class="wt-decision">Les analyses de ces indices s’afficheront ici dès que l’EA Weltrade les enverra depuis MT5.</p>
+    </article>`;
+  }
+
+  function renderFamilies(markets){
+    const host=$("wtFamilies");
+    if(!host)return;
+    const counts={};
+    markets.forEach(m=>{counts[m.family]=(counts[m.family]||0)+1;});
+    const keys=markets.length?FAMILIES.map(f=>f[0]).filter(k=>counts[k]).concat(Object.keys(counts).filter(k=>!FAMILIES.some(f=>f[0]===k))):FAMILIES.map(f=>f[0]);
+    if(family!=="all"&&!keys.includes(family))family="all";
+    const btn=(k,label,n)=>`<button type="button" class="index-family-button${family===k?" active":""}" data-wt-family-filter="${esc(k)}" role="tab" aria-selected="${family===k}"><span>${esc(label)}</span>${n===null?"":`<small>${n}</small>`}</button>`;
+    host.innerHTML=btn("all","Toutes",markets.length?markets.length:null)+keys.map(k=>btn(k,familyLabel(k),markets.length?counts[k]:null)).join("");
+  }
+
   function render(){
     const notice=$("wtNotice"),results=$("wtResults"),meta=$("wtMeta");
     if(!notice||!results)return;
     if(!data){
       notice.className="notice warning";
       notice.innerHTML=`Aucune analyse Weltrade reçue pour l’instant : l’EA Weltrade doit les envoyer depuis MT5.${guide()}`;
-      results.innerHTML="";
+      renderFamilies([]);
+      results.innerHTML=FAMILIES.filter(f=>family==="all"||f[0]===family).map(waitingCard).join("");
       if(meta)meta.innerHTML="";
       return;
     }
     const age=ageMinutes(data.updated_at);
     const markets=[...data.markets].sort((a,b)=>(isSignal(b)-isSignal(a))||((Number(b.score)||0)-(Number(a.score)||0)));
     const signals=markets.filter(isSignal);
-    const shown=filter==="signals"?signals:markets;
+    renderFamilies(markets);
+    const inFamily=markets.filter(m=>family==="all"||m.family===family);
+    const shown=filter==="signals"?inFamily.filter(isSignal):inFamily;
     if(meta)meta.innerHTML=`<span>Envoi EA <b>${esc(ageText(age))}</b></span><span>Indices <b>${markets.length}</b></span><span>Signaux <b>${signals.length}</b></span><span>Compte <b>${esc(data.account||"—")}</b></span><span><b>${esc(data.source||"Sera EA Weltrade")} ${esc(data.version||"")}</b></span>`;
     if(age!==null&&age>STALE_MINUTES){
       notice.className="notice warning";
@@ -144,9 +170,42 @@
       if(m&&window.SeraVoice)window.SeraVoice.speak(speechFor(m),true);
     });
     $("wtRefresh")?.addEventListener("click",refresh);
+    $("wtFamilies")?.addEventListener("click",event=>{
+      const b=event.target.closest("[data-wt-family-filter]");
+      if(!b)return;
+      family=b.dataset.wtFamilyFilter;
+      render();
+    });
+    // Onglet "Weltrade · SyntX" dans le choix du marché (à côté de Synthétiques et Forex).
+    $("weltradeFilter")?.addEventListener("click",()=>setMode(true,true));
+    ["syntheticFilter","forexFilter"].forEach(id=>$(id)?.addEventListener("click",()=>setMode(false,false)));
+    document.querySelectorAll('a[href="#weltrade"]').forEach(a=>a.addEventListener("click",event=>{event.preventDefault();setMode(true,true);}));
+  }
+
+  let savedTitle=null,savedActive=[];
+  function setMode(on,scroll){
+    const body=document.body,btn=$("weltradeFilter"),title=document.querySelector("#scanner .scanner-heading h2");
+    if(on===body.classList.contains("wt-mode")){ if(on&&scroll)$("scanner")?.scrollIntoView({behavior:"smooth",block:"start"}); return; }
+    body.classList.toggle("wt-mode",on);
+    btn?.classList.toggle("active",on);
+    btn?.setAttribute("aria-selected",on?"true":"false");
+    const others=["syntheticFilter","forexFilter"].map($).filter(Boolean);
+    if(on){
+      savedActive=others.filter(b=>b.classList.contains("active"));
+      others.forEach(b=>{b.classList.remove("active");b.setAttribute("aria-selected","false");});
+      if(title){savedTitle=title.textContent;title.textContent="Signaux Weltrade (SyntX)";}
+      if(scroll)$("scanner")?.scrollIntoView({behavior:"smooth",block:"start"});
+      try{history.replaceState(null,"","#weltrade");}catch(e){/* ignore */}
+      refresh();
+    }else{
+      if(title&&savedTitle!==null)title.textContent=savedTitle;
+      if(!others.some(b=>b.classList.contains("active")))savedActive.forEach(b=>{b.classList.add("active");b.setAttribute("aria-selected","true");});
+      if(location.hash==="#weltrade"){try{history.replaceState(null,"",location.pathname+location.search);}catch(e){/* ignore */}}
+    }
   }
 
   window.SeraWeltrade={
+    open:()=>setMode(true,true),
     signals:()=>data?data.markets.filter(isSignal).map(m=>({broker:"Weltrade",market:m.symbol,mode:"swing",verdict:m.verdict,confidence:m.confidence,entry:m.entry,sl:m.sl,tp1:m.tp1,tp2:m.tp2,tp3:m.tp3})):[],
     refresh
   };
@@ -155,6 +214,7 @@
     if(!$("weltrade"))return;
     bind();
     refresh();
+    if(location.hash==="#weltrade")setMode(true,true);
     timer=setInterval(refresh,60000);
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();

@@ -21,6 +21,8 @@ async function captureSpeech(page) {
 async function open(page) {
   await page.goto('/');
   await page.evaluate(() => document.getElementById('welcomePopup')?.remove());
+  await page.locator('#weltradeFilter').click();
+  await expect(page.locator('#weltradeFilter')).toHaveClass(/active/);
 }
 
 test('Weltrade tab shows the analyses sent by the MT5 EA', async ({ page }) => {
@@ -44,6 +46,36 @@ test('Weltrade tab explains how to connect the EA when nothing was received', as
   await open(page);
   await expect(page.locator('#wtNotice')).toContainText('Aucune analyse Weltrade reçue');
   await expect(page.locator('#wtNotice')).toContainText('PublishToApp');
+  // the Weltrade synthetic families are listed while waiting for the EA
+  await expect(page.locator('#wtFamilies [data-wt-family-filter="GAINX"]')).toBeVisible();
+  await expect(page.locator('#weltrade .wt-card.wt-waiting').first()).toContainText('GainX');
+});
+
+test('Weltrade is a market tab next to Synthetiques and Forex', async ({ page }) => {
+  await serveWeltrade(page, () => ({ ...sample, updated_at: new Date().toISOString() }));
+  await page.goto('/');
+  await page.evaluate(() => document.getElementById('welcomePopup')?.remove());
+  await expect(page.locator('#weltrade')).toBeHidden();
+  await page.locator('#weltradeFilter').click();
+  await expect(page.locator('#weltrade')).toBeVisible();
+  await expect(page.locator('#results')).toBeHidden();
+  await expect(page.locator('#syntheticFilter')).not.toHaveClass(/active/);
+  await expect(page.locator('#scanner h2')).toHaveText('Signaux Weltrade (SyntX)');
+  await page.locator('[data-wt-family-filter="PAINX"]').click();
+  await expect(page.locator('#weltrade .wt-card')).toHaveCount(sample.markets.filter(m => m.family === 'PAINX').length);
+  await page.locator('#syntheticFilter').click();
+  await expect(page.locator('#weltrade')).toBeHidden();
+  await expect(page.locator('#results')).toBeVisible();
+  await expect(page.locator('#syntheticFilter')).toHaveClass(/active/);
+  await expect(page.locator('#weltradeFilter')).not.toHaveClass(/active/);
+});
+
+test('the #weltrade link opens the Weltrade tab directly', async ({ page }) => {
+  await serveWeltrade(page, () => ({ ...sample, updated_at: new Date().toISOString() }));
+  await page.goto('/#weltrade');
+  await page.evaluate(() => document.getElementById('welcomePopup')?.remove());
+  await expect(page.locator('#weltradeFilter')).toHaveClass(/active/);
+  await expect(page.locator('#weltrade .wt-card')).toHaveCount(sample.markets.length);
 });
 
 test('old Weltrade analyses are flagged as not up to date', async ({ page }) => {

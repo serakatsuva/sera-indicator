@@ -65,3 +65,12 @@
   .signal-notification-center{order:2}
   .status-row{order:3;width:100%;align-items:flex-end}
 }
+/* Onglet Weltrade dans "Marché" : remplace la liste Deriv / Forex */
+#weltrade{display:none}
+body.wt-mode #weltrade{display:block}
+body.wt-mode #scanner .scanner-controls>.control-group:not(:first-child),
+body.wt-mode #scanner .compact-meta,body.wt-mode #trendWatchPanel,body.wt-mode #notice,body.wt-mode #results{display:none}
+body.wt-mode #scanner{padding-bottom:6px}
+.wt-families{margin:0 0 12px}
+.wt-waiting{opacity:.72}
+.wt-waiting .wt-signal{background:rgba(255,255,255,.05);color:#8ea0b5}

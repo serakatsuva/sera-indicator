@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
   <link rel="stylesheet" href="./chart.css?v=chart-20261021">
-  <link rel="stylesheet" href="./weltrade.css?v=weltrade-20261101">
+  <link rel="stylesheet" href="./weltrade.css?v=weltrade-20261101b">
 </head>
 <body>
   <div class="welcome-overlay" id="welcomePopup" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -121,6 +121,7 @@
           <div class="market-family-filter compact-tabs" role="tablist" aria-label="Type de marché">
             <button class="family-filter active" id="syntheticFilter" type="button" role="tab" aria-selected="true">Synthétiques</button>
             <button class="family-filter" id="forexFilter" type="button" role="tab" aria-selected="false">Forex · 27 paires</button>
+            <button class="family-filter" id="weltradeFilter" type="button" role="tab" aria-selected="false">Weltrade · SyntX</button>
           </div>
         </div>
         <div class="control-group synthetic-family-group" id="syntheticFamilyGroup">
@@ -175,6 +176,7 @@
         </div>
       </div>
       <div class="wt-meta-strip" id="wtMeta"></div>
+      <div class="index-family-filter wt-families" id="wtFamilies" role="tablist" aria-label="Famille Weltrade"></div>
       <div id="wtNotice" class="notice loading">Chargement des analyses Weltrade…</div>
       <div id="wtResults" class="wt-grid" aria-live="polite"></div>
     </section>
@@ -300,6 +302,6 @@
   <script src="./chart-engine.js?v=forex-live-20261021" defer></script>
   <script src="./app.js?v=forex-live-20261021" defer></script>
   <script src="./voice.js?v=voice-20261101" defer></script>
-  <script src="./weltrade.js?v=weltrade-20261101" defer></script>
+  <script src="./weltrade.js?v=weltrade-20261101b" defer></script>
 </body>
 </html>
