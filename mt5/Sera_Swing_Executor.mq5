@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.65"
+#property version   "2.66"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -717,8 +717,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.65")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.65");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.66")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.66");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -1127,7 +1127,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Deriv v2.65";
+string g_email_ea="Sera EA Swing Intelligent Deriv v2.66";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -1205,7 +1205,9 @@ void EmailSignal(const string broker,const string market,const string symbol,con
    string body="Nouveau signal Sera "+broker;
    body+="\r\n\r\nMarche : "+market;
    if(symbol!="" && symbol!=market) body+=" (MT5 : "+symbol+")";
-   body+="\r\nSignal : "+(verdict=="BUY"?string("ACHAT (BUY)"):string("VENTE (SELL)"))+"  |  "+horizon;
+   string side_text="VENTE (SELL)";
+   if(verdict=="BUY") side_text="ACHAT (BUY)";
+   body+="\r\nSignal : "+side_text+"  |  "+horizon;
    body+="\r\nConfiance : "+DoubleToString(confidence,0)+" %";
    if(state!="") body+="\r\nEtat : "+state;
    body+=EmailPriceLine("Entree",price_symbol,entry)+EmailPriceLine("Stop loss",price_symbol,sl);
@@ -1251,10 +1253,14 @@ void EmailTradeDeals()
       else if(entry==DEAL_ENTRY_OUT || entry==DEAL_ENTRY_OUT_BY)
       {
          double result=HistoryDealGetDouble(ticket,DEAL_PROFIT)+HistoryDealGetDouble(ticket,DEAL_SWAP)+HistoryDealGetDouble(ticket,DEAL_COMMISSION);
-         string amount=(result>=0?string("+"):string(""))+DoubleToString(result,2)+" "+AccountInfoString(ACCOUNT_CURRENCY);
+         string sign="";
+         if(result>=0) sign="+";
+         string amount=sign+DoubleToString(result,2)+" "+AccountInfoString(ACCOUNT_CURRENCY);
          string body="Position fermee (totalement ou en partie) par "+g_email_ea;
          body+="\r\n\r\nMarche : "+symbol+"\r\nLot ferme : "+DoubleToString(volume,2)+EmailPriceLine("Prix de sortie",symbol,price);
-         body+="\r\nResultat : "+amount+(result>=0?string("  (gain)"):string("  (perte)"));
+         string verdict_text="  (perte)";
+         if(result>=0) verdict_text="  (gain)";
+         body+="\r\nResultat : "+amount+verdict_text;
          body+="\r\nBalance : "+DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE),2)+"  |  equite : "+DoubleToString(AccountInfoDouble(ACCOUNT_EQUITY),2);
          body+=EmailFooter();
          SendSeraEmail("Sera : "+symbol+" ferme "+amount,body);
@@ -2021,7 +2027,7 @@ void RenderDashboard()
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
    if(TradeDriftPlaybook) horizons+=" + Derive H1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.65",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.66",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -2398,7 +2404,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.65"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.65");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.66"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.66");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -2467,7 +2473,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.65: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.66: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
