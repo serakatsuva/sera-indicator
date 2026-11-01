@@ -31,7 +31,7 @@ async function candles(c,symbol,tf){
   for(let p=0;p<PAGES[tf];p++){
     let m;
     for(let a=0;a<4;a++){
-      try{m=await c.call({ticks_history:symbol,style:'candles',granularity:GRAN[tf],count:5000,end,adjust_start_time:1});}catch(e){m={error:{message:e.message}};}
+      try{m=await c.call({ticks_history:symbol,style:'candles',granularity:GRAN[tf],count:1000,end,adjust_start_time:1});}catch(e){m={error:{message:e.message}};}
       if(!m.error)break;
       await sleep(1500*(a+1));
     }
@@ -39,7 +39,7 @@ async function candles(c,symbol,tf){
     const rows=m.candles.map(x=>[+x.epoch,+x.open,+x.high,+x.low,+x.close]);
     all=rows.concat(all.filter(r=>r[0]>rows[rows.length-1][0]));
     end=rows[0][0]-1;
-    if(rows.length<4900)break;
+    if(rows.length<990)break;
     await sleep(250);
   }
   const seen=new Set();return all.filter(r=>!seen.has(r[0])&&seen.add(r[0])).sort((a,b)=>a[0]-b[0]);
