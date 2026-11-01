@@ -1,0 +1,31 @@
+name: Sera Backtest History (Deriv)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pages_h1:
+        description: 'Pages de 5000 bougies H1'
+        default: '3'
+      pages_m15:
+        description: 'Pages de 5000 bougies M15'
+        default: '2'
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Download Deriv history
+        run: node scripts/fetch-history.mjs --pages-h1 "${{ inputs.pages_h1 }}" --pages-m15 "${{ inputs.pages_m15 }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deriv-history
+          path: research/deriv-history.json.gz
+          retention-days: 30
