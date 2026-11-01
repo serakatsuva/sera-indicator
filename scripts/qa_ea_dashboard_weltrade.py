@@ -64,7 +64,7 @@ static void force(const string& name,const string& side,const string& state,doub
 }
 static void click(const char* name){ long l=0; double d=0; string s=string("SWX_PANEL_BTN_")+name; OnChartEvent(CHARTEVENT_OBJECT_CLICK,l,d,s); }
 int main(int argc,char** argv){
-  const char* names[]={"GainX 800","PainX 800","GainX 1200","PainX 600","FX Vol 20","SFX Vol 40","SwitchX 600","BreakX 1200","EURUSD"};
+  const char* names[]={"GainX 800","PainX 800","GainX 1200","PainX 600","FX Vol 20","SFX Vol 40","SwitchX 600","BreakX 1200","EURUSD","FlipX 3"};
   int trend=1; for(auto n:names){ SIM_PRICE[n]=trend>0?50000:1000; SIM_TREND[n]=trend; trend=-trend; }
   SIM_NOW=1793000000;
   OnInit();
@@ -74,6 +74,7 @@ int main(int argc,char** argv){
   force("GainX 800","SELL","EXECUTE_NOW");
   force("PainX 800","BUY","WAIT_RETRACE");
   force("SFX Vol 40","SELL","WAIT_CONFIRMATION");
+  force("FlipX 3","BUY","EXECUTE_NOW");   // famille non tradee par defaut : analyse seule pour l'app
   SIM_NOW+=30; OnTimer();
   dump("CYCLE AVEC SIGNAUX (GainX 800 EXECUTE_NOW, PainX 800 WAIT_RETRACE)");
   SIM_NOW+=30; OnTimer();
@@ -141,8 +142,10 @@ def main() -> int:
     signal = next((v for k, v in sections.items() if k.startswith("CYCLE AVEC")), "")
     after = next((v for k, v in sections.items() if k.startswith("CYCLE SUIVANT")), "")
     m = re.search(r"SYMBOLS (\d+)", text)
-    if not m or int(m.group(1)) != 8:
-        errors.append(f"expected 8 Weltrade indices detected (EURUSD excluded), got {m.group(1) if m else '?'}")
+    if not m or int(m.group(1)) != 9:
+        errors.append(f"expected 9 Weltrade indices detected (EURUSD excluded, FlipX analysed for the app), got {m.group(1) if m else '?'}")
+    if "POS FlipX 3" in text or "ORD FlipX 3" in text or "ANALYSE SEULE (app) : famille FLIPX non tradee" not in text:
+        errors.append("FlipX (family not traded) must be analysed for the app but never traded")
     if "valid=1" not in text:
         errors.append("no index could be analysed from the broker candles")
     if "SERA EA SWING INTELLIGENT WELTRADE v" not in start or "[green] BOT ACTIF" not in start:
@@ -200,6 +203,8 @@ def main() -> int:
         req = _json.loads(pub)
         app = _json.loads(base64.b64decode(req["content"]).decode("utf-8"))
         rows = {m["symbol"]: m for m in app["markets"]}
+        if rows.get("FlipX 3", {}).get("traded") is not False or rows.get("GainX 800", {}).get("traded") is not True:
+            errors.append("published JSON must flag FlipX as analysis only (traded=false) and GainX as traded")
         if "[skip ci]" not in req["message"] or req.get("branch") != "main" or "sha" in req:
             errors.append("first publish: wrong commit message/branch, or a sha sent for a new file")
         if rows.get("GainX 800", {}).get("verdict") != "SELL" or rows["GainX 800"]["entry"] <= 0 or rows["GainX 800"]["tp3"] <= 0:

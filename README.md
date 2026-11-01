@@ -17,7 +17,7 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 
 ## Exécution MT5 — Sera EA Swing Intelligent Deriv v2.64
 
-Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv_v2.64.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade_v2.30.mq5`.
+Le dossier `mt5/` contient `Sera_EA_Swing_Intelligent_Deriv_v2.64.mq5` (et une copie identique, `Sera_Swing_Executor.mq5`) et `Sera_EA_Swing_Intelligent_Weltrade_v2.40.mq5`.
 
 **Nom des fichiers** : la version fait partie du nom (`…_Deriv_vX.YY.mq5`, `…_Weltrade_vX.YY.mq5`). À chaque amélioration, le fichier est renommé avec la nouvelle version ; `scripts/ea_files.py` vérifie que la version du nom, celle du code (`#property version`) et le lien de téléchargement de l’application correspondent.
 
@@ -36,6 +36,12 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - **Symboles Forex reconnus chez tous les brokers** : `EUR/USD`, `EURUSD-STD`, `EURUSD`, `EURUSD.m`, `frxEURUSD`…
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
+
+### v2.40 (Weltrade) — les 41 indices du compte dans l'app
+- L'onglet Weltrade de l'app liste les 41 indices du compte (FX Vol, SFX Vol, GainX, PainX, MAX GainX/PainX, FlipX, SwitchX,
+  BreakX, TrendX, PlusX, FiboX, QuadX) : carte complète dès que l'EA envoie l'analyse, sinon « en attente ».
+- `AnalyseAllFamiliesForApp = true` : l'EA analyse aussi FlipX / PlusX / FiboX / QuadX pour l'app (mention « Analyse seule »),
+  sans jamais les trader tant que `TradeFlipX` / `TradeProgressionX` restent à `false`.
 
 ### v2.64 (Deriv) / v2.30 (Weltrade) — signaux et trades par email
 - Chaque nouveau signal BUY/SELL est envoyé **une seule fois** par email : marché, sens, horizon, confiance, entrée, stop loss, TP1-TP3
@@ -170,7 +176,7 @@ Le tableau de bord affiche maintenant :
 
 Nombre de lignes : `DashboardMaxOrders`, `DashboardMaxSetups`. Le flux `ea-signals.json` publie désormais `engine_score` et `engine_minimum_score`.
 
-**Fichiers .set** : `mt5/Sera_EA_Swing_Intelligent_Deriv_v2.64.set` et `mt5/Sera_EA_Swing_Intelligent_Weltrade_v2.30.set` contiennent les réglages par défaut de chaque version. Dans MT5 : clic droit sur l’EA > *Propriétés* > onglet *Paramètres* > *Charger*. Ils sont générés depuis le code par `scripts/build_ea_set.py` et la QA vérifie qu’ils sont à jour.
+**Fichiers .set** : `mt5/Sera_EA_Swing_Intelligent_Deriv_v2.64.set` et `mt5/Sera_EA_Swing_Intelligent_Weltrade_v2.40.set` contiennent les réglages par défaut de chaque version. Dans MT5 : clic droit sur l’EA > *Propriétés* > onglet *Paramètres* > *Charger*. Ils sont générés depuis le code par `scripts/build_ea_set.py` et la QA vérifie qu’ils sont à jour.
 
 ### v2.40 (Deriv) — tableau de bord sur le graphique
 
@@ -249,7 +255,7 @@ GitHub Pages ne reçoit aucun identifiant MT5. L’EA s’exécute dans le termi
 
 ## Sera EA Swing Intelligent Weltrade — indices synthétiques Weltrade
 
-`mt5/Sera_EA_Swing_Intelligent_Weltrade_v2.30.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ; depuis v2.20 il peut aussi envoyer ses analyses à l’onglet Weltrade de l’app (option `PublishToApp`).
+`mt5/Sera_EA_Swing_Intelligent_Weltrade_v2.40.mq5` applique le **même moteur Swing haute conviction H1/H4/D1** aux indices synthétiques Weltrade (SyntX). Weltrade ne publie pas de données publiques comme Deriv : l’analyse tourne donc **directement dans MT5**, sur les bougies du compte Weltrade, sans serveur ; depuis v2.20 il peut aussi envoyer ses analyses à l’onglet Weltrade de l’app (option `PublishToApp`).
 
 **Indices détectés automatiquement** (ou liste manuelle dans `SymbolsList`) :
 

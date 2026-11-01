@@ -28,7 +28,9 @@ async function open(page) {
 test('Weltrade tab shows the analyses sent by the MT5 EA', async ({ page }) => {
   await serveWeltrade(page, () => ({ ...sample, updated_at: new Date(Date.now() - 2 * 60000).toISOString() }));
   await open(page);
-  await expect(page.locator('#weltrade .wt-card')).toHaveCount(sample.markets.length);
+  // the 41 indices of the Weltrade account are listed; the analysed ones get a full card
+  await expect(page.locator('#weltrade .wt-card')).toHaveCount(41);
+  await expect(page.locator('#weltrade .wt-card:not(.wt-waiting)')).toHaveCount(sample.markets.length);
   const signals = sample.markets.filter(m => m.verdict === 'BUY' || m.verdict === 'SELL');
   await expect(page.locator('#wtNotice')).toContainText(`${signals.length} signal(s) Weltrade en cours`);
   const first = page.locator('.wt-card', { hasText: signals[0].symbol }).first();
@@ -36,6 +38,7 @@ test('Weltrade tab shows the analyses sent by the MT5 EA', async ({ page }) => {
   await expect(first.locator('.wt-levels strong').first()).toHaveText(Number(signals[0].entry).toFixed(signals[0].digits));
   await page.locator('[data-wt-filter="signals"]').click();
   await expect(page.locator('#weltrade .wt-card')).toHaveCount(signals.length);
+  await expect(page.locator('#weltrade .wt-waiting')).toHaveCount(0);
   // no horizontal scroll on any screen
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth) + 1);
 });
@@ -48,7 +51,9 @@ test('Weltrade tab explains how to connect the EA when nothing was received', as
   await expect(page.locator('#wtNotice')).toContainText('PublishToApp');
   // the Weltrade synthetic families are listed while waiting for the EA
   await expect(page.locator('#wtFamilies [data-wt-family-filter="GAINX"]')).toBeVisible();
-  await expect(page.locator('#weltrade .wt-card.wt-waiting').first()).toContainText('GainX');
+  await expect(page.locator('#weltrade .wt-card.wt-waiting')).toHaveCount(41);
+  for (const name of ['GainX 800', 'MAX PainX 2000', 'FlipX 3', 'FiboX', 'PlusX 1'])
+    await expect(page.locator(`#weltrade .wt-card[data-wt-symbol="${name}"]`)).toContainText('EN ATTENTE');
 });
 
 test('Weltrade is a market tab next to Synthetiques and Forex', async ({ page }) => {
@@ -62,7 +67,8 @@ test('Weltrade is a market tab next to Synthetiques and Forex', async ({ page })
   await expect(page.locator('#syntheticFilter')).not.toHaveClass(/active/);
   await expect(page.locator('#scanner h2')).toHaveText('Signaux Weltrade (SyntX)');
   await page.locator('[data-wt-family-filter="PAINX"]').click();
-  await expect(page.locator('#weltrade .wt-card')).toHaveCount(sample.markets.filter(m => m.family === 'PAINX').length);
+  await expect(page.locator('#weltrade .wt-card')).toHaveCount(7);   // PainX 400-1200 + MAX PainX 1000/2000
+  await expect(page.locator('#weltrade .wt-card:not(.wt-waiting)')).toHaveCount(sample.markets.filter(m => m.family === 'PAINX').length);
   await page.locator('#syntheticFilter').click();
   await expect(page.locator('#weltrade')).toBeHidden();
   await expect(page.locator('#results')).toBeVisible();
@@ -75,7 +81,7 @@ test('the #weltrade link opens the Weltrade tab directly', async ({ page }) => {
   await page.goto('/#weltrade');
   await page.evaluate(() => document.getElementById('welcomePopup')?.remove());
   await expect(page.locator('#weltradeFilter')).toHaveClass(/active/);
-  await expect(page.locator('#weltrade .wt-card')).toHaveCount(sample.markets.length);
+  await expect(page.locator('#weltrade .wt-card:not(.wt-waiting)')).toHaveCount(sample.markets.length);
 });
 
 test('old Weltrade analyses are flagged as not up to date', async ({ page }) => {

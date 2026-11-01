@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "2.30"
+#property version   "2.40"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -13,6 +13,7 @@ input bool TradeRegimeSwitchX=true;          // SwitchX / BreakX / TrendX
 input bool TradeFlipX=false;                 // FlipX : marche sans tendance (50 % de changement par pas)
 input bool TradeProgressionX=false;          // PlusX / FiboX / QuadX : progressions mathematiques
 input int MaximumScannedSymbols=60;
+input bool AnalyseAllFamiliesForApp=true;    // analyser aussi FlipX / PlusX / FiboX / QuadX pour l'app (analyse seule : seules les familles activees ci-dessus sont tradees)
 input int AnalysisBars=1000;                 // bougies cloturees analysees par unite de temps (1000 = EMA200 exacte)
 input bool ShowDashboard=true;              // tableau de bord sur le graphique
 input int DashboardX=10;
@@ -561,7 +562,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Weltrade v2.30";
+string g_email_ea="Sera EA Swing Intelligent Weltrade v2.40";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -1413,7 +1414,7 @@ void RefreshSymbols()
    {
       string name=SymbolName(i,false);
       string family=SyntXFamily(name);
-      if(family!="" && FamilyEnabled(family)) AddSymbol(name);
+      if(family!="" && (FamilyEnabled(family) || AnalyseAllFamiliesForApp)) AddSymbol(name);
    }
 }
 
@@ -1479,7 +1480,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.30"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.30");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.40"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.40");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -2062,7 +2063,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.30",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.40",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -2149,10 +2150,21 @@ void RenderDashboard(const bool can_trade,const string mode_label)
 }
 
 // Controles, ordres et decision d'un indice deja analyse. entered : une seule entree au marche par cycle.
+// Detection automatique : un indice d'une famille non activee est analyse pour l'app, jamais trade.
+bool AnalysisOnly(const string symbol)
+{
+   return SymbolsList=="" && !FamilyEnabled(SyntXFamily(symbol));
+}
+
 void ProcessDecision(const int i,const bool can_trade,bool &entered)
 {
    PanelFromDecision(g_rows[i],g_decisions[i]);
    if(!g_decisions[i].valid) return;
+   if(AnalysisOnly(g_decisions[i].symbol))
+   {
+      g_rows[i].decision="ANALYSE SEULE (app) : famille "+g_decisions[i].family+" non tradee";
+      return;
+   }
    bool signal=IsSignal(g_decisions[i].verdict);
    ManagePendingEntry(g_decisions[i],can_trade,g_rows[i]);
    if(!entered) entered=TryMarketEntry(g_decisions[i],can_trade,g_rows[i]);
@@ -2204,7 +2216,7 @@ datetime ServerToUtc(const datetime t){ return t<=0?0:t+(TimeGMT()-TimeCurrent()
 string BuildAppJson()
 {
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
-   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.30\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
+   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.40\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
                ",\"account\":"+JsonText(demo?"DEMO":"REEL")+",\"markets\":[";
    int written=0;
    for(int i=0;i<ArraySize(g_symbols);i++)
@@ -2220,6 +2232,7 @@ string BuildAppJson()
       bool signal=IsSignal(d.verdict);
       string since=signal && i<ArraySize(g_rows) && g_rows[i].since>0?IsoUtc(ServerToUtc(g_rows[i].since)):"";
       string decision=i<ArraySize(g_rows)?g_rows[i].decision:"";
+      string traded=AnalysisOnly(d.symbol)?"false":"true";
       if(written>0) json+=",";
       json+="{\"symbol\":"+JsonText(d.symbol)+",\"family\":"+JsonText(d.family)+",\"verdict\":"+JsonText(d.verdict)+
             ",\"bias\":"+JsonText(d.side)+",\"state\":"+JsonText(d.state)+",\"setup\":"+JsonText(d.setupType)+
@@ -2229,7 +2242,7 @@ string BuildAppJson()
             ",\"digits\":"+IntegerToString(digits)+
             ",\"entry\":"+DoubleToString(signal?d.entry:0,digits)+",\"sl\":"+DoubleToString(signal?d.sl:0,digits)+
             ",\"tp1\":"+DoubleToString(signal?d.tp1:0,digits)+",\"tp2\":"+DoubleToString(signal?d.tp2:0,digits)+",\"tp3\":"+DoubleToString(signal?d.tp3:0,digits)+
-            ",\"since\":"+JsonText(since)+",\"decision\":"+JsonText(decision)+",\"closes\":["+series+"]}";
+            ",\"traded\":"+traded+",\"since\":"+JsonText(since)+",\"decision\":"+JsonText(decision)+",\"closes\":["+series+"]}";
       written++;
    }
    return json+"]}";
@@ -2334,7 +2347,7 @@ void ScanAndTrade()
             string now=g_decisions[i].verdict;
             if(EnableTrendWatch && now!=before && IsSignal(now))
                SendSwxAlert("SyntX: signal "+now+" "+symbol+" · score "+DoubleToString(g_decisions[i].score,0)+" · "+g_decisions[i].state);
-            if(IsSignal(now))
+            if(IsSignal(now) && !AnalysisOnly(symbol))
                EmailSignal("Weltrade",symbol,symbol,now,"Swing H1/H4/D1",g_decisions[i].confidence,g_decisions[i].state,
                            g_decisions[i].entry,g_decisions[i].sl,g_decisions[i].tp1,g_decisions[i].tp2,g_decisions[i].tp3);
             else EmailSignalClear(symbol,"Swing H1/H4/D1");
@@ -2352,7 +2365,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v2.30: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v2.40: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)

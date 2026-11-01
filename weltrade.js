@@ -14,6 +14,19 @@
   // Familles d'indices Weltrade (SyntX) reconnues par l'EA ; les noms exacts viennent du compte MT5.
   const FAMILIES=[["GAINX","GainX"],["PAINX","PainX"],["FXVOL","FX Vol"],["SFXVOL","SFX Vol"],["FLIPX","FlipX"],["SWITCHX","SwitchX"],
                   ["BREAKX","BreakX"],["TRENDX","TrendX"],["PLUSX","PlusX"],["FIBOX","FiboX"],["QUADX","QuadX"]];
+  // Les 41 indices du compte Weltrade (liste des symboles MT5 du propriétaire).
+  const CATALOG=["FX Vol 20","FX Vol 40","FX Vol 60","FX Vol 80","FX Vol 99","SFX Vol 20","SFX Vol 40","SFX Vol 60","SFX Vol 80","SFX Vol 99",
+    "GainX 400","GainX 600","GainX 800","GainX 999","GainX 1200","MAX GainX 1000","MAX GainX 2000",
+    "PainX 400","PainX 600","PainX 800","PainX 999","PainX 1200","MAX PainX 1000","MAX PainX 2000",
+    "FlipX 1","FlipX 2","FlipX 3","FlipX 4","FlipX 5","SwitchX 600","SwitchX 1200","SwitchX 1800",
+    "BreakX 600","BreakX 1200","BreakX 1800","TrendX 600","TrendX 1200","TrendX 1800","PlusX 1","FiboX","QuadX"];
+  // Meme regle que SyntXFamily() dans l'EA.
+  function familyOf(name){
+    const s=String(name||"").toUpperCase().replace(/[ _]/g,"");
+    for(const k of ["SFXVOL","FXVOL","PAINX","GAINX","FLIPX","SWITCHX","BREAKX","TRENDX","PLUSX","FIBOX","QUADX"])if(s.includes(k))return k;
+    return "";
+  }
+  const norm=n=>String(n||"").toUpperCase().replace(/[ _]/g,"");
   const familyLabel=k=>(FAMILIES.find(f=>f[0]===k)||[k,k||"SyntX"])[1];
 
   const $=id=>document.getElementById(id);
@@ -70,7 +83,7 @@
       <div class="wt-tfs">${tfChip("H1",m.h1)}${tfChip("H4",m.h4)}${tfChip("D1",m.d1)}</div>
       ${sparkline(m.closes,cls)}
       ${levels}
-      <div class="wt-meta"><span>Score ${Math.round(Number(m.score)||0)}/84</span><span>Conditions ${Math.round(Number(m.conditions)||0)}%</span><span>Consensus ${Math.round(Number(m.consensus)||0)}%</span>${since!==null?`<span>Signal ${esc(ageText(since))}</span>`:""}</div>
+      <div class="wt-meta"><span>Score ${Math.round(Number(m.score)||0)}/84</span><span>Conditions ${Math.round(Number(m.conditions)||0)}%</span><span>Consensus ${Math.round(Number(m.consensus)||0)}%</span>${since!==null?`<span>Signal ${esc(ageText(since))}</span>`:""}${m.traded===false?`<span title="Famille non tradée par l’EA (réglages Trade…)">Analyse seule</span>`:""}</div>
       <div class="wt-bar"><i style="width:${progress.toFixed(0)}%"></i></div>
       ${m.decision?`<p class="wt-decision">${esc(m.decision)}</p>`:""}
       <button class="wt-speak" type="button" data-wt-speak="${esc(m.symbol)}">🔊 Lire l’analyse</button>
@@ -86,7 +99,7 @@
 
   function guide(){
     return `<details class="wt-guide"><summary>Comment remplir cet onglet</summary><ol>
-      <li>Installer <b>Sera EA Swing Intelligent Weltrade v2.20</b> (ou plus récent) sur un graphique de votre compte Weltrade.</li>
+      <li>Installer <b>Sera EA Swing Intelligent Weltrade v2.40</b> (ou plus récent) sur un graphique de votre compte Weltrade.</li>
       <li>Créer une clé GitHub <i>fine-grained</i> : accès au seul dépôt <code>serakatsuva/sera-indicator</code>, permission <b>Contents : Read and write</b>.</li>
       <li>Dans les paramètres de l’EA : <code>PublishToApp = true</code> et coller la clé dans <code>GitHubToken</code>.</li>
       <li>MT5 → Outils → Options → Expert Advisors → WebRequest : ajouter <code>https://api.github.com</code>.</li>
@@ -94,11 +107,19 @@
     </ol></details>`;
   }
 
-  function waitingCard(f){
-    return `<article class="wt-card wt-waiting" data-wt-family="${esc(f[0])}">
-      <div class="wt-top"><div><h3>${esc(f[1])}</h3><p>Indices ${esc(f[1])} · SWING H1/H4/D1</p></div><span class="wt-signal wait">EN ATTENTE</span></div>
-      <p class="wt-decision">Les analyses de ces indices s’afficheront ici dès que l’EA Weltrade les enverra depuis MT5.</p>
+  function waitingCard(m){
+    return `<article class="wt-card wt-waiting" data-wt-symbol="${esc(m.symbol)}">
+      <div class="wt-top"><div><h3>${esc(m.symbol)}</h3><p>${esc(familyLabel(m.family))} · SWING H1/H4/D1</p></div><span class="wt-signal wait">EN ATTENTE</span></div>
+      <p class="wt-decision">En attente de l’analyse de l’EA Weltrade (MT5).</p>
     </article>`;
+  }
+
+  // Indices analyses par l'EA + indices du compte pas encore recus (cartes "en attente").
+  function allMarkets(){
+    const got=data?data.markets.map(m=>({...m,family:m.family||familyOf(m.symbol)})):[];
+    const seen=new Set(got.map(m=>norm(m.symbol)));
+    const waiting=CATALOG.filter(n=>!seen.has(norm(n))).map(n=>({symbol:n,family:familyOf(n),waiting:true}));
+    return got.concat(waiting);
   }
 
   function renderFamilies(markets){
@@ -118,18 +139,20 @@
     if(!data){
       notice.className="notice warning";
       notice.innerHTML=`Aucune analyse Weltrade reçue pour l’instant : l’EA Weltrade doit les envoyer depuis MT5.${guide()}`;
-      renderFamilies([]);
-      results.innerHTML=FAMILIES.filter(f=>family==="all"||f[0]===family).map(waitingCard).join("");
+      const list=allMarkets();
+      renderFamilies(list);
+      results.innerHTML=list.filter(m=>family==="all"||m.family===family).map(waitingCard).join("");
       if(meta)meta.innerHTML="";
       return;
     }
     const age=ageMinutes(data.updated_at);
-    const markets=[...data.markets].sort((a,b)=>(isSignal(b)-isSignal(a))||((Number(b.score)||0)-(Number(a.score)||0)));
+    const all=allMarkets().sort((a,b)=>(!!a.waiting-!!b.waiting)||(isSignal(b)-isSignal(a))||((Number(b.score)||0)-(Number(a.score)||0)));
+    const markets=all.filter(m=>!m.waiting);
     const signals=markets.filter(isSignal);
-    renderFamilies(markets);
-    const inFamily=markets.filter(m=>family==="all"||m.family===family);
+    renderFamilies(all);
+    const inFamily=all.filter(m=>family==="all"||m.family===family);
     const shown=filter==="signals"?inFamily.filter(isSignal):inFamily;
-    if(meta)meta.innerHTML=`<span>Envoi EA <b>${esc(ageText(age))}</b></span><span>Indices <b>${markets.length}</b></span><span>Signaux <b>${signals.length}</b></span><span>Compte <b>${esc(data.account||"—")}</b></span><span><b>${esc(data.source||"Sera EA Weltrade")} ${esc(data.version||"")}</b></span>`;
+    if(meta)meta.innerHTML=`<span>Envoi EA <b>${esc(ageText(age))}</b></span><span>Indices <b>${markets.length}/${all.length}</b></span><span>Signaux <b>${signals.length}</b></span><span>Compte <b>${esc(data.account||"—")}</b></span><span><b>${esc(data.source||"Sera EA Weltrade")} ${esc(data.version||"")}</b></span>`;
     if(age!==null&&age>STALE_MINUTES){
       notice.className="notice warning";
       notice.innerHTML=`Dernières analyses reçues ${esc(ageText(age))} : MT5 ou l’EA Weltrade semble arrêté. Les données ci-dessous ne sont plus à jour.${guide()}`;
@@ -137,7 +160,7 @@
       notice.className="notice success";
       notice.textContent=signals.length?`${signals.length} signal(s) Weltrade en cours · analyses MT5 envoyées ${ageText(age)}.`:`Aucun signal Weltrade en cours · ${markets.length} indices analysés ${ageText(age)}.`;
     }
-    results.innerHTML=shown.length?shown.map(card).join(""):`<p class="wt-empty">Aucun signal BUY/SELL pour le moment.</p>`;
+    results.innerHTML=shown.length?shown.map(m=>m.waiting?waitingCard(m):card(m)).join(""):`<p class="wt-empty">Aucun signal BUY/SELL pour le moment.</p>`;
   }
 
   function announceNew(){
