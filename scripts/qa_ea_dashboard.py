@@ -196,7 +196,7 @@ def main() -> int:
         errors.append("page 2 shows the same markets as page 1")
     if possible_rows(p1) > 30:
         errors.append(f"the list does not fit a 720 px chart ({possible_rows(p1)} rows)")
-    n_sig = len([m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels") and m["mode"] in ("swing", "day")])
+    n_sig = len([m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels") and m["mode"] in ("swing", "day", "drift")])
     if f"SIGNAUX EN COURS ({n_sig})" not in c2s:
         errors.append(f"signals table missing or wrong count (expected {n_sig})")
     if n_sig:
