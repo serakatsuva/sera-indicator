@@ -206,9 +206,11 @@ def main() -> int:
         if "CHARTOPEN " not in text.split("=== LOG ===")[-1]:
             errors.append("the 'Ouvrir' button did not open the market chart")
         plus_sec = sections.get("BOUTON + (5 marches de plus)", "")
-        lv = first["levels"]
         drawn = {m.group(1): (float(m.group(2)), float(m.group(3))) for m in re.finditer(r"^SIG (\w+) (\S+) (\S+)", plus_sec, re.M)}
         near = lambda a, b: abs(a - b) <= 1e-5 + 1e-9 * abs(b)   # the simulator prints prices with 5 decimals
+        # The opened chart is the first row of the EA signals table (its own order): match it by entry price.
+        sig_rows = [m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels")]
+        lv = next((m["levels"] for m in sig_rows if near(drawn.get("ENTRY", (0, 0))[0], m["levels"]["entry"])), first["levels"])
         ok = (near(drawn.get("ENTRY", (0, 0))[0], lv["entry"]) and near(drawn.get("SL", (0, 0))[0], lv["sl"])
               and near(drawn.get("TP3", (0, 0))[0], lv["tp3"]) and "RISK" in drawn and "REWARD" in drawn)
         if not ok:
