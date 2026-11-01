@@ -79,7 +79,10 @@
   }
 
   function readAll(){
-    const all=[...lastDeriv,...(window.SeraWeltrade?window.SeraWeltrade.signals():[])];
+    const drift=(window.SeraPlaybook?window.SeraPlaybook.signals():[]).map(m=>({broker:"Deriv",market:m.market,mode:"swing",verdict:m.final_verdict,
+      confidence:m.final_confidence,entry:m.levels?.entry,sl:m.levels?.sl,tp1:m.levels?.tp1,tp2:m.levels?.tp2,tp3:m.levels?.tp3}));
+    const seen=new Set(lastDeriv.map(s=>`${s.market}|${s.verdict}`));
+    const all=[...lastDeriv,...drift.filter(s=>!seen.has(`${s.market}|${s.verdict}`)),...(window.SeraWeltrade?window.SeraWeltrade.signals():[])];
     if(!all.length){speak("Aucun signal Deriv ni Weltrade en cours pour le moment.",true);return;}
     speak(`${all.length} signal${all.length>1?"s":""} en cours. `+all.map(signalText).join(" "),true);
   }

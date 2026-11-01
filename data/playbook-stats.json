@@ -1,0 +1,256 @@
+{
+ "generated_at": "2026-11-01T10:57:06.475Z",
+ "source": "Historique H1/M15 Deriv r\u00e9el (1 an) \u2014 scripts/backtest-playbook.mjs",
+ "period": {
+  "from": "2025-12-11",
+  "to": "2026-11-01"
+ },
+ "management": "50 % encaiss\u00e9s \u00e0 TP1 + stop au point d\u2019entr\u00e9e, stop \u00e0 TP1 quand TP2 est touch\u00e9, reste \u00e0 TP3 ; stop v\u00e9rifi\u00e9 en premier",
+ "groups": {
+  "bullbear": {
+   "label": "Bull / Bear Market",
+   "params": {
+    "label": "Bull / Bear Market",
+    "rsi": 40,
+    "sl": 2.5,
+    "tp1": 0.3,
+    "tp2": 0.9,
+    "tp3": 1.5,
+    "trend": false
+   },
+   "all": {
+    "trades": 406,
+    "tp1_rate": 93.8,
+    "losing_rate": 6.2,
+    "expectancy_r": 0.346,
+    "total_r": 140.5,
+    "positive_months": 11,
+    "months": 11
+   },
+   "train": {
+    "trades": 251,
+    "tp1_rate": 94,
+    "losing_rate": 6,
+    "expectancy_r": 0.346,
+    "total_r": 86.9,
+    "positive_months": 9,
+    "months": 9
+   },
+   "test": {
+    "trades": 155,
+    "tp1_rate": 93.5,
+    "losing_rate": 6.5,
+    "expectancy_r": 0.346,
+    "total_r": 53.6,
+    "positive_months": 3,
+    "months": 3
+   }
+  },
+  "spike": {
+   "label": "Boom / Crash \u00b7 GainX / PainX",
+   "params": {
+    "label": "Boom / Crash \u00b7 GainX / PainX",
+    "rsi": 45,
+    "sl": 1,
+    "tp1": 0.3,
+    "tp2": 0.65,
+    "tp3": 1,
+    "trend": true
+   },
+   "all": {
+    "trades": 3566,
+    "tp1_rate": 78.5,
+    "losing_rate": 21.5,
+    "expectancy_r": 0.075,
+    "total_r": 268.4,
+    "positive_months": 11,
+    "months": 12
+   },
+   "train": {
+    "trades": 2529,
+    "tp1_rate": 78.4,
+    "losing_rate": 21.6,
+    "expectancy_r": 0.078,
+    "total_r": 198.4,
+    "positive_months": 8,
+    "months": 9
+   },
+   "test": {
+    "trades": 1037,
+    "tp1_rate": 78.9,
+    "losing_rate": 21.1,
+    "expectancy_r": 0.068,
+    "total_r": 70,
+    "positive_months": 3,
+    "months": 4
+   }
+  }
+ },
+ "markets": {
+  "Boom 1000 Index": {
+   "trades": 296,
+   "tp1_rate": 77.4,
+   "losing_rate": 22.6,
+   "expectancy_r": 0.069,
+   "total_r": 20.4,
+   "positive_months": 8,
+   "months": 11
+  },
+  "Boom 150 Index": {
+   "trades": 89,
+   "tp1_rate": 79.8,
+   "losing_rate": 20.2,
+   "expectancy_r": 0.079,
+   "total_r": 7,
+   "positive_months": 5,
+   "months": 6
+  },
+  "Boom 300 Index": {
+   "trades": 336,
+   "tp1_rate": 80.4,
+   "losing_rate": 19.6,
+   "expectancy_r": 0.101,
+   "total_r": 34,
+   "positive_months": 10,
+   "months": 11
+  },
+  "Boom 50 Index": {
+   "trades": 253,
+   "tp1_rate": 82.2,
+   "losing_rate": 17.8,
+   "expectancy_r": 0.106,
+   "total_r": 26.7,
+   "positive_months": 9,
+   "months": 10
+  },
+  "Boom 500 Index": {
+   "trades": 300,
+   "tp1_rate": 80.3,
+   "losing_rate": 19.7,
+   "expectancy_r": 0.111,
+   "total_r": 33.4,
+   "positive_months": 10,
+   "months": 12
+  },
+  "Boom 600 Index": {
+   "trades": 293,
+   "tp1_rate": 77.8,
+   "losing_rate": 22.2,
+   "expectancy_r": 0.065,
+   "total_r": 18.9,
+   "positive_months": 7,
+   "months": 11
+  },
+  "Boom 900 Index": {
+   "trades": 120,
+   "tp1_rate": 80.8,
+   "losing_rate": 19.2,
+   "expectancy_r": 0.096,
+   "total_r": 11.5,
+   "positive_months": 5,
+   "months": 6
+  },
+  "Crash 1000 Index": {
+   "trades": 317,
+   "tp1_rate": 77.6,
+   "losing_rate": 22.4,
+   "expectancy_r": 0.073,
+   "total_r": 23.2,
+   "positive_months": 9,
+   "months": 12
+  },
+  "Crash 150 Index": {
+   "trades": 291,
+   "tp1_rate": 75.9,
+   "losing_rate": 24.1,
+   "expectancy_r": 0.039,
+   "total_r": 11.4,
+   "positive_months": 7,
+   "months": 11
+  },
+  "Crash 300 Index": {
+   "trades": 296,
+   "tp1_rate": 78.4,
+   "losing_rate": 21.6,
+   "expectancy_r": 0.072,
+   "total_r": 21.4,
+   "positive_months": 9,
+   "months": 11
+  },
+  "Crash 50 Index": {
+   "trades": 252,
+   "tp1_rate": 73.8,
+   "losing_rate": 26.2,
+   "expectancy_r": -0.015,
+   "total_r": -3.7,
+   "positive_months": 5,
+   "months": 10
+  },
+  "Crash 500 Index": {
+   "trades": 107,
+   "tp1_rate": 83.2,
+   "losing_rate": 16.8,
+   "expectancy_r": 0.104,
+   "total_r": 11.2,
+   "positive_months": 5,
+   "months": 6
+  },
+  "Crash 600 Index": {
+   "trades": 321,
+   "tp1_rate": 79.1,
+   "losing_rate": 20.9,
+   "expectancy_r": 0.102,
+   "total_r": 32.7,
+   "positive_months": 10,
+   "months": 12
+  },
+  "Crash 900 Index": {
+   "trades": 295,
+   "tp1_rate": 77.3,
+   "losing_rate": 22.7,
+   "expectancy_r": 0.068,
+   "total_r": 20.2,
+   "positive_months": 10,
+   "months": 12
+  },
+  "Bear Market Index": {
+   "trades": 115,
+   "tp1_rate": 87.8,
+   "losing_rate": 12.2,
+   "expectancy_r": 0.242,
+   "total_r": 27.8,
+   "positive_months": 5,
+   "months": 5
+  },
+  "Bull Market Index": {
+   "trades": 291,
+   "tp1_rate": 96.2,
+   "losing_rate": 3.8,
+   "expectancy_r": 0.387,
+   "total_r": 112.6,
+   "positive_months": 11,
+   "months": 11
+  }
+ },
+ "baseline": {
+  "swing_detected": {
+   "label": "Moteur Swing H1/H4/D1 (setups d\u00e9tect\u00e9s)",
+   "trades": 436,
+   "tp1_rate": 33.0,
+   "total_r": -28.5
+  },
+  "swing_confirmed": {
+   "label": "Moteur Swing H1/H4/D1 (signaux confirm\u00e9s)",
+   "trades": 11,
+   "tp1_rate": 45.0,
+   "total_r": 4.8
+  },
+  "day_confirmed": {
+   "label": "Moteur Day M15/H1 (signaux confirm\u00e9s, 62 jours)",
+   "trades": 510,
+   "tp1_rate": 9.0,
+   "total_r": -27.9
+  },
+  "note": "M\u00eame historique, rejou\u00e9 avec scripts/backtest.mjs (moteur r\u00e9el, gestion EA)."
+ }
+}

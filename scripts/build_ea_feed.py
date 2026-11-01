@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 SOURCE = Path("data/signals.json")
 TARGET = Path("data/ea-signals.json")
+PLAYBOOK = Path("data/playbook-signals.json")   # Drift Playbook rows (mode "drift"), written by update-signals.mjs
 LEVEL_KEYS = ("entry", "sl", "tp1", "tp2", "tp3", "tp4", "tp5")
 PLAN_KEYS = ("suggested_entry", "zone_min", "zone_max")
 
@@ -66,8 +67,9 @@ def compact_row(row: dict) -> dict:
     return {k: v for k, v in out.items() if v is not None}
 
 
-def build(signals: dict) -> dict:
+def build(signals: dict, playbook: dict | None = None) -> dict:
     markets = [compact_row(r) for r in signals.get("markets") or [] if r.get("mode") in ("swing", "day")]
+    markets += [compact_row(r) for r in (playbook or {}).get("markets") or [] if r.get("mode") == "drift"]
     # "status" and "updated_at" first: the EA reads the first occurrence of these keys.
     feed = {
         "status": signals.get("status"),
@@ -157,6 +159,14 @@ def self_test() -> None:
         {"id": "R_10:swing", "market": "Volatility 10 Index", "symbol": "R_10", "mode": "swing", "final_verdict": "ATTENDRE",
          "decision_engine": {"freshness_gate": False}, "levels": None, "entry_tf": None},
     ]}
+    playbook = {"markets": [
+        {"id": "BOOM1000:drift", "market": "Boom 1000 Index", "symbol": "BOOM1000", "mode": "drift", "final_verdict": "SELL",
+         "final_confidence": 77, "execution_state": "EXECUTE_NOW", "execution_score": 90, "setup_detected": 1, "setup_direction": "SELL",
+         "decision_engine": {"condition_pass_percent": 100, "score": 90, "freshness_gate": True},
+         "levels": {"entry": 100.0, "sl": 101.0, "tp1": 99.7, "tp2": 99.35, "tp3": 99.0, "tp4": 98.95, "tp5": 98.9}}]}
+    with_drift = build(sample, playbook)
+    assert not sanitize(with_drift) and not validate(with_drift), validate(with_drift)
+    assert with_drift["markets"][-1]["mode"] == "drift" and with_drift["confirmed_signals"] == 2
     feed = build(sample)
     assert not sanitize(feed) and not validate(feed), validate(feed)
     # A confirmed SELL whose far target went negative must be neutralized, not block the feed.
@@ -177,7 +187,8 @@ def main() -> int:
     if "--self-test" in sys.argv:
         self_test()
         return 0
-    feed = build(json.loads(SOURCE.read_text(encoding="utf-8")))
+    playbook = json.loads(PLAYBOOK.read_text(encoding="utf-8")) if PLAYBOOK.exists() else None
+    feed = build(json.loads(SOURCE.read_text(encoding="utf-8")), playbook)
     for w in sanitize(feed):
         # Visible in the Actions run summary; the market is published as untradable (ATTENDRE).
         print(f"::warning title=EA feed: market neutralized::{w}")

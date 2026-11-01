@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "2.40"
+#property version   "2.50"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -13,6 +13,7 @@ input bool TradeRegimeSwitchX=true;          // SwitchX / BreakX / TrendX
 input bool TradeFlipX=false;                 // FlipX : marche sans tendance (50 % de changement par pas)
 input bool TradeProgressionX=false;          // PlusX / FiboX / QuadX : progressions mathematiques
 input int MaximumScannedSymbols=60;
+input bool TradeDriftPlaybook=true;          // v2.50 : strategie "sens de la derive" (PainX BUY, GainX SELL, SwitchX/BreakX/TrendX selon le regime), mesuree sur Boom/Crash
 input bool AnalyseAllFamiliesForApp=true;    // analyser aussi FlipX / PlusX / FiboX / QuadX pour l'app (analyse seule : seules les familles activees ci-dessus sont tradees)
 input int AnalysisBars=1000;                 // bougies cloturees analysees par unite de temps (1000 = EMA200 exacte)
 input bool ShowDashboard=true;              // tableau de bord sur le graphique
@@ -562,7 +563,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Weltrade v2.40";
+string g_email_ea="Sera EA Swing Intelligent Weltrade v2.50";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -1270,6 +1271,109 @@ void Decide(const string symbol,SwxDecision &d)
 //  SCANNER, EXÉCUTION ET TABLEAU DE BORD
 // ===================================================================================
 
+bool IsSignal(const string verdict){ return verdict=="BUY" || verdict=="SELL"; }
+
+// Detection automatique : un indice d'une famille non activee est analyse pour l'app, jamais trade.
+bool AnalysisOnly(const string symbol)
+{
+   return SymbolsList=="" && !FamilyEnabled(SyntXFamily(symbol));
+}
+
+// --- PLAYBOOK DERIVE : meme regles que scripts/drift-playbook.mjs (verifie par scripts/qa_drift_playbook.py) ---
+// PainX / MAX PainX montent entre deux chutes -> BUY seulement ; GainX / MAX GainX baissent entre deux sauts -> SELL seulement ;
+// SwitchX / BreakX / TrendX : regime GainX puis PainX -> sens de la tendance H1. Entree sur repli (RSI 14), SL en ATR 14,
+// TP1 0,3 R (50 % encaisses + point mort), TP2 0,65 R, TP3 1 R. Sur Boom/Crash (Deriv, 1 an) : 78 % des trades atteignent TP1.
+struct DriftInfo
+{
+   bool     valid,active,pullback,trendOk;
+   string   group,side;
+   double   rsi,atr,entry,sl,tp1,tp2,tp3,tp4,tp5;
+};
+
+string DriftGroup(const string name,string &side)
+{
+   string n=name;
+   StringToUpper(n);
+   StringReplace(n," ","");
+   StringReplace(n,"_","");
+   side="";
+   if(StringFind(n,"BULLMARKET")>=0){ side="BUY"; return "bullbear"; }
+   if(StringFind(n,"BEARMARKET")>=0){ side="SELL"; return "bullbear"; }
+   if(StringFind(n,"BOOM")>=0 || (StringFind(n,"GAINX")>=0 && StringFind(n,"SWITCHX")<0)){ side="SELL"; return "spike"; }
+   if(StringFind(n,"CRASH")>=0 || StringFind(n,"PAINX")>=0){ side="BUY"; return "spike"; }
+   if(StringFind(n,"SWITCHX")>=0 || StringFind(n,"BREAKX")>=0 || StringFind(n,"TRENDX")>=0){ side="TREND"; return "regime"; }
+   return "";
+}
+
+// Calcul sur des bougies H1 cloturees (plus ancienne en premier).
+bool DriftCompute(const string name,const double &h[],const double &l[],const double &c[],const int n,DriftInfo &r)
+{
+   r.valid=false; r.active=false; r.pullback=false; r.trendOk=false; r.side="NEUTRE"; r.rsi=50; r.atr=0;
+   r.entry=0; r.sl=0; r.tp1=0; r.tp2=0; r.tp3=0; r.tp4=0; r.tp5=0;
+   string fixed_side="";
+   r.group=DriftGroup(name,fixed_side);
+   if(r.group=="" || n<210) return false;
+   double rsiTh=r.group=="bullbear"?40.0:45.0, slAtr=r.group=="bullbear"?2.5:1.0;
+   double t1=0.3, t2=r.group=="bullbear"?0.9:0.65, t3=r.group=="bullbear"?1.5:1.0;
+   bool needTrend=r.group!="bullbear";
+   double k20=2.0/21.0,k50=2.0/51.0,e20=c[0],e50=c[0],atr=h[0]-l[0],up=1e-9,dn=1e-9;
+   for(int i=1;i<n;i++)
+   {
+      e20=k20*c[i]+(1.0-k20)*e20;
+      e50=k50*c[i]+(1.0-k50)*e50;
+      double tr=MathMax(h[i]-l[i],MathMax(MathAbs(h[i]-c[i-1]),MathAbs(l[i]-c[i-1])));
+      atr=(atr*13.0+tr)/14.0;
+      double d=c[i]-c[i-1];
+      up=(up*13.0+(d>0?d:0.0))/14.0;
+      dn=(dn*13.0+(d<0?-d:0.0))/14.0;
+   }
+   r.rsi=100.0-100.0/(1.0+up/MathMax(dn,1e-12));
+   r.atr=atr;
+   string trendSide=e20>e50?"BUY":(e20<e50?"SELL":"NEUTRE");
+   r.side=fixed_side=="TREND"?trendSide:fixed_side;
+   int dir=r.side=="BUY"?1:(r.side=="SELL"?-1:0);
+   r.pullback=dir>0?r.rsi<rsiTh:(dir<0?r.rsi>100.0-rsiTh:false);
+   r.trendOk=!needTrend || trendSide==r.side;
+   r.valid=true;
+   r.active=dir!=0 && r.pullback && r.trendOk && atr>0;
+   if(!r.active) return true;
+   double risk=slAtr*atr;
+   r.entry=c[n-1];
+   r.sl=r.entry-dir*risk;
+   r.tp1=r.entry+dir*t1*risk;
+   r.tp2=r.entry+dir*t2*risk;
+   r.tp3=r.entry+dir*t3*risk;
+   r.tp4=r.entry+dir*(t3+0.05)*risk;
+   r.tp5=r.entry+dir*(t3+0.1)*risk;
+   return true;
+}
+
+bool DriftPlaybook(const string symbol,DriftInfo &r)
+{
+   r.valid=false; r.active=false;
+   MqlRates rates[];
+   ArraySetAsSeries(rates,false);
+   int n=CopyRates(symbol,PERIOD_H1,1,960,rates);
+   if(n<210) return false;
+   double h[],l[],c[];
+   ArrayResize(h,n); ArrayResize(l,n); ArrayResize(c,n);
+   for(int i=0;i<n;i++){ h[i]=rates[i].high; l[i]=rates[i].low; c[i]=rates[i].close; }
+   return DriftCompute(symbol,h,l,c,n,r);
+}
+
+// Pas de signal Swing : si le playbook derive est actif, il devient le signal a executer.
+void ApplyDriftPlaybook(SwxDecision &d)
+{
+   if(!TradeDriftPlaybook || !d.valid || IsSignal(d.verdict) || AnalysisOnly(d.symbol)) return;
+   DriftInfo p;
+   if(!DriftPlaybook(d.symbol,p) || !p.active) return;
+   d.verdict=p.side; d.side=p.side; d.state="EXECUTE_NOW"; d.setupType="DRIFT_PLAYBOOK";
+   d.entry=p.entry; d.sl=p.sl; d.tp1=p.tp1; d.tp2=p.tp2; d.tp3=p.tp3; d.tp4=p.tp4; d.tp5=p.tp5; d.zoneEntry=p.entry;
+   d.score=80; d.execScore=90; d.conditionPct=100;
+   d.confidence=p.group=="regime"?75:78;    // taux TP1 mesure sur Boom/Crash (Deriv) ; regime : estimation
+   d.gAligned=true; d.gQuality=true; d.gConfirm=true; d.gSetup=true; d.gStructure=true; d.gRisk=true; d.gScore=true;
+}
+
 // ---------- Tableau de bord (depuis v1.20) : etat du bot, analyses et controles avant chaque entree ----------
 #define SWX_GATES 12
 #define SWX_BAR_COLUMN 114
@@ -1328,7 +1432,6 @@ string PanelFirstBlock(const PanelRow &r)
    return "";
 }
 
-bool IsSignal(const string verdict){ return verdict=="BUY" || verdict=="SELL"; }
 
 bool FastEntryOk(const SwxDecision &d)
 {
@@ -1480,7 +1583,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.40"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.40");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.50"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.50");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -2063,7 +2166,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.40",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.50",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -2150,12 +2253,6 @@ void RenderDashboard(const bool can_trade,const string mode_label)
 }
 
 // Controles, ordres et decision d'un indice deja analyse. entered : une seule entree au marche par cycle.
-// Detection automatique : un indice d'une famille non activee est analyse pour l'app, jamais trade.
-bool AnalysisOnly(const string symbol)
-{
-   return SymbolsList=="" && !FamilyEnabled(SyntXFamily(symbol));
-}
-
 void ProcessDecision(const int i,const bool can_trade,bool &entered)
 {
    PanelFromDecision(g_rows[i],g_decisions[i]);
@@ -2216,7 +2313,7 @@ datetime ServerToUtc(const datetime t){ return t<=0?0:t+(TimeGMT()-TimeCurrent()
 string BuildAppJson()
 {
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
-   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.40\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
+   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.50\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
                ",\"account\":"+JsonText(demo?"DEMO":"REEL")+",\"markets\":[";
    int written=0;
    for(int i=0;i<ArraySize(g_symbols);i++)
@@ -2344,6 +2441,7 @@ void ScanAndTrade()
          if(g_decisions[i].valid)
          {
             AnalysisReversalExit(g_decisions[i]);
+            ApplyDriftPlaybook(g_decisions[i]);
             string now=g_decisions[i].verdict;
             if(EnableTrendWatch && now!=before && IsSignal(now))
                SendSwxAlert("SyntX: signal "+now+" "+symbol+" · score "+DoubleToString(g_decisions[i].score,0)+" · "+g_decisions[i].state);
@@ -2365,7 +2463,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v2.40: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v2.50: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)

@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="./popup.css?v=deriv-20260831-4">
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
   <link rel="stylesheet" href="./chart.css?v=chart-20261021">
-  <link rel="stylesheet" href="./weltrade.css?v=weltrade-20261101c">
+  <link rel="stylesheet" href="./weltrade.css?v=weltrade-20261101d">
 </head>
 <body>
   <div class="welcome-overlay" id="welcomePopup" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -76,6 +76,7 @@
       <span>Décision : <b>BUY / SELL / WAIT</b></span>
       <a href="#scanner">Voir les signaux</a>
       <a href="#weltrade">Weltrade</a>
+      <a href="#playbook">Stratégie mesurée</a>
     </section>
 
     <section class="execution-panel panel compact-execution" id="mt5Execution">
@@ -86,8 +87,8 @@
           <small>Réel · Swing (signaux du site) et Scalping M1 · coupure si retournement</small>
         </div>
         <div class="compact-exec-links">
-          <a class="text-link" href="./mt5/Sera_EA_Swing_Intelligent_Deriv_v2.64.mq5" download>Deriv v2.64</a>
-          <a class="text-link" href="./mt5/Sera_EA_Swing_Intelligent_Weltrade_v2.40.mq5" download>Weltrade v2.40</a>
+          <a class="text-link" href="./mt5/Sera_EA_Swing_Intelligent_Deriv_v2.65.mq5" download>Deriv v2.65</a>
+          <a class="text-link" href="./mt5/Sera_EA_Swing_Intelligent_Weltrade_v2.50.mq5" download>Weltrade v2.50</a>
           <a class="text-link" href="./mt5/Sera_EA_Scalping_Intelligent_v1.08.mq5" download>Scalping v1.08</a>
           <button class="text-link" id="showMt5Setup" type="button">Installation</button>
         </div>
@@ -179,6 +180,21 @@
       <div class="index-family-filter wt-families" id="wtFamilies" role="tablist" aria-label="Famille Weltrade"></div>
       <div id="wtNotice" class="notice loading">Chargement des analyses Weltrade…</div>
       <div id="wtResults" class="wt-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="scanner-panel panel playbook-panel" id="playbook">
+      <div class="wt-heading">
+        <div><span class="eyebrow cyan">Stratégie mesurée sur 1 an</span><h2>Sens de la dérive</h2></div>
+      </div>
+      <p class="pb-intro">Boom, GainX et Bear Market baissent entre deux sauts ; Crash, PainX et Bull Market montent entre deux chutes.
+        La stratégie n’entre que dans ce sens, après un repli (RSI), avec un petit premier objectif (TP1 = 0,3 fois le risque)
+        où la moitié est encaissée et le stop remonte au point d’entrée. Les chiffres ci-dessous sont mesurés, pas promis.</p>
+      <div class="pb-groups" id="pbGroups"></div>
+      <div class="pb-weltrade">Weltrade : PainX = achat, GainX = vente (même mécanique que Crash / Boom), SwitchX / BreakX / TrendX selon leur régime — appliqué par l’EA Weltrade v2.50. Volatility, Step, Jump, FX Vol, FlipX : marchés au hasard, aucun avantage mesuré.</div>
+      <div id="pbNotice" class="notice loading">Chargement de la stratégie mesurée…</div>
+      <div id="pbSignals" class="wt-grid" aria-live="polite"></div>
+      <p class="pb-period" id="pbPeriod"></p>
+      <p class="pb-baseline" id="pbBaseline"></p>
     </section>
 
     <div class="signal-modal" id="signalModal" hidden aria-hidden="true">
@@ -301,7 +317,8 @@
   <script src="./vendor/lightweight-charts-4.1.3.standalone.js" defer></script>
   <script src="./chart-engine.js?v=forex-live-20261021" defer></script>
   <script src="./app.js?v=forex-live-20261021" defer></script>
-  <script src="./voice.js?v=voice-20261101" defer></script>
+  <script src="./voice.js?v=voice-20261101b" defer></script>
   <script src="./weltrade.js?v=weltrade-20261101c" defer></script>
+  <script src="./playbook.js?v=playbook-20261101" defer></script>
 </body>
 </html>

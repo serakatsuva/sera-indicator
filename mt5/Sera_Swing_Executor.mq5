@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.64"
+#property version   "2.65"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -93,6 +93,7 @@ input bool ShowSignalsTable=true;           // tableau des signaux en cours (ent
 input int DashboardMaxSignals=8;
 input int DashboardMaxSetups=8;             // lignes max. pour les positions possibles
 input bool ShowEntryChecks=true;            // detail des 11 controles du signal suivi
+input bool TradeDriftPlaybook=true;          // v2.65 : strategie mesuree "sens de la derive" (Boom/Crash, Bull/Bear Market), signaux "Derive H1"
 input bool TradeDaySignals=true;             // prendre aussi les signaux Day M15/H1 (plus fréquents, plus courts)
 input bool UseBrokerConfirmation=true;       // tendance du broker alignée avec le signal
 input bool BrokerConfirmationH4Only=true;     // v2.52 : seule la tendance H4 compte (le H1 peut etre en repli)
@@ -716,8 +717,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.64")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.64");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.65")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.65");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -995,10 +996,17 @@ int VerdictState(const string verdict)
    return 0;
 }
 
+string ModeLabel(const string mode)
+{
+   if(mode=="day") return "Day M15/H1";
+   if(mode=="drift") return "Derive H1";
+   return "Swing H1/H4/D1";
+}
+
 void SendTrendAlert(const string market,const string verdict,const double confidence,const string execution_state,const string mode)
 {
    if(!EnableTrendWatch) return;
-   string message="Sera Trend Watch: "+market+" "+verdict+(mode=="day"?" Day M15/H1 ":" Swing H1/H4/D1 ")+execution_state+" a "+DoubleToString(confidence,0)+"%";
+   string message="Sera Trend Watch: "+market+" "+verdict+" "+ModeLabel(mode)+" "+execution_state+" a "+DoubleToString(confidence,0)+"%";
    if(EnableTerminalAlert) Alert(message);
    if(EnablePushNotification)
    {
@@ -1119,7 +1127,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Deriv v2.64";
+string g_email_ea="Sera EA Swing Intelligent Deriv v2.65";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -1952,7 +1960,7 @@ int RenderPossible(int line)
       string side=signal?r.verdict:(r.setup_side=="BUY"||r.setup_side=="SELL"?r.setup_side:"-");
       double score=r.engine_score>0?r.engine_score:r.confidence;
       string scoreText=DoubleToString(score,0)+" / "+DoubleToString(r.engine_min,0);
-      PanelText(line,"  "+Pad(r.market,27)+Pad(r.mode=="day"?"Day":"Swing",8)+Pad(side,6)+Pad(r.state,19)+
+      PanelText(line,"  "+Pad(r.market,27)+Pad(r.mode=="day"?"Day":(r.mode=="drift"?"Derive":"Swing"),8)+Pad(side,6)+Pad(r.state,19)+
                 Pad(DoubleToString(r.conditions,0)+"%",11)+Pad(MissingShort(r),24)+scoreText,signal?white:cyan);
       // barre : avancement vers un signal tradable = le plus faible entre score/seuil et conditions/minimum
       double progress=RowProgress(r);
@@ -2012,7 +2020,8 @@ void RenderDashboard()
 
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.64",amber,10);
+   if(TradeDriftPlaybook) horizons+=" + Derive H1";
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.65",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -2065,7 +2074,7 @@ void RenderDashboard()
    {
       PanelRow r=g_rows[focus];
       PanelText(line++,"",grey);
-      string horizon=r.mode=="day"?"Day M15/H1":"Swing H1/H4/D1";
+      string horizon=ModeLabel(r.mode);
       string side=(r.verdict=="BUY"||r.verdict=="SELL")?r.verdict:"setup";
       PanelText(line++,"SIGNAL SUIVI (detail des controles) : "+r.market+"  |  "+horizon+"  |  "+side+"  |  "+r.state,
                 r.verdict=="BUY"?blue:r.verdict=="SELL"?red:cyan);
@@ -2145,10 +2154,10 @@ void Evaluate(const string json)
       string model_direction=JsonString(object,"model_ensemble_direction");
       double model_consensus=JsonNumber(object,"model_ensemble_consensus");
       double models_available=JsonNumber(object,"model_models_available");
-      if(mode=="swing" || mode=="day") g_markets_seen++;
+      if(mode=="swing" || mode=="day" || mode=="drift") g_markets_seen++;
       if(setup_detected>0) g_setups_seen++;
       if(verdict=="BUY" || verdict=="SELL") g_signals_seen++;
-      if(mode=="swing" || (TradeDaySignals && mode=="day"))
+      if(mode=="swing" || (TradeDaySignals && mode=="day") || (TradeDriftPlaybook && mode=="drift"))
       {
          PanelRow pr;
          PanelReset(pr,JsonString(object,"market"),mode,verdict,execution_state,confidence,conditions_percent,execution_score);
@@ -2184,7 +2193,8 @@ void Evaluate(const string json)
          string opposite=verdict=="BUY"?"SELL":"BUY";
          // Le veto des modeles ne concerne qu'un vrai signal BUY/SELL (pas les marches en ATTENDRE),
          // et il n'est ecrit qu'une fois par signal dans le journal (pas toutes les 30 s).
-         if(UseOpenSourceModelGuard && (verdict=="BUY" || verdict=="SELL") && models_available>=2
+         // Strategie "derive" : mesuree sur l'historique, les modeles IA de tendance ne la bloquent pas.
+         if(UseOpenSourceModelGuard && mode!="drift" && (verdict=="BUY" || verdict=="SELL") && models_available>=2
             && model_direction==opposite && model_consensus>=MinimumModelConsensus && confidence<ModelVetoBelowConfidence)
          {
             model_guard_ok=false;
@@ -2219,7 +2229,7 @@ void Evaluate(const string json)
                   "Retirez tous les autres EA Sera : ils peuvent empecher l'ouverture des positions.");
          }
          int known=remembered!=-999?remembered:previous_alert_state;
-         string email_horizon=mode=="day"?"Day M15/H1":"Swing H1/H4/D1";
+         string email_horizon=ModeLabel(mode);
          if(directional_confirmed && alert_state!=known) SendTrendAlert(market_name,verdict,confidence,execution_state,mode);
          if(directional_confirmed) EmailSignal("Deriv",market_name,symbol,verdict,email_horizon,confidence,execution_state,pr.entry,pr.sl,pr.tp1,pr.tp2,pr.tp3);
          else if(row_fresh && state==0) EmailSignalClear(market_name,email_horizon);
@@ -2388,7 +2398,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.64"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.64");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.65"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.65");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -2457,7 +2467,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.64: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.65: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),

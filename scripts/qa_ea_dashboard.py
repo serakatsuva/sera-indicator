@@ -301,6 +301,32 @@ def main() -> int:
     if not re.search(r"\[amber\] Emails : .*Outils > Options > Email", nocfg):
         errors.append("email scenario: the dashboard does not explain that MT5 email must be configured")
 
+    # Scenario: Drift Playbook row (mode "drift", measured strategy): traded although the AI models disagree,
+    # shown as "Derive" on the dashboard.
+    drift = json.loads(json.dumps(feed))
+    for m in drift["markets"]:
+        m.update(final_verdict="ATTENDRE", execution_state="WAIT_CONFIRMATION", setup_detected=0)
+        m.pop("levels", None)
+    drift["markets"].append({"id": "BOOM1000:drift", "market": "Boom 1000 Index", "symbol": "BOOM1000", "mode": "drift",
+        "asset_class": "synthetic", "final_verdict": "SELL", "final_confidence": 77, "condition_pass_percent": 100,
+        "engine_score": 90, "engine_minimum_score": 90, "execution_state": "EXECUTE_NOW", "execution_score": 90,
+        "setup_detected": 1, "setup_direction": "SELL", "model_ensemble_direction": "BUY", "model_ensemble_consensus": 100,
+        "model_models_available": 4, "freshness_gate": True,
+        "levels": {"entry": 15000.0, "sl": 15050.0, "tp1": 14985.0, "tp2": 14967.5, "tp3": 14950.0, "tp4": 14947.5, "tp5": 14945.0}})
+    dp = BUILD / "ea-signals-drift.json"
+    dp.write_text(json.dumps(drift, separators=(",", ":")), encoding="utf-8")
+    outd = subprocess.run([str(exe), str(dp), str(world(drift)), str(now)], capture_output=True, text=True, timeout=120)
+    cd1 = outd.stdout.split("=== CYCLE 2")[0]
+    if not quiet:
+        print("=== SCENARIO PLAYBOOK DERIVE (Boom 1000 SELL) ===")
+        print("\n".join(l for l in cd1.splitlines() if "Boom 1000" in l or l.startswith("POS ") or "Horizons" in l)[:1200])
+    if outd.returncode != 0 or "POS Boom 1000 Index SELL" not in cd1 and "POS BOOM1000 SELL" not in cd1:
+        errors.append("drift playbook row (mode drift, EXECUTE_NOW) did not open a SELL position")
+    if "Derive" not in cd1:
+        errors.append("drift playbook signals are not labelled 'Derive' on the dashboard")
+    if "non execute - les modeles IA" in outd.stdout.split("=== LOG ===")[-1] and "Boom 1000" in outd.stdout.split("=== LOG ===")[-1].split("non execute")[0][-80:]:
+        errors.append("the AI model veto must not block a measured drift playbook signal")
+
     # Scenario: fast entry — a confirmed, very confident Day signal still in WAIT_CONFIRMATION enters at market.
     day_rows = [m for m in feed["markets"] if m["mode"] == "day" and m["final_verdict"] in ("BUY", "SELL") and m.get("levels")]
     if day_rows:

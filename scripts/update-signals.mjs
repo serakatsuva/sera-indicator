@@ -1,8 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {driftPlaybook,driftProfile} from './drift-playbook.mjs';
 
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
+const PLAYBOOK_OUTPUT=path.join(process.cwd(),'data','playbook-signals.json');
+const PLAYBOOK_STATS=path.join(process.cwd(),'data','playbook-stats.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
 const DERIV_WS='wss://api.derivws.com/trading/v1/options/ws/public?app_id=1089';
 const ENGINE_VERSION='Sera Autonomous Engine v4.1 · High Conviction Swing';
@@ -1129,11 +1132,47 @@ async function main(){
   }
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
   await fs.writeFile(OUTPUT,JSON.stringify(payload,null,2));
+  await writePlaybook(candles,payload.updated_at);
   console.log(`Wrote ${markets.length} analyses; ${trendChanges} trend change(s), ${trendFlips} flip(s); ${payload.confirmed_signals} confirmed signals.`);
+}
+
+// Drift Playbook (scripts/drift-playbook.mjs): strategy measured on one year of history, published apart from
+// the Day/Swing analyses in data/playbook-signals.json (read by the web app and merged into the EA feed as mode "drift").
+function playbookRows(candles,stats,markets=MARKETS){
+  const rows=[];
+  for(const meta of markets){
+    if(!driftProfile(meta.market))continue;
+    const h1=candles.get(`${meta.symbol}:H1`);
+    const pb=driftPlaybook(meta.market,h1);
+    if(!pb)continue;
+    const measured=stats?.markets?.[meta.market]||null,group=stats?.groups?.[pb.group]?.all||null;
+    const ageMinutes=Math.round((Date.now()/1000-pb.closed_at-3600)/60);
+    const fresh=ageMinutes<=90;
+    const active=pb.active&&fresh;
+    rows.push({id:`${meta.symbol}:drift`,market:meta.market,symbol:meta.symbol,family:meta.family,mode:'drift',strategy:'drift_playbook',
+      group:pb.group,label:pb.label,drift_side:pb.side,final_verdict:active?pb.side:'ATTENDRE',
+      final_confidence:Math.round(measured?.tp1_rate??group?.tp1_rate??0),
+      execution_state:active?'EXECUTE_NOW':'WAIT_CONFIRMATION',execution_score:active?90:0,
+      setup_detected:active?1:0,setup_direction:active?pb.side:'NEUTRE',
+      decision_engine:{condition_pass_percent:active?100:(pb.trend_ok?50:0),score:active?90:0,minimum_score:90,freshness_gate:fresh},
+      rsi:+pb.rsi.toFixed(1),rsi_threshold:pb.side==='BUY'?pb.params.rsi:100-pb.params.rsi,trend_ok:pb.trend_ok,pullback:pb.pullback,
+      price:pb.price,closed_at:pb.closed_at,levels:active?pb.levels:null,measured,measured_group:group});
+  }
+  return rows;
+}
+
+async function writePlaybook(candles,updatedAt){
+  let stats=null;
+  try{stats=JSON.parse(await fs.readFile(PLAYBOOK_STATS,'utf8'));}catch{stats=null;}
+  const rows=playbookRows(candles,stats);
+  const out={updated_at:updatedAt,strategy:'Sera Drift Playbook',period:stats?.period||null,groups:stats?.groups||{},
+    signals:rows.filter(r=>r.final_verdict!=='ATTENDRE').length,markets:rows};
+  await fs.writeFile(PLAYBOOK_OUTPUT,JSON.stringify(out,null,1));
+  console.log(`Drift Playbook: ${rows.length} markets, ${out.signals} active signal(s).`);
 }
 
 // Importable by the backtester (scripts/backtest.mjs): run only when executed directly.
 export {inspectCandles,technicalSetup,attachTrendMemory,buildFamilyContexts,attachFamilyContext,autonomousDecision,finalize,
-  buildLevels,aggregateCandles,onlyClosedCandles,MODES,marketFamilyFromName,marketSpikeBias};
+  buildLevels,aggregateCandles,onlyClosedCandles,MODES,marketFamilyFromName,marketSpikeBias,playbookRows};
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href)
   main().catch(error=>{console.error(error instanceof Error?error.message:error);process.exit(1);});

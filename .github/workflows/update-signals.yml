@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/update-signals.yml'
       - 'scripts/update-signals.mjs'
+      - 'scripts/drift-playbook.mjs'
       - 'scripts/open_source_ensemble.py'
       - 'scripts/adaptive_evidence.py'
       - 'scripts/send_gmail_alerts.py'
@@ -160,6 +161,7 @@ jobs:
           cp data/adaptive-evidence.json /tmp/sera-generated/data/adaptive-evidence.json
           cp data/email-alert-state.json /tmp/sera-generated/data/email-alert-state.json
           cp data/ea-signals.json /tmp/sera-generated/data/ea-signals.json
+          cp data/playbook-signals.json /tmp/sera-generated/data/playbook-signals.json
 
           for attempt in 1 2 3; do
             git fetch origin main
@@ -169,7 +171,8 @@ jobs:
             cp /tmp/sera-generated/data/adaptive-evidence.json data/adaptive-evidence.json
             cp /tmp/sera-generated/data/email-alert-state.json data/email-alert-state.json
             cp /tmp/sera-generated/data/ea-signals.json data/ea-signals.json
-            git add data/signals.json data/open-source-ai.json data/adaptive-evidence.json data/email-alert-state.json data/ea-signals.json
+            cp /tmp/sera-generated/data/playbook-signals.json data/playbook-signals.json
+            git add data/signals.json data/open-source-ai.json data/adaptive-evidence.json data/email-alert-state.json data/ea-signals.json data/playbook-signals.json
 
             if git diff --cached --quiet; then
               echo "No signal changes to commit."
