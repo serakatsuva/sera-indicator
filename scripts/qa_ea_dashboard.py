@@ -113,6 +113,8 @@ def world(feed: dict) -> Path:
     for m in feed["markets"]:
         name = m["market"].replace("/", "") if m.get("asset_class") == "forex" else m["market"]
         has_signal = m["final_verdict"] in ("BUY", "SELL") and bool(m.get("levels"))
+        if m.get("mode") == "drift" and name in symbols and symbols[name][2]:
+            continue
         if name in symbols and symbols[name][2] and not has_signal:
             continue
         price = (m.get("levels") or {}).get("entry") or 100.0
@@ -232,9 +234,11 @@ def main() -> int:
     if placed and (not m or int(m.group(1)) == 0):
         errors.append("limit orders placed on cycle 1 were cancelled by another setup of the same symbol")
     # Scenario: one confirmed signal switches to EXECUTE_NOW -> a market position must open.
+    # Scenarios below force one Swing/Day signal: the drift rows of the live feed (same symbols, other direction) are left out.
+    base_feed = {**feed, "markets": [m for m in feed["markets"] if m["mode"] != "drift"]}
     rows = [m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels") and m["mode"] in ("swing", "day")]
     if rows:
-        forced = json.loads(json.dumps(feed))
+        forced = json.loads(json.dumps(base_feed))
         target = next(m for m in forced["markets"] if m["id"] == rows[0]["id"])
         # The open-source models must agree, otherwise the EA rightly refuses (checked separately below).
         target.update(execution_state="EXECUTE_NOW", execution_score=92, final_confidence=max(90, target["final_confidence"]),
@@ -270,7 +274,7 @@ def main() -> int:
         if "POS " + target["market"] in c3 or f"{target['market']} {target['final_verdict']} non execute - les modeles IA" not in log3:
             errors.append(f"AI veto on {target['market']} did not block the entry")
     # Scenario: emails. Uses a confirmed signal of the feed, or a synthetic one when the feed has none right now.
-    mailfeed = json.loads(json.dumps(feed))
+    mailfeed = json.loads(json.dumps(base_feed))
     if rows:
         target = next(m for m in mailfeed["markets"] if m["id"] == rows[0]["id"])
     else:
@@ -311,7 +315,7 @@ def main() -> int:
 
     # Scenario: Drift Playbook row (mode "drift", measured strategy): traded although the AI models disagree,
     # shown as "Derive" on the dashboard.
-    drift = json.loads(json.dumps(feed))
+    drift = json.loads(json.dumps(base_feed))
     for m in drift["markets"]:
         m.update(final_verdict="ATTENDRE", execution_state="WAIT_CONFIRMATION", setup_detected=0)
         m.pop("levels", None)
@@ -344,7 +348,7 @@ def main() -> int:
     # Scenario: fast entry — a confirmed, very confident Day signal still in WAIT_CONFIRMATION enters at market.
     day_rows = [m for m in feed["markets"] if m["mode"] == "day" and m["final_verdict"] in ("BUY", "SELL") and m.get("levels")]
     if day_rows:
-        fast = json.loads(json.dumps(feed))
+        fast = json.loads(json.dumps(base_feed))
         target = next(m for m in fast["markets"] if m["id"] == day_rows[0]["id"])
         target.update(execution_state="WAIT_CONFIRMATION", execution_score=76, final_confidence=max(90, target["final_confidence"]),
                       condition_pass_percent=max(80, target["condition_pass_percent"]),
@@ -367,7 +371,7 @@ def main() -> int:
     # Scenario: an old Sera EA on another chart marked the signal as already traded and rewrites the shared memory
     # -> no position, the reason is written once in the journal and the dashboard warns about the other EA.
     if rows:
-        clash = json.loads(json.dumps(feed))
+        clash = json.loads(json.dumps(base_feed))
         target = next(m for m in clash["markets"] if m["id"] == rows[0]["id"])
         target.update(execution_state="EXECUTE_NOW", execution_score=92, final_confidence=92,
                       condition_pass_percent=max(85, target["condition_pass_percent"]),
@@ -394,7 +398,7 @@ def main() -> int:
     # Scenario: confirmed Day signal waiting for confirmation (not confident enough for the fast entry)
     # -> a limit order is placed at once; next cycle the AI models turn against it -> cancelled before it fills.
     if day_rows:
-        wait = json.loads(json.dumps(feed))
+        wait = json.loads(json.dumps(base_feed))
         target = next(m for m in wait["markets"] if m["id"] == day_rows[0]["id"])
         lv = target["levels"]
         risk = abs(lv["entry"] - lv["sl"])
