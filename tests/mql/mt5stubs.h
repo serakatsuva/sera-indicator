@@ -42,7 +42,7 @@ datetime TimeCurrent(); datetime TimeGMT(); bool TimeToStruct(datetime,MqlDateTi
 bool EventSetTimer(int); void EventKillTimer(); int GetLastError(); void ResetLastError(); long TerminalInfoInteger(E_INT); long MQLInfoInteger(E_INT);
 double NormalizeDouble(double,int); string CharArrayToString(const std::vector<char>&,int,int,int);
 const int INVALID_HANDLE=-1; enum ENUM_MA_METHOD{MODE_EMA}; enum ENUM_APPLIED_PRICE{PRICE_CLOSE};
-int iMA(const string&,ENUM_TIMEFRAMES,int,int,ENUM_MA_METHOD,ENUM_APPLIED_PRICE); int iRSI(const string&,ENUM_TIMEFRAMES,int,ENUM_APPLIED_PRICE);
+int iMA(const string&,ENUM_TIMEFRAMES,int,int,ENUM_MA_METHOD,ENUM_APPLIED_PRICE); int iCustom(const string&,ENUM_TIMEFRAMES,const string&); bool ChartIndicatorAdd(long,int,int); int iRSI(const string&,ENUM_TIMEFRAMES,int,ENUM_APPLIED_PRICE);
 int iATR(const string&,ENUM_TIMEFRAMES,int); int iADX(const string&,ENUM_TIMEFRAMES,int); int iMACD(const string&,ENUM_TIMEFRAMES,int,int,int,ENUM_APPLIED_PRICE);
 int CopyBuffer(int,int,int,int,std::vector<double>&); bool IndicatorRelease(int);
 int WebRequest(const string&,const string&,const string&,const string&,int,const std::vector<char>&,int,std::vector<char>&,string&);
@@ -54,7 +54,7 @@ extern string _Symbol; const long ACCOUNT_TRADE_MODE_REAL=2;
 double StoredLevel(const string&,const string&); void StoreLevel(const string&,const string&,const double); double AdaptiveRiskPercent(); double SafeVolume(const string&,const double,const double);
 // Chart objects (dashboard)
 typedef unsigned int color;
-enum ENUM_OBJECT{OBJ_LABEL,OBJ_RECTANGLE_LABEL,OBJ_BUTTON,OBJ_RECTANGLE,OBJ_TREND,OBJ_TEXT};
+enum ENUM_OBJECT{OBJ_LABEL,OBJ_RECTANGLE_LABEL,OBJ_BUTTON,OBJ_RECTANGLE,OBJ_TREND,OBJ_TEXT,OBJ_ARROW_BUY,OBJ_ARROW_SELL};
 const int STYLE_SOLID=0,STYLE_DASH=1; const long ANCHOR_LEFT=0;
 const int CHARTEVENT_OBJECT_CLICK=1;
 enum ENUM_OBJECT_PROPERTY_INTEGER{OBJPROP_CORNER,OBJPROP_SELECTABLE,OBJPROP_HIDDEN,OBJPROP_XDISTANCE,OBJPROP_YDISTANCE,OBJPROP_FONTSIZE,OBJPROP_COLOR,OBJPROP_BORDER_TYPE,OBJPROP_XSIZE,OBJPROP_YSIZE,OBJPROP_BGCOLOR,OBJPROP_STATE,OBJPROP_TIME,OBJPROP_FILL,OBJPROP_BACK,OBJPROP_STYLE,OBJPROP_WIDTH,OBJPROP_RAY_RIGHT,OBJPROP_ANCHOR};

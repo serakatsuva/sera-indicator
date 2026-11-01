@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "2.53"
+#property version   "2.54"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -15,6 +15,8 @@ input bool TradeProgressionX=false;          // PlusX / FiboX / QuadX : progress
 input int MaximumScannedSymbols=60;
 input bool TradeDriftPlaybook=true;          // v2.50 : strategie "sens de la derive" (PainX BUY, GainX SELL, SwitchX/BreakX/TrendX selon le regime), mesuree sur Boom/Crash
 input bool DriftRequireLiquiditySweep=true;  // mode precision : signaux "derive" seulement apres un balayage de liquidite SMC (TP1 96 % Bull/Bear, 80 % Boom/Crash mesures)
+input bool OpenChartWithIndicator=true;      // bouton Ouvrir : ajoute l'indicateur Sera SMC Zones (zones Premium/Discount, fleches) au graphique ouvert
+input string ChartIndicatorName="Sera_SMC_Zones";  // fichier de l'indicateur dans MQL5\Indicators (compile)
 input bool AnalyseAllFamiliesForApp=true;    // analyser aussi FlipX / PlusX / FiboX / QuadX pour l'app (analyse seule : seules les familles activees ci-dessus sont tradees)
 input int AnalysisBars=1000;                 // bougies cloturees analysees par unite de temps (1000 = EMA200 exacte)
 input bool ShowDashboard=true;              // tableau de bord sur le graphique
@@ -572,7 +574,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Weltrade v2.53";
+string g_email_ea="Sera EA Swing Intelligent Weltrade v2.54";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -1612,7 +1614,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.53"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.53");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.54"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.54");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -2195,7 +2197,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.53",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.54",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -2342,7 +2344,7 @@ datetime ServerToUtc(const datetime t){ return t<=0?0:t+(TimeGMT()-TimeCurrent()
 string BuildAppJson()
 {
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
-   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.53\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
+   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.54\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
                ",\"account\":"+JsonText(demo?"DEMO":"REEL")+",\"markets\":[";
    int written=0;
    for(int i=0;i<ArraySize(g_symbols);i++)
@@ -2492,7 +2494,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v2.53: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v2.54: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)
@@ -2514,6 +2516,20 @@ void OnTimer()
 
 void RedrawDashboard(){ RenderDashboard(g_dash_can_trade,g_dash_mode); }
 
+// Pose l'indicateur Sera SMC Zones (MQL5\Indicators\Sera_SMC_Zones.ex5) sur le graphique ouvert par le bouton Ouvrir.
+void AttachSeraIndicator(const long chart,const string symbol,const ENUM_TIMEFRAMES tf)
+{
+   if(!OpenChartWithIndicator || chart==0 || ChartIndicatorName=="") return;
+   int handle=iCustom(symbol,tf,ChartIndicatorName);
+   if(handle==INVALID_HANDLE)
+   {
+      Print("Sera: indicateur ",ChartIndicatorName," introuvable - copiez Sera_SMC_Zones.mq5 dans MQL5\\Indicators puis compilez-le (F7)");
+      return;
+   }
+   ResetLastError();
+   if(!ChartIndicatorAdd(chart,0,handle)) Print("Sera: indicateur non ajoute au graphique, erreur=",GetLastError());
+}
+
 void OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
 {
    if(id!=CHARTEVENT_OBJECT_CLICK) return;
@@ -2527,7 +2543,11 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
       {
          long chart=ChartOpen(g_open_symbols[k],g_open_tfs[k]);
          if(chart==0) Print("Sera: impossible d'ouvrir le graphique ",g_open_symbols[k]);
-         else DrawSignalOnChart(chart,g_open_rows[k]);   // entree, SL et TP dessines sur le nouveau graphique
+         else
+         {
+            DrawSignalOnChart(chart,g_open_rows[k]);   // entree, SL et TP dessines sur le nouveau graphique
+            AttachSeraIndicator(chart,g_open_symbols[k],g_open_tfs[k]);
+         }
       }
       return;
    }

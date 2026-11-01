@@ -208,6 +208,8 @@ def main() -> int:
             errors.append("signal row (market, direction, levels) or its 'Ouvrir' button missing")
         if "CHARTOPEN " not in text.split("=== LOG ===")[-1]:
             errors.append("the 'Ouvrir' button did not open the market chart")
+        if "ICUSTOM Sera_SMC_Zones" not in text.split("=== LOG ===")[-1] or "CHARTINDICATOR 1 77" not in text.split("=== LOG ===")[-1]:
+            errors.append("the 'Ouvrir' button did not put the Sera SMC Zones indicator on the opened chart")
         plus_sec = sections.get("BOUTON + (5 marches de plus)", "")
         drawn = {m.group(1): (float(m.group(2)), float(m.group(3))) for m in re.finditer(r"^SIG (\w+) (\S+) (\S+)", plus_sec, re.M)}
         near = lambda a, b: abs(a - b) <= 1e-5 + 1e-9 * abs(b)   # the simulator prints prices with 5 decimals
@@ -230,7 +232,7 @@ def main() -> int:
     if placed and (not m or int(m.group(1)) == 0):
         errors.append("limit orders placed on cycle 1 were cancelled by another setup of the same symbol")
     # Scenario: one confirmed signal switches to EXECUTE_NOW -> a market position must open.
-    rows = [m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels")]
+    rows = [m for m in feed["markets"] if m["final_verdict"] in ("BUY", "SELL") and m.get("levels") and m["mode"] in ("swing", "day")]
     if rows:
         forced = json.loads(json.dumps(feed))
         target = next(m for m in forced["markets"] if m["id"] == rows[0]["id"])

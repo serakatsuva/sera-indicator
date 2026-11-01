@@ -76,6 +76,8 @@ jobs:
         run: python scripts/qa_ea_dashboard_weltrade.py --quiet
       - name: Drift Playbook — Weltrade EA identical to the online engine
         run: python scripts/qa_drift_playbook.py
+      - name: Sera SMC Zones indicator (zones, labels, arrows identical to the online engine)
+        run: python scripts/qa_indicator.py
       - name: Scalping EA full session simulation (entries, stacking, profit, reversal, netting, emergency stop)
         run: python scripts/qa_ea_scalping.py --quiet
       - name: MT5 presets (.set) match the EA inputs

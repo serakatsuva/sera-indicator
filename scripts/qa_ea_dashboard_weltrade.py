@@ -194,6 +194,8 @@ def main() -> int:
         errors.append("signals table (indice, H1, BUY/SELL, levels, Ouvrir) missing")
     if "CHARTOPEN " not in text.split("=== LOG ===")[-1]:
         errors.append("the 'Ouvrir' button did not open the chart")
+    if "ICUSTOM Sera_SMC_Zones" not in text.split("=== LOG ===")[-1] or "CHARTINDICATOR 1 77" not in text.split("=== LOG ===")[-1]:
+        errors.append("the 'Ouvrir' button did not put the Sera SMC Zones indicator on the opened chart")
     folded_sec = sections.get("BOUTON - (liste repliee)", "")
     if not all(f"SIG {k} " in folded_sec for k in ("ENTRY", "SL", "TP1", "TP3", "RISK", "REWARD")):
         errors.append("the opened chart does not show the entry / SL / TP zones")

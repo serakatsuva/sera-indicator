@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.68"
+#property version   "2.69"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -95,6 +95,8 @@ input int DashboardMaxSetups=8;             // lignes max. pour les positions po
 input bool ShowEntryChecks=true;            // detail des 11 controles du signal suivi
 input bool TradeDriftPlaybook=true;          // v2.65 : strategie mesuree "sens de la derive" (Boom/Crash, Bull/Bear Market), signaux "Derive H1"
 input bool DriftRequireLiquiditySweep=true;  // mode precision : signaux "derive" seulement apres un balayage de liquidite SMC (TP1 96 % Bull/Bear, 80 % Boom/Crash mesures)
+input bool OpenChartWithIndicator=true;      // bouton Ouvrir : ajoute l'indicateur Sera SMC Zones (zones Premium/Discount, fleches) au graphique ouvert
+input string ChartIndicatorName="Sera_SMC_Zones";  // fichier de l'indicateur dans MQL5\Indicators (compile)
 input bool TradeDaySignals=true;             // prendre aussi les signaux Day M15/H1 (plus fréquents, plus courts)
 input bool UseBrokerConfirmation=true;       // tendance du broker alignée avec le signal
 input bool BrokerConfirmationH4Only=true;     // v2.52 : seule la tendance H4 compte (le H1 peut etre en repli)
@@ -718,8 +720,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.68")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.68");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.69")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.69");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -1136,7 +1138,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Deriv v2.68";
+string g_email_ea="Sera EA Swing Intelligent Deriv v2.69";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -2036,7 +2038,7 @@ void RenderDashboard()
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
    if(TradeDriftPlaybook) horizons+=" + Derive H1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.68",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.69",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -2421,7 +2423,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.68"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.68");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.69"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.69");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -2490,7 +2492,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.68: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.69: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
@@ -2517,6 +2519,20 @@ void OnTimer()
 
 void RedrawDashboard(){ RenderDashboard(); }
 
+// Pose l'indicateur Sera SMC Zones (MQL5\Indicators\Sera_SMC_Zones.ex5) sur le graphique ouvert par le bouton Ouvrir.
+void AttachSeraIndicator(const long chart,const string symbol,const ENUM_TIMEFRAMES tf)
+{
+   if(!OpenChartWithIndicator || chart==0 || ChartIndicatorName=="") return;
+   int handle=iCustom(symbol,tf,ChartIndicatorName);
+   if(handle==INVALID_HANDLE)
+   {
+      Print("Sera: indicateur ",ChartIndicatorName," introuvable - copiez Sera_SMC_Zones.mq5 dans MQL5\\Indicators puis compilez-le (F7)");
+      return;
+   }
+   ResetLastError();
+   if(!ChartIndicatorAdd(chart,0,handle)) Print("Sera: indicateur non ajoute au graphique, erreur=",GetLastError());
+}
+
 void OnChartEvent(const int id,const long &lparam,const double &dparam,const string &sparam)
 {
    if(id!=CHARTEVENT_OBJECT_CLICK) return;
@@ -2530,7 +2546,11 @@ void OnChartEvent(const int id,const long &lparam,const double &dparam,const str
       {
          long chart=ChartOpen(g_open_symbols[k],g_open_tfs[k]);
          if(chart==0) Print("Sera: impossible d'ouvrir le graphique ",g_open_symbols[k]);
-         else DrawSignalOnChart(chart,g_open_rows[k]);   // entree, SL et TP dessines sur le nouveau graphique
+         else
+         {
+            DrawSignalOnChart(chart,g_open_rows[k]);   // entree, SL et TP dessines sur le nouveau graphique
+            AttachSeraIndicator(chart,g_open_symbols[k],g_open_tfs[k]);
+         }
       }
       return;
    }
