@@ -37,6 +37,20 @@ Pour l’activer dans MT5 : *Outils → Options → Expert Advisors* → autoris
 - Profils de risque synthétiques étendus (DEX, Drift Switch, VolSwitch, Baskets).
 - `TradeDaySignals = true` (activé par défaut depuis v2.31) : l’EA prend aussi les signaux Day M15/H1, avec une durée maximale de 48 h par position.
 
+### Recherche SMC sur les vrais marchés (1er novembre 2026)
+Historique : `scripts/fetch-history.mjs --set real` (Deriv + Yahoo Finance pour compléter le H1) — 29 paires Forex (≈ 2 ans H1),
+or / argent / platine / palladium, 12 indices boursiers, BTC / ETH ; M15 ≈ 2 mois. Scripts : `research/smc_model_real.py`, `research/strategies_real.py`.
+
+| Marché | Modèle SMC complet, 1 R (apprentissage / test) | Après spread |
+|---|---|---|
+| Forex | 53 % / 54 % gagnants, +0,06 / +0,09 R | ≈ 0 avec 0,8 point de base, négatif dès 1,5 (risque médian 19 points de base) |
+| Métaux | 50 % / 47 %, 0,00 / −0,06 R | négatif |
+| Indices boursiers | 43 % / 45 %, −0,15 / −0,09 R | négatif |
+| Crypto | 42 % / 62 % (très peu de trades) | non concluant |
+
+Killzones (Londres, New York, Asie) et M15 : pas mieux. Tendance + repli, balayage seul, RSI : ≈ 0 avant coûts.
+Conclusion : aucun avantage SMC exploitable après coûts sur ces marchés ; rien n'est ajouté aux robots.
+
 ### Recherche SMC (1er novembre 2026) — ce qui a été mesuré
 - `research/smc_model.py` : modèle SMC complet seul — balayage de liquidité → CHoCH → entrée limite à 50 % de la jambe (zone FVG / OB),
   stop sous la mèche, objectifs 0,5 R / 1 R / 2 R / liquidité opposée — sur toutes les familles Deriv, H1 (1 an) et M15 (62 jours).
