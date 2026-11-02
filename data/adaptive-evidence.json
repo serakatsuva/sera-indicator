@@ -1,46 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-02T01:07:59.106244Z",
+  "updated_at": "2026-11-02T01:12:37.411703Z",
   "records": [
-    {
-      "key": "RDBEAR:day|1793325600|SELL",
-      "id": "RDBEAR:day",
-      "market": "Bear Market Index",
-      "symbol": "RDBEAR",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1793325600,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 96,
-      "execution_score": 85.0,
-      "active_strategies": [
-        "SMC structure",
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 933.9865,
-        "sl": 1179.1873,
-        "tp1": 566.1852999999999,
-        "tp2": 345.5045799999998,
-        "tp3": 51.26361999999972,
-        "tp4": -242.97734000000037,
-        "tp5": -537.2183000000005
-      },
-      "status": "resolved",
-      "created_at": "2026-10-30T02:20:42.946446Z",
-      "max_stage": 0,
-      "last_epoch": 1793497500,
-      "result": "TIMEOUT_FLAT",
-      "r": 0.0,
-      "resolved_epoch": 1793498400
-    },
     {
       "key": "CRASH300N:day|1793325600|SELL",
       "id": "CRASH300N:day",
@@ -24025,18 +23986,42 @@
       "created_at": "2026-11-02T00:51:30.113028Z",
       "max_stage": 0,
       "last_epoch": 1793580300
+    },
+    {
+      "key": "JD10:day|1793580300|SELL",
+      "id": "JD10:day",
+      "market": "Jump 10 Index",
+      "symbol": "JD10",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1793580300,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 92,
+      "execution_score": 77.0,
+      "active_strategies": [
+        "SMC structure",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 92694.8,
+        "sl": 93025.54,
+        "tp1": 92198.69000000002,
+        "tp2": 91901.02400000002,
+        "tp3": 91504.13600000004,
+        "tp4": 91107.24800000005,
+        "tp5": 90710.36000000006
+      },
+      "status": "open",
+      "created_at": "2026-11-02T01:12:37.322384Z"
     }
   ],
   "profiles": {
-    "Bear Market Index|day|GENERIC|TRANSITION": {
-      "samples": 3,
-      "decisive_samples": 2,
-      "win_rate": 0.0,
-      "avg_r": -0.667,
-      "losses": 2,
-      "breakeven_or_flat": 1,
-      "wins": 0
-    },
     "Crash 300 Index|day|BREAKOUT_CONTINUATION|TRENDING": {
       "samples": 6,
       "decisive_samples": 6,
@@ -24658,6 +24643,15 @@
       "breakeven_or_flat": 1,
       "wins": 0
     },
+    "Bear Market Index|day|GENERIC|TRANSITION": {
+      "samples": 2,
+      "decisive_samples": 2,
+      "win_rate": 0.0,
+      "avg_r": -1.0,
+      "losses": 2,
+      "breakeven_or_flat": 0,
+      "wins": 0
+    },
     "Jump 25 Index|day|GENERIC|TRENDING": {
       "samples": 6,
       "decisive_samples": 5,
@@ -24804,11 +24798,23 @@
     }
   },
   "strategy_profiles": {
+    "Trend following": {
+      "samples": 133,
+      "decisive_samples": 90,
+      "win_rate": 7.8,
+      "avg_r": -0.486
+    },
     "SMC structure": {
       "samples": 150,
       "decisive_samples": 87,
       "win_rate": 17.2,
       "avg_r": -0.272
+    },
+    "Breakout + impulse": {
+      "samples": 150,
+      "decisive_samples": 100,
+      "win_rate": 7.0,
+      "avg_r": -0.498
     },
     "Momentum": {
       "samples": 150,
@@ -24846,24 +24852,6 @@
       "win_rate": 17.9,
       "avg_r": -0.25
     },
-    "HH/HL or LH/LL structure": {
-      "samples": 150,
-      "decisive_samples": 85,
-      "win_rate": 14.1,
-      "avg_r": -0.309
-    },
-    "Trend following": {
-      "samples": 133,
-      "decisive_samples": 90,
-      "win_rate": 7.8,
-      "avg_r": -0.486
-    },
-    "Breakout + impulse": {
-      "samples": 150,
-      "decisive_samples": 100,
-      "win_rate": 7.0,
-      "avg_r": -0.498
-    },
     "MACD momentum alignment": {
       "samples": 150,
       "decisive_samples": 104,
@@ -24875,6 +24863,12 @@
       "decisive_samples": 97,
       "win_rate": 6.2,
       "avg_r": -0.501
+    },
+    "HH/HL or LH/LL structure": {
+      "samples": 150,
+      "decisive_samples": 85,
+      "win_rate": 14.1,
+      "avg_r": -0.309
     },
     "ADX / DMI trend strength": {
       "samples": 150,
