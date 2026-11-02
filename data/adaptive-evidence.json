@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-02T13:08:23.667793Z",
+  "updated_at": "2026-11-02T13:11:24.982613Z",
   "records": [
-    {
-      "key": "R_25:day|1793364300|SELL",
-      "id": "R_25:day",
-      "market": "Volatility 25 Index",
-      "symbol": "R_25",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1793364300,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 95,
-      "execution_score": 83.0,
-      "active_strategies": [
-        "SMC structure",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 2931.513,
-        "sl": 2948.122,
-        "tp1": 2906.5995000000003,
-        "tp2": 2891.6514,
-        "tp3": 2871.7206,
-        "tp4": 2851.7898000000005,
-        "tp5": 2831.8590000000004
-      },
-      "status": "resolved",
-      "created_at": "2026-10-30T13:05:32.121559Z",
-      "max_stage": 0,
-      "last_epoch": 1793378700,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1793379600
-    },
     {
       "key": "WLDEUR:day|1793365200|SELL",
       "id": "WLDEUR:day",
@@ -23996,18 +23958,42 @@
       "created_at": "2026-11-02T12:48:07.797932Z",
       "max_stage": 0,
       "last_epoch": 1793623500
+    },
+    {
+      "key": "1HZ30V:day|1793623500|BUY",
+      "id": "1HZ30V:day",
+      "market": "Volatility 30 (1s) Index",
+      "symbol": "1HZ30V",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1793623500,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 95,
+      "execution_score": 83.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 6139.661,
+        "sl": 6086.711,
+        "tp1": 6219.085999999999,
+        "tp2": 6266.741,
+        "tp3": 6330.280999999999,
+        "tp4": 6393.820999999999,
+        "tp5": 6457.360999999999
+      },
+      "status": "open",
+      "created_at": "2026-11-02T13:11:24.922109Z"
     }
   ],
   "profiles": {
-    "Volatility 25 Index|day|GENERIC|TRANSITION": {
-      "samples": 16,
-      "decisive_samples": 16,
-      "win_rate": 25.0,
-      "avg_r": -0.244,
-      "losses": 12,
-      "breakeven_or_flat": 0,
-      "wins": 4
-    },
     "EUR Basket|day|GENERIC|TRANSITION": {
       "samples": 9,
       "decisive_samples": 0,
@@ -24043,6 +24029,15 @@
       "losses": 0,
       "breakeven_or_flat": 2,
       "wins": 2
+    },
+    "Volatility 25 Index|day|GENERIC|TRANSITION": {
+      "samples": 15,
+      "decisive_samples": 15,
+      "win_rate": 26.7,
+      "avg_r": -0.193,
+      "losses": 11,
+      "breakeven_or_flat": 0,
+      "wins": 4
     },
     "Volatility 25 (1s) Index|day|BREAKOUT_CONTINUATION|TRENDING": {
       "samples": 2,
@@ -24799,6 +24794,12 @@
       "win_rate": 18.6,
       "avg_r": -0.255
     },
+    "Momentum": {
+      "samples": 150,
+      "decisive_samples": 105,
+      "win_rate": 20.0,
+      "avg_r": -0.266
+    },
     "FVG / Order Block": {
       "samples": 150,
       "decisive_samples": 91,
@@ -24834,12 +24835,6 @@
       "decisive_samples": 81,
       "win_rate": 18.5,
       "avg_r": -0.204
-    },
-    "Momentum": {
-      "samples": 150,
-      "decisive_samples": 105,
-      "win_rate": 20.0,
-      "avg_r": -0.266
     },
     "Trend following": {
       "samples": 141,
