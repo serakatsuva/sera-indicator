@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-02T14:03:58.136672Z",
+  "updated_at": "2026-11-02T14:09:00.724578Z",
   "records": [
-    {
-      "key": "R_25:day|1793366100|SELL",
-      "id": "R_25:day",
-      "market": "Volatility 25 Index",
-      "symbol": "R_25",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1793366100,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 96,
-      "execution_score": 85.0,
-      "active_strategies": [
-        "SMC structure",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 2926.018,
-        "sl": 2946.899,
-        "tp1": 2894.6965,
-        "tp2": 2875.9036000000006,
-        "tp3": 2850.8464000000004,
-        "tp4": 2825.7892000000006,
-        "tp5": 2800.732000000001
-      },
-      "status": "resolved",
-      "created_at": "2026-10-30T13:35:23.272172Z",
-      "max_stage": 0,
-      "last_epoch": 1793378700,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1793379600
-    },
     {
       "key": "WLDEUR:day|1793367000|SELL",
       "id": "WLDEUR:day",
@@ -24026,18 +23988,42 @@
       "created_at": "2026-11-02T13:47:27.628550Z",
       "max_stage": 0,
       "last_epoch": 1793627100
+    },
+    {
+      "key": "CRASH500:day|1793627100|SELL",
+      "id": "CRASH500:day",
+      "market": "Crash 500 Index",
+      "symbol": "CRASH500",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1793627100,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 95,
+      "execution_score": 90.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 2965.13,
+        "sl": 2990.025,
+        "tp1": 2927.7875000000004,
+        "tp2": 2905.382,
+        "tp3": 2875.5080000000003,
+        "tp4": 2845.634,
+        "tp5": 2815.76
+      },
+      "status": "open",
+      "created_at": "2026-11-02T14:09:00.632321Z"
     }
   ],
   "profiles": {
-    "Volatility 25 Index|day|GENERIC|TRANSITION": {
-      "samples": 14,
-      "decisive_samples": 14,
-      "win_rate": 28.6,
-      "avg_r": -0.136,
-      "losses": 10,
-      "breakeven_or_flat": 0,
-      "wins": 4
-    },
     "EUR Basket|day|GENERIC|TRANSITION": {
       "samples": 7,
       "decisive_samples": 0,
@@ -24100,6 +24086,15 @@
       "losses": 0,
       "breakeven_or_flat": 0,
       "wins": 1
+    },
+    "Volatility 25 Index|day|GENERIC|TRANSITION": {
+      "samples": 13,
+      "decisive_samples": 13,
+      "win_rate": 30.8,
+      "avg_r": -0.069,
+      "losses": 9,
+      "breakeven_or_flat": 0,
+      "wins": 4
     },
     "Bear Market Index|day|BREAKOUT_CONTINUATION|TRENDING": {
       "samples": 7,
