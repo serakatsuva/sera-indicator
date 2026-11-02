@@ -1,48 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-02T05:06:38.678159Z",
+  "updated_at": "2026-11-02T05:11:02.136125Z",
   "records": [
-    {
-      "key": "WLDAUD:day|1793339100|SELL",
-      "id": "WLDAUD:day",
-      "market": "AUD Basket",
-      "symbol": "WLDAUD",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1793339100,
-      "setup_type": "REVERSAL",
-      "regime": "TRANSITION",
-      "confidence": 91,
-      "execution_score": 98.0,
-      "active_strategies": [
-        "SMC structure",
-        "Liquidity sweep",
-        "Momentum",
-        "Price rejection",
-        "Range reversal",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "Engulfing confirmation"
-      ],
-      "levels": {
-        "entry": 944.645,
-        "sl": 945.687,
-        "tp1": 943.0819999999999,
-        "tp2": 942.1442,
-        "tp3": 940.8937999999998,
-        "tp4": 939.6433999999998,
-        "tp5": 938.3929999999998
-      },
-      "status": "resolved",
-      "created_at": "2026-10-30T06:04:38.431780Z",
-      "max_stage": 1,
-      "last_epoch": 1793370600,
-      "result": "BREAKEVEN",
-      "r": 0.0,
-      "resolved_epoch": 1793371500
-    },
     {
       "key": "CRASH150N:day|1793339100|SELL",
       "id": "CRASH150N:day",
@@ -24033,19 +23992,45 @@
         "tp5": 1318.8180000000016
       },
       "status": "open",
-      "created_at": "2026-11-02T05:06:38.589816Z"
+      "created_at": "2026-11-02T05:06:38.589816Z",
+      "max_stage": 0,
+      "last_epoch": 1793594700
+    },
+    {
+      "key": "1HZ100V:day|1793594700|SELL",
+      "id": "1HZ100V:day",
+      "market": "Volatility 100 (1s) Index",
+      "symbol": "1HZ100V",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1793594700,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 88,
+      "execution_score": 76.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation"
+      ],
+      "levels": {
+        "entry": 1309.57,
+        "sl": 1352.52,
+        "tp1": 1245.145,
+        "tp2": 1206.4899999999998,
+        "tp3": 1154.9499999999998,
+        "tp4": 1103.4099999999996,
+        "tp5": 1051.8699999999997
+      },
+      "status": "open",
+      "created_at": "2026-11-02T05:11:02.082997Z"
     }
   ],
   "profiles": {
-    "AUD Basket|day|REVERSAL|TRANSITION": {
-      "samples": 1,
-      "decisive_samples": 0,
-      "win_rate": null,
-      "avg_r": 0.0,
-      "losses": 0,
-      "breakeven_or_flat": 1,
-      "wins": 0
-    },
     "Crash 150 Index|day|BREAKOUT_CONTINUATION|TRENDING": {
       "samples": 7,
       "decisive_samples": 4,
@@ -24831,35 +24816,23 @@
     }
   },
   "strategy_profiles": {
+    "Trend following": {
+      "samples": 138,
+      "decisive_samples": 89,
+      "win_rate": 6.7,
+      "avg_r": -0.493
+    },
     "SMC structure": {
       "samples": 150,
       "decisive_samples": 80,
       "win_rate": 22.5,
       "avg_r": -0.177
     },
-    "Liquidity sweep": {
-      "samples": 1,
-      "decisive_samples": 0,
-      "win_rate": null,
-      "avg_r": 0.0
-    },
-    "Momentum": {
+    "Breakout + impulse": {
       "samples": 150,
-      "decisive_samples": 100,
-      "win_rate": 22.0,
-      "avg_r": -0.196
-    },
-    "Price rejection": {
-      "samples": 1,
-      "decisive_samples": 0,
-      "win_rate": null,
-      "avg_r": 0.0
-    },
-    "Range reversal": {
-      "samples": 1,
-      "decisive_samples": 0,
-      "win_rate": null,
-      "avg_r": 0.0
+      "decisive_samples": 95,
+      "win_rate": 8.4,
+      "avg_r": -0.468
     },
     "Trend memory": {
       "samples": 150,
@@ -24884,24 +24857,6 @@
       "decisive_samples": 87,
       "win_rate": 25.3,
       "avg_r": -0.117
-    },
-    "Engulfing confirmation": {
-      "samples": 1,
-      "decisive_samples": 0,
-      "win_rate": null,
-      "avg_r": 0.0
-    },
-    "Trend following": {
-      "samples": 138,
-      "decisive_samples": 89,
-      "win_rate": 6.7,
-      "avg_r": -0.493
-    },
-    "Breakout + impulse": {
-      "samples": 150,
-      "decisive_samples": 95,
-      "win_rate": 8.4,
-      "avg_r": -0.468
     },
     "ADX / DMI trend strength": {
       "samples": 150,
@@ -24938,6 +24893,12 @@
       "decisive_samples": 76,
       "win_rate": 25.0,
       "avg_r": -0.1
+    },
+    "Momentum": {
+      "samples": 150,
+      "decisive_samples": 100,
+      "win_rate": 22.0,
+      "avg_r": -0.196
     },
     "FVG / Order Block": {
       "samples": 150,
