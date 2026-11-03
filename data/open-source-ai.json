@@ -1,8 +1,8 @@
 {
   "version": "Sera OSS Ensemble v1.1",
-  "updated_at": "2026-11-03T05:56:39.861153Z",
-  "foundation_ran": false,
-  "foundation_updated_at": "2026-11-03T05:42:06.633060Z",
+  "updated_at": "2026-11-03T06:02:40.592015Z",
+  "foundation_ran": true,
+  "foundation_updated_at": "2026-11-03T06:02:40.592035Z",
   "markets": {
     "WLDAUD:day": {
       "latest_epoch": 1793683800,
@@ -102,14 +102,30 @@
     },
     "BOOM300N:day": {
       "latest_epoch": 1793683800,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-03T06:02:40.473974Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "NEUTRAL",
+        "confidence": 51.7,
+        "reference_price": 318.356,
+        "forecast_price": 318.26205444,
+        "expected_return_pct": -0.0295,
+        "volatility_threshold_pct": 0.2367,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "SELL",
+        "confidence": 64.8,
+        "reference_price": 318.35598755,
+        "forecast_price": 317.55877686,
+        "expected_return_pct": -0.2504,
+        "volatility_threshold_pct": 0.2367,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "BOOM300N:swing": {
@@ -438,14 +454,23 @@
     },
     "WLDGBP:day": {
       "latest_epoch": 1793683800,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-03T06:02:40.474613Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "error",
+        "direction": "NEUTRAL",
+        "error": "Could not infer frequency for series WLDGBP:day"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 58.6,
+        "reference_price": 1012.69702148,
+        "forecast_price": 1012.57275391,
+        "expected_return_pct": -0.0123,
+        "volatility_threshold_pct": 0.02,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "WLDGBP:swing": {
@@ -474,7 +499,7 @@
     },
     "WLDXAU:swing": {
       "latest_epoch": 1793678400,
-      "foundation_updated_at": "2026-11-03T05:42:06.530998Z",
+      "foundation_updated_at": "2026-11-03T06:02:40.474707Z",
       "chronos2": {
         "status": "error",
         "direction": "NEUTRAL",
@@ -591,14 +616,30 @@
     },
     "JD75:day": {
       "latest_epoch": 1793683800,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-03T06:02:40.474964Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "NEUTRAL",
+        "confidence": 62.3,
+        "reference_price": 5393.41,
+        "forecast_price": 5405.29882812,
+        "expected_return_pct": 0.2204,
+        "volatility_threshold_pct": 0.2519,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 51.7,
+        "reference_price": 5393.41015625,
+        "forecast_price": 5391.75976562,
+        "expected_return_pct": -0.0306,
+        "volatility_threshold_pct": 0.2519,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "JD75:swing": {
@@ -735,14 +776,30 @@
     },
     "stpRNG4:day": {
       "latest_epoch": 1793683800,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-03T06:02:40.475284Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "SELL",
+        "confidence": 76.9,
+        "reference_price": 8506.0,
+        "forecast_price": 8496.7734375,
+        "expected_return_pct": -0.1085,
+        "volatility_threshold_pct": 0.0565,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 60.8,
+        "reference_price": 8506.0,
+        "forecast_price": 8502.27734375,
+        "expected_return_pct": -0.0438,
+        "volatility_threshold_pct": 0.0565,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "stpRNG4:swing": {
@@ -819,7 +876,7 @@
     },
     "1HZ10V:swing": {
       "latest_epoch": 1793678400,
-      "foundation_updated_at": "2026-11-03T05:42:06.531321Z",
+      "foundation_updated_at": "2026-11-03T06:02:40.475424Z",
       "chronos2": {
         "status": "ok",
         "model": "Chronos-2 small",
@@ -1039,14 +1096,30 @@
     },
     "R_50:day": {
       "latest_epoch": 1793683800,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-03T06:02:40.475827Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "BUY",
+        "confidence": 71.2,
+        "reference_price": 97.0255,
+        "forecast_price": 97.19096375,
+        "expected_return_pct": 0.1705,
+        "volatility_threshold_pct": 0.1125,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 62.6,
+        "reference_price": 97.02549744,
+        "forecast_price": 97.12399292,
+        "expected_return_pct": 0.1015,
+        "volatility_threshold_pct": 0.1126,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "R_50:swing": {
@@ -1411,7 +1484,7 @@
     },
     "AUDUSD-STD:swing": {
       "latest_epoch": 1793678400,
-      "foundation_updated_at": "2026-11-03T05:42:06.561411Z",
+      "foundation_updated_at": "2026-11-03T06:02:40.514649Z",
       "chronos2": {
         "status": "error",
         "direction": "NEUTRAL",
