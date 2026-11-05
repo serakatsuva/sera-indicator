@@ -817,6 +817,8 @@ function renderSelected(){
   renderPredictionPanel(row);
   renderLiveIntelligencePanel(row);
   renderVisualTradePlan(row);
+  renderCopilot(row);
+  renderCopilotTickers();
   renderRealtimeCandles(row);
   $("selectedTimeframe").textContent=row?.timeframes?.join(" + ")||(selectedIsForex||row?.mode==="swing"?"H1 + H4 + D1":"M15 + H1");
   const swingBadge=$("swingDurationBadge");
@@ -1805,6 +1807,54 @@ function renderVisualTradePlan(row){
   $("visualPlanState").textContent=plan.state;
 }
 
+// Sera Copilot : scan du marché + carte de signal + bande de cotations (voir copilot.js).
+// Lecture seule : ne déclenche aucun ordre, l'exécution reste du ressort de l'EA MT5.
+let copilotLiveAt=0;
+function renderCopilot(row){
+  if(!window.SeraCopilot)return;
+  try{
+    const spec=chartSpecForRow(row);
+    const plan=visualTradePlan(row);
+    const effective=row?effectiveSignalState(row):{verdict:"ATTENDRE",setupDetected:false,stale:true};
+    const validation=row?liveValidationFor(row):null;
+    const ready=effective.verdict==="BUY"||effective.verdict==="SELL";
+    const live=validation?.state==="BUY"||validation?.state==="SELL";
+    const intel=row?liveIntelligenceFor(row):null;
+    const confidence=ready||effective.setupDetected?Number(row?.final_confidence):Number(validation?.score??intel?.score);
+    window.SeraCopilot.render({
+      market:selected,
+      candles:liveCandleSeries.get(`${selected}:${spec.entry}`)||[],
+      plan,fmt:fmtEntry,confidence,
+      steps:[
+        {label:"Détection",done:Boolean(effective.setupDetected||ready)},
+        {label:"Validation live",done:Boolean(live&&!liveOpposesServer(row))},
+        {label:"Risque",done:Boolean(plan&&Number.isFinite(plan.rr)&&plan.rr>=window.SeraCopilot.MIN_RR&&Number.isFinite(plan.sl))},
+        {label:"Prêt EA",done:Boolean(ready&&!effective.stale&&resultsAreFresh())}
+      ]
+    });
+  }catch(error){console.warn("Sera Copilot :",error);}
+}
+
+function renderCopilotTickers(){
+  if(!window.SeraCopilot)return;
+  try{
+    const pool=marketFamily==="synthetic"?marketsForIndexFamily():[selected];
+    const names=[selected,...pool.filter(name=>name!==selected&&liveQuotes.has(name))].slice(0,4);
+    const items=names.map(name=>{
+      const quote=liveQuotes.get(name);
+      const history=liveTickHistory.get(name)||[];
+      const first=Number(history[0]?.price),latest=Number(quote?.price);
+      return{
+        market:name,active:name===selected,
+        price:quote?fmtEntry(latest):"—",
+        deltaPct:first&&latest?((latest-first)/first)*100:0,
+        spark:history.map(t=>t.price)
+      };
+    });
+    window.SeraCopilot.renderTickers({items});
+  }catch(error){console.warn("Sera Copilot cotations :",error);}
+}
+
 function renderRealtimeCandles(row){
   // Sera Chart Engine (TradingView Lightweight Charts, gratuit) en priorité;
   // l'ancien rendu canvas ci-dessous reste le secours si la bibliothèque échoue.
@@ -1974,6 +2024,7 @@ function scheduleLiveUi(market){
         renderPredictionPanel(row);
         renderLiveIntelligencePanel(row);
         renderVisualTradePlan(row);
+        if(Date.now()-copilotLiveAt>=1000){copilotLiveAt=Date.now();renderCopilot(row);renderCopilotTickers();}
         renderRealtimeCandles(row);
       }
     }
