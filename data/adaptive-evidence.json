@@ -1,46 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-05T19:09:08.303095Z",
+  "updated_at": "2026-11-05T19:14:21.520007Z",
   "records": [
-    {
-      "key": "WLDUSD:day|1793630700|SELL",
-      "id": "WLDUSD:day",
-      "market": "USD Basket",
-      "symbol": "WLDUSD",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1793630700,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 96,
-      "execution_score": 77.0,
-      "active_strategies": [
-        "SMC structure",
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 1230.166,
-        "sl": 1232.055,
-        "tp1": 1227.3324999999998,
-        "tp2": 1225.6323999999997,
-        "tp3": 1223.3655999999994,
-        "tp4": 1221.0987999999993,
-        "tp5": 1218.8319999999992
-      },
-      "status": "resolved",
-      "created_at": "2026-11-02T15:05:56.096704Z",
-      "max_stage": 0,
-      "last_epoch": 1793642400,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1793643300
-    },
     {
       "key": "R_100:day|1793630700|BUY",
       "id": "R_100:day",
@@ -24286,7 +24247,9 @@
         "tp5": 2675.6989999999983
       },
       "status": "open",
-      "created_at": "2026-11-05T19:09:08.241764Z"
+      "created_at": "2026-11-05T19:09:08.241764Z",
+      "max_stage": 0,
+      "last_epoch": 1793904300
     },
     {
       "key": "R_75:day|1793904300|SELL",
@@ -24319,20 +24282,55 @@
         "tp5": 28046.883200000033
       },
       "status": "open",
-      "created_at": "2026-11-05T19:09:08.241857Z"
+      "created_at": "2026-11-05T19:09:08.241857Z",
+      "max_stage": 0,
+      "last_epoch": 1793904300
+    },
+    {
+      "key": "1HZ25V:day|1793904300|SELL",
+      "id": "1HZ25V:day",
+      "market": "Volatility 25 (1s) Index",
+      "symbol": "1HZ25V",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1793904300,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 91,
+      "execution_score": 84.0,
+      "active_strategies": [
+        "SMC structure",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 909822.61,
+        "sl": 915278.95,
+        "tp1": 901638.1000000001,
+        "tp2": 896727.3940000001,
+        "tp3": 890179.7860000001,
+        "tp4": 883632.1780000002,
+        "tp5": 877084.5700000002
+      },
+      "status": "open",
+      "created_at": "2026-11-05T19:14:21.418048Z"
     }
   ],
   "profiles": {
-    "USD Basket|day|GENERIC|TRANSITION": {
-      "samples": 2,
-      "decisive_samples": 2,
+    "Volatility 100 Index|day|GENERIC|TRENDING": {
+      "samples": 1,
+      "decisive_samples": 1,
       "win_rate": 0.0,
       "avg_r": -1.0,
-      "losses": 2,
+      "losses": 1,
       "breakeven_or_flat": 0,
       "wins": 0
     },
-    "Volatility 100 Index|day|GENERIC|TRENDING": {
+    "USD Basket|day|GENERIC|TRANSITION": {
       "samples": 1,
       "decisive_samples": 1,
       "win_rate": 0.0,
@@ -25204,6 +25202,12 @@
       "win_rate": 13.7,
       "avg_r": -0.345
     },
+    "Breakout + impulse": {
+      "samples": 150,
+      "decisive_samples": 93,
+      "win_rate": 10.8,
+      "avg_r": -0.435
+    },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 99,
@@ -25234,24 +25238,6 @@
       "win_rate": 12.6,
       "avg_r": -0.398
     },
-    "Family context confirmation": {
-      "samples": 150,
-      "decisive_samples": 96,
-      "win_rate": 13.5,
-      "avg_r": -0.351
-    },
-    "HH/HL or LH/LL structure": {
-      "samples": 150,
-      "decisive_samples": 93,
-      "win_rate": 9.7,
-      "avg_r": -0.432
-    },
-    "Breakout + impulse": {
-      "samples": 150,
-      "decisive_samples": 93,
-      "win_rate": 10.8,
-      "avg_r": -0.435
-    },
     "ADX / DMI trend strength": {
       "samples": 150,
       "decisive_samples": 95,
@@ -25275,6 +25261,18 @@
       "decisive_samples": 92,
       "win_rate": 10.9,
       "avg_r": -0.429
+    },
+    "HH/HL or LH/LL structure": {
+      "samples": 150,
+      "decisive_samples": 93,
+      "win_rate": 9.7,
+      "avg_r": -0.432
+    },
+    "Family context confirmation": {
+      "samples": 150,
+      "decisive_samples": 96,
+      "win_rate": 13.5,
+      "avg_r": -0.351
     },
     "Trend following": {
       "samples": 150,
