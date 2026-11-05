@@ -777,6 +777,12 @@ function resultCard(row,fresh){
   return card;
 }
 
+function reliabilityText(row){
+  const e=row?.adaptive_evidence;
+  if(!e||!(Number(e.sample_size)>=12)||!Number.isFinite(Number(e.win_rate)))return "";
+  return ` · mesuré ${Number(e.win_rate).toLocaleString("fr-FR",{maximumFractionDigits:0})} % (n=${e.sample_size})`;
+}
+
 function renderSelected(){
   $("selectedMarket").textContent=selected;
   const selectedIsForex=marketFamily==="forex";
@@ -800,7 +806,7 @@ function renderSelected(){
   $("decisionOrb").className=`decision-orb ${cls}`;
   $("decisionOrb").querySelector("strong").textContent=verdict;
   $("decisionConfidence").textContent=fresh&&!effective.stale
-    ?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`${row.final_confidence}% · ${executionLabel(row)}`)
+    ?(row.score_type==="setup_readiness"?`${row.final_confidence}% de préparation`:`Score moteur ${row.final_confidence}% · ${executionLabel(row)}${reliabilityText(row)}`)
     :row?"Analyse serveur à actualiser":"Première analyse en cours";
   $("decisionSummary").textContent=fresh&&!effective.stale&&row?.ai_summary
     ?row.ai_summary
@@ -811,6 +817,7 @@ function renderSelected(){
     :row
       ?`Prix Deriv en direct pour ${selected}; analyse serveur en retard. Les observations locales sont indicatives et aucun ancien signal n’est exécutable.`
       :`Sera attend la première analyse serveur pour ${selected}.`;
+  if(row?.precision_gate?.blocked)$("decisionSummary").textContent=`Précision : ${row.precision_gate.reason}`;
   renderOpenSourceModels(row);
   renderLiveEntry(row);
   renderTradeAction(row);
@@ -1821,10 +1828,14 @@ function renderCopilot(row){
     const live=validation?.state==="BUY"||validation?.state==="SELL";
     const intel=row?liveIntelligenceFor(row):null;
     const confidence=ready||effective.setupDetected?Number(row?.final_confidence):Number(validation?.score??intel?.score);
+    const evidence=row?.adaptive_evidence;
+    const reliability=evidence&&Number(evidence.sample_size)>=12&&Number.isFinite(Number(evidence.win_rate))
+      ?{winPct:Number(evidence.win_rate),n:Number(evidence.sample_size),avgR:Number(evidence.avg_r)||0,gate:evidence.gate}
+      :null;
     window.SeraCopilot.render({
       market:selected,
       candles:liveCandleSeries.get(`${selected}:${spec.entry}`)||[],
-      plan,fmt:fmtEntry,confidence,
+      plan,fmt:fmtEntry,confidence,reliability,gate:row?.precision_gate||null,
       steps:[
         {label:"Détection",done:Boolean(effective.setupDetected||ready)},
         {label:"Validation live",done:Boolean(live&&!liveOpposesServer(row))},

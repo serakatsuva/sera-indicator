@@ -20,7 +20,7 @@
   const MIN_CANDLES=30;
   const MIN_RR=1.5;
 
-  let stats=null,statsLoading=false;
+  let stats=null,statsLoading=false,report=null,reportLoading=false;
 
   // ---------- Calculs purs (testables : SeraCopilot._scan) ----------
 
@@ -136,6 +136,34 @@
     if(stats&&lastCtx)render(lastCtx);
   }
 
+  async function loadReport(){
+    if(report||reportLoading)return;
+    reportLoading=true;
+    for(const url of [`./data/precision-report.json?t=${Date.now()}`,`${RAW}precision-report.json?t=${Date.now()}`]){
+      try{const r=await fetch(url,{cache:"no-store"});if(r.ok){report=await r.json();break;}}catch(e){/* source suivante */}
+    }
+    reportLoading=false;
+    if(report&&lastCtx)render(lastCtx);
+  }
+
+  // Dérive structurelle connue des indices Deriv (même table que scripts/drift-playbook.mjs).
+  function driftSide(market){
+    const n=String(market||"").toUpperCase().replace(/\s+/g,"");
+    if(n.includes("BULLMARKET"))return "BUY";
+    if(n.includes("BEARMARKET"))return "SELL";
+    if(n.includes("BOOM")||(n.includes("GAINX")&&!n.includes("SWITCHX")))return "SELL";
+    if(n.includes("CRASH")||n.includes("PAINX"))return "BUY";
+    return null;
+  }
+
+  function reliabilityHtml(ctx){
+    const rel=ctx.reliability,gate=ctx.gate;
+    if(gate&&gate.blocked)return `<p class="cp-warn">Signal du moteur neutralisé sur ${esc(gate.label)} : ${esc(gate.reason)}</p>`;
+    if(!rel)return `<p class="cp-muted">Aucune mesure suffisante pour ce marché (moins de 12 trades résolus) : le pourcentage ci-dessus est un score du moteur, pas une probabilité.</p>`;
+    const bad=rel.gate==="CAUTION"||rel.avgR<0;
+    return `<p class="${bad?"cp-warn":"cp-muted"}">Réussite mesurée : <b>${fr(rel.winPct)} %</b> sur ${fr(rel.n,0)} trades résolus · ${rel.avgR>=0?"+":""}${fr(rel.avgR,2)} R en moyenne${bad?" · historique défavorable":""}.</p>`;
+  }
+
   function performanceHtml(market){
     const group=groupFor(market);
     const g=group&&(stats?.precision?.groups?.[group]?.all||stats?.groups?.[group]?.all);
@@ -165,6 +193,7 @@
     const host=$("copilotPanel");
     if(!host||!ctx)return false;
     loadStats();
+    loadReport();
     const fmt=ctx.fmt||(v=>String(v));
     const s=scan(ctx.candles);
     const plan=ctx.plan||null;
@@ -175,26 +204,34 @@
       scanBox.innerHTML=`<p class="cp-muted">Bougies live en cours de chargement (30 minimum).</p>`;
       sumBox.textContent="Le scan démarre dès que l'historique est reçu.";
     }else{
-      chip.textContent=s.bias==="BUY"?"BIAIS HAUSSIER":s.bias==="SELL"?"BIAIS BAISSIER":"BIAIS NEUTRE";
+      chip.textContent=s.bias==="BUY"?"LECTURE HAUSSIÈRE":s.bias==="SELL"?"LECTURE BAISSIÈRE":"LECTURE NEUTRE";
       chip.className=`cp-chip ${stateOf(s.bias==="BUY"?1:s.bias==="SELL"?-1:0)}`;
-      scanBox.innerHTML=scanRows(s,fmt).map(r=>`<div class="cp-scan-row ${r.state}"><i></i><span>${esc(r.label)}</span><b>${esc(r.text)}</b></div>`).join("");
+      const rows=scanRows(s,fmt);
+      const drift=driftSide(ctx.market);
+      if(drift){
+        const against=s.bias!=="NEUTRE"&&s.bias!==drift;
+        rows.push({key:"drift",label:"Dérive de l'indice",state:drift==="BUY"?"bull":"bear",text:`${drift==="BUY"?"Haussière":"Baissière"}${against?" · lecture à contre-sens":""}`});
+      }
+      const sc=report?.copilot_scan?.overall;
+      scanBox.innerHTML=rows.map(r=>`<div class="cp-scan-row ${r.state}"><i></i><span>${esc(r.label)}</span><b>${esc(r.text)}</b></div>`).join("")
+        +`<p class="cp-warn">${sc?`Testé sur 1 an (${fr(sc.n,0)} mesures) : cette lecture tombe juste dans ${fr(sc.hit_pct)} % des cas, comme le hasard.`:"Cette lecture n'a pas d'avantage prédictif démontré."} Ne l'utilise pas seule comme signal.</p>`;
       sumBox.textContent=overview(ctx.market,s,plan,fmt);
     }
 
     if(plan&&(plan.side==="BUY"||plan.side==="SELL")){
       const long=plan.side==="BUY";
       cardBox.className=`cp-signal ${long?"buy":"sell"}`;
-      cardBox.innerHTML=`<div class="cp-signal-head"><span class="cp-side">${long?"LONG":"SHORT"}</span><strong>${esc(ctx.market)}</strong><div class="cp-conf">${ring(ctx.confidence)}</div></div>
-        <small class="cp-muted">${esc(plan.timeframe||"")} · ${plan.isProjected?"scénario projeté, non exécutable":"plan confirmé"} · confiance = score du moteur</small>
+      cardBox.innerHTML=`<div class="cp-signal-head"><span class="cp-side">${long?"LONG":"SHORT"}</span><strong>${esc(ctx.market)}</strong><div class="cp-conf">${ring(ctx.reliability?ctx.reliability.winPct:ctx.confidence)}</div></div>
+        <small class="cp-muted">${esc(plan.timeframe||"")} · ${plan.isProjected?"scénario projeté, non exécutable":"plan confirmé"} · ${ctx.reliability?"anneau = réussite mesurée":"anneau = score moteur, non calibré"}</small>
         <dl class="cp-levels">
           <div><dt>Entrée</dt><dd>${fmt(plan.entry)}</dd></div>
           <div><dt>Objectif (TP3)</dt><dd class="tp">${fmt(plan.target)}</dd></div>
           <div><dt>Stop</dt><dd class="sl">${fmt(plan.sl)}</dd></div>
           <div><dt>Risque : gain</dt><dd>1 : ${fr(plan.rr,2)}</dd></div>
-        </dl>`;
+        </dl>${reliabilityHtml(ctx)}`;
     }else{
       cardBox.className="cp-signal wait";
-      cardBox.innerHTML=`<div class="cp-signal-head"><span class="cp-side">WAIT</span><strong>${esc(ctx.market)}</strong></div><p class="cp-muted">Aucun plan valide pour l'instant : le moteur attend une entrée confirmée. Rien n'est à exécuter.</p>`;
+      cardBox.innerHTML=`<div class="cp-signal-head"><span class="cp-side">WAIT</span><strong>${esc(ctx.market)}</strong></div><p class="cp-muted">Aucun plan valide pour l'instant : le moteur attend une entrée confirmée. Rien n'est à exécuter.</p>${ctx.gate&&ctx.gate.blocked?reliabilityHtml(ctx):""}`;
     }
 
     const steps=ctx.steps||[];

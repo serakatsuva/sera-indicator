@@ -18,7 +18,7 @@
   const HISTORY_COUNT=300;
   const HISTORY_TTL_MS=120000;
   const COLORS={
-    up:"#38e8bb",down:"#ff5f76",entry:"#4da3ff",sl:"#ff5f76",tp:"#38e8bb",
+    up:"#38e8bb",down:"#ff5f76",entry:"#8a93a6",sl:"#ff5f76",tp:"#38e8bb",
     zone:"rgba(77,163,255,.55)",ema20:"#54d8ff",ema50:"#ffb142",text:"#8fa3b8"
   };
 
@@ -29,7 +29,7 @@
     priceLines:[],levelsKey:"",markersKey:"",
     tfByMode:{},frame:"plan",
     history:new Map(),historyLoading:new Map(),historyAt:new Map(),
-    ctx:null,overlayFrame:0,precision:-1,data:[]
+    ctx:null,overlayFrame:0,precision:-1,data:[],clock:0
   };
 
   const tzShift=()=>-new Date().getTimezoneOffset()*60;
@@ -161,6 +161,8 @@
     chart.subscribeCrosshairMove(param=>updateLegend(param?.seriesData?.get?.(candles)||null));
     chart.timeScale().subscribeVisibleLogicalRangeChange(scheduleOverlay);
     if(window.ResizeObserver)new ResizeObserver(scheduleOverlay).observe(container);
+    if(state.clock)clearInterval(state.clock);
+    state.clock=setInterval(scheduleOverlay,1000);
 
     Object.assign(state,{chart,candles,ema20,ema50,host,container,overlay,toolbar,legend,
       dataKey:"",lastTime:0,lastLength:0,priceLines:[],levelsKey:"",markersKey:"",precision:-1});
@@ -172,6 +174,7 @@
   }
 
   function teardown(){
+    if(state.clock){clearInterval(state.clock);state.clock=0;}
     try{state.chart&&state.chart.remove();}catch{}
     state.container?.remove();state.toolbar?.remove();
     state.host?.classList.remove("tv-active");
@@ -258,6 +261,31 @@
     state.overlayFrame=requestAnimationFrame(()=>{state.overlayFrame=0;drawOverlay();});
   }
 
+  function countdownText(tfSeconds){
+    const left=Math.max(0,tfSeconds-(Math.floor(Date.now()/1000)%tfSeconds));
+    const h=Math.floor(left/3600),m=Math.floor(left%3600/60),sec=left%60,two=n=>String(n).padStart(2,"0");
+    return h?`${h}:${two(m)}:${two(sec)}`:`${two(m)}:${two(sec)}`;
+  }
+
+  // Pastille du prix actuel avec le temps restant avant la clôture de la bougie.
+  function drawPricePill(g,width,plotRight){
+    const {candles,ctx,data}=state;
+    const last=data?.at(-1);
+    if(!last||!finite(last.close))return;
+    const y=candles.priceToCoordinate(Number(last.close));
+    if(y===null||!Number.isFinite(y))return;
+    const tfSeconds=TF_SECONDS[currentTf(ctx)]||3600;
+    const up=Number(last.close)>=Number(last.open);
+    const w=width-plotRight;if(w<36)return;
+    const top=Math.max(2,y-15);
+    g.fillStyle=up?"#0f9d7a":"#d6455d";g.fillRect(plotRight,top,w,30);
+    g.fillStyle="#fff";g.font="700 10px JetBrains Mono, monospace";g.textBaseline="middle";g.textAlign="center";
+    g.fillText((ctx.fmt||String)(last.close),plotRight+w/2,top+9);
+    g.font="600 9px JetBrains Mono, monospace";
+    g.fillText(countdownText(tfSeconds),plotRight+w/2,top+21);
+    g.textAlign="left";
+  }
+
   // Boîtes risque / rendement façon outil "Position longue / courte".
   function drawOverlay(){
     const {overlay,container,chart,candles,ctx}=state;
@@ -269,9 +297,10 @@
     const g=overlay.getContext("2d");if(!g)return;
     g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,width,height);
     const plan=ctx.plan;
-    if(!plan||!finite(plan.entry)||!finite(plan.sl)||!finite(plan.target))return;
     const scaleWidth=chart.priceScale("right").width()||60;
     const plotRight=width-scaleWidth;
+    drawPricePill(g,width,plotRight);
+    if(!plan||!finite(plan.entry)||!finite(plan.sl)||!finite(plan.target))return;
     const yEntry=candles.priceToCoordinate(Number(plan.entry));
     const yStop=candles.priceToCoordinate(Number(plan.sl));
     const yTarget=candles.priceToCoordinate(Number(plan.target));
@@ -305,8 +334,9 @@
     };
     const targetY=buy?Math.min(yEntry,yTarget):Math.max(yEntry,yTarget);
     const stopY=buy?Math.max(yEntry,yStop):Math.min(yEntry,yStop);
-    label(`${plan.side}${plan.isProjected?" projeté":""} · R:R 1:${rr}`,targetY+(buy?13:-13),"#7ff3cf");
-    label(`Risque ${fmt(risk)}`,stopY+(buy?-13:13),"#ff9aaa");
+    const pct=d=>plan.entry>0?` (${(d/plan.entry*100).toFixed(2)} %)`:"";
+    label(`${plan.side}${plan.isProjected?" projeté":""} · Objectif ${buy?"+":"−"}${fmt(reward)}${pct(reward)} · R:R 1:${rr}`,targetY+(buy?13:-13),"#7ff3cf");
+    label(`Stop ${buy?"−":"+"}${fmt(risk)}${pct(risk)}`,stopY+(buy?-13:13),"#ff9aaa");
     g.restore();
   }
 

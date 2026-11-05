@@ -259,7 +259,56 @@ def record_from_row(row:dict[str,Any])->dict[str,Any]|None:
     }
 
 
+# Garde-fou de précision MESURÉ (backtest du vrai moteur sur 1 an d'historique Deriv, voir research/precision_report.json).
+# Sur Bull Market / Bear Market, le moteur générique perd : 309 trades Day, -84 R (-0,27 R / trade ; à contre-sens de la dérive
+# -0,39 R, t = -5,9). Ces indices relèvent du Drift Playbook (mesuré à part) : on neutralise ici les signaux du moteur générique.
+STRUCTURAL_BLOCKS=(
+    {
+        "id":"bullbear_generic_engine",
+        "names":("BULLMARKET","BEARMARKET"),
+        "label":"Bull / Bear Market",
+        "trades":309,"avg_r":-0.273,"total_r":-84.3,
+        "reason":"Le moteur générique perd sur cet indice à dérive (backtest 1 an : 309 trades, -0,27 R / trade). Utiliser le Drift Playbook.",
+    },
+)
+
+
+def structural_block(row:dict[str,Any])->dict[str,Any]|None:
+    name=str(row.get("market") or "").upper().replace(" ","")
+    for block in STRUCTURAL_BLOCKS:
+        if any(token in name for token in block["names"]):
+            return block
+    return None
+
+
+def apply_precision_gate(row:dict[str,Any])->bool:
+    """Demote BUY/SELL to ATTENDRE on markets where the generic engine has a measured negative expectancy."""
+    block=structural_block(row)
+    if not block or row.get("mode") not in {"day","swing"}:
+        return False
+    row["precision_gate"]={
+        "id":block["id"],"blocked":True,"label":block["label"],"reason":block["reason"],
+        "trades":block["trades"],"avg_r":block["avg_r"],"total_r":block["total_r"],
+    }
+    if row.get("final_verdict") in {"BUY","SELL"}:
+        row["final_verdict"]="ATTENDRE"
+    row["execution_state"]="WAIT_CONFIRMATION"
+    row["execution_ready"]=0
+    if isinstance(row.get("execution"),dict):
+        row["execution"]["state"]="WAIT_CONFIRMATION"
+        row["execution"]["ready"]=False
+        row["execution"]["reason"]=(str(row["execution"].get("reason") or "")+" Précision : "+block["reason"]).strip()
+    row["setup_detected"]=0
+    row["setup_direction"]="NEUTRE"
+    engine=row.get("decision_engine")
+    if isinstance(engine,dict):
+        engine["setup_detected"]=False
+        engine["detected_side"]="NEUTRE"
+    return True
+
+
 def apply_evidence(row:dict[str,Any],profiles:dict[str,Any],strategy_profiles:dict[str,Any]):
+    apply_precision_gate(row)
     pseudo={
         "market":row.get("market"),"mode":row.get("mode"),
         "setup_type":((row.get("decision_engine") or {}).get("setup_type") or "GENERIC"),
@@ -367,6 +416,12 @@ def self_test():
         strategy_records.append({**base,"status":"resolved","resolved_epoch":i,"r":3.6 if i<11 else -1.0,"active_strategies":["Trend following","SMC structure"]})
     sp=build_strategy_profiles(strategy_records)
     assert sp["Trend following"]["samples"]==18
+    gated={"market":"Bear Market Index","mode":"day","final_verdict":"SELL","execution_state":"EXECUTE_NOW","setup_detected":1,"setup_direction":"SELL",
+           "execution":{"state":"EXECUTE_NOW","ready":True},"decision_engine":{"setup_detected":True,"detected_side":"SELL"}}
+    assert apply_precision_gate(gated) and gated["final_verdict"]=="ATTENDRE" and gated["execution_state"]=="WAIT_CONFIRMATION"
+    assert gated["setup_detected"]==0 and gated["precision_gate"]["blocked"] is True
+    free={"market":"Boom 300 Index","mode":"day","final_verdict":"SELL","execution_state":"EXECUTE_NOW"}
+    assert not apply_precision_gate(free) and free["final_verdict"]=="SELL" and "precision_gate" not in free
     print(VERSION+" self-test passed")
 
 

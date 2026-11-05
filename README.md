@@ -547,3 +547,12 @@ GitHub ne garantit pas les tâches planifiées : sur ce dépôt, le `cron` toute
 - **Forex** : l’application s’abonne aussi aux ticks Deriv des paires disponibles (`deriv_forex_symbols`, publié par le moteur à chaque cycle). Le prix de la carte passe de « SERVEUR » à « LIVE » et la bougie H1 en cours du graphique bouge tick par tick. Les paires absentes chez Deriv (souvent les exotiques) gardent le prix serveur.
 - **Signaux** : relus toutes les **20 secondes** ; l’interface n’est reconstruite que lorsqu’une nouvelle analyse arrive. Une coupure réseau passagère ne fait plus disparaître la dernière analyse.
 - La décision BUY/SELL reste celle du moteur serveur (cycle continu de ~5 min) ; le prix live Forex est indicatif et doit être confirmé sur MT5.
+
+## Sera Copilot et mesure de précision (2026-11-05)
+
+- **Copilot** (`copilot.js`, `copilot.css`) : panneau de la fenêtre de détail. Scan en 4 lignes (structure, liquidité, impulsion, momentum) sur les vraies bougies live, résumé automatique par règles (pas un LLM), carte de signal, étapes Détection → Validation → Risque → Prêt EA, bande de cotations. Il n'envoie aucun ordre.
+- **Le scan n'a pas d'avantage prédictif** : 48,9 % de réussite sur 48 000 mesures (1 an d'historique, `research/scan_backtest.cjs`). Il est donc présenté comme une *lecture* descriptive, jamais comme un signal.
+- **Fiabilité mesurée** : le Copilot et le texte sous l'orbe affichent la réussite réelle (`adaptive_evidence` de chaque ligne) quand au moins 12 trades résolus existent ; sinon le pourcentage est un « score moteur non calibré ».
+- **Rapport de précision** : `data/precision-report.json` (rejeu du vrai moteur sur 1 an : `scripts/backtest.mjs` puis `research/analyze_events.py`). Résultat : aucun avantage solide sur le moteur générique, et la confiance affichée ne prédit pas le résultat.
+- **Garde-fou mesuré** : sur Bull Market / Bear Market, le moteur générique perd (309 trades Day, −84 R, −0,27 R / trade). `scripts/adaptive_evidence.py` neutralise ses signaux (`precision_gate`) ; le Drift Playbook s'en occupe. Les EA ne sont pas modifiés : ils lisent simplement ATTENDRE.
+- **Graphique** : prix actuel avec compte à rebours de la bougie sur l'axe, distance et % des boîtes stop / objectif, entrée en gris façon TradingView.
