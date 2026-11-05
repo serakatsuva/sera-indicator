@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Deriv"
-#property version   "2.69"
+#property version   "2.70"
 #property strict
 
 #include <Trade/Trade.mqh>
@@ -118,6 +118,12 @@ input bool CutOnMarketReversal=true;           // fermer dès qu'un retournement
 
 // --- v2.20 : robustesse
 input double PartialCloseAtTP1Percent=50.0;    // encaisser cette part de la position à TP1 (0 = désactivé)
+input bool   RespectPrecisionGate=true;          // v2.70 : ne pas trader un marche neutralise par la mesure de precision (flux serveur)
+input bool   BlockNegativeMeasuredEdge=true;     // v2.70 : refuser un marche dont le R moyen mesure est negatif (assez de cas)
+input int    MeasuredEdgeMinSamples=30;          // v2.70 : nombre minimum de cas mesures avant de refuser pour R moyen negatif
+input double MaximumWeeklyLossPercent=6.0;       // v2.70 : stop de la semaine : pause si la perte nette depuis lundi depasse X % de la balance (0 = desactive)
+input double LossRiskFactor=0.50;                // v2.70 : apres une perte aujourd'hui, le risque par trade est ramene a RiskPercent x ce facteur (max 1.0)
+string g_email_note="";                          // v2.70 : ligne de fiabilite mesuree ajoutee aux e-mails de signal
 input double EmergencyEquityStopPercent=15.0;  // fermer toutes les positions Sera si l'équité chute de X % sous la balance (0 = désactivé)
 input int ReversalStructureBars=24;            // cassure du plus bas / plus haut des N dernières bougies H1 (24 = 1 jour)
 
@@ -238,6 +244,7 @@ struct PanelRow
    bool opened;
    double entry,sl,tp1,tp2,tp3;   // niveaux du signal (tableau des signaux)
    datetime since;                // apparition du signal
+   string reliability;            // v2.70 : fiabilite mesuree (flux serveur)
 };
 
 PanelRow g_rows[];
@@ -456,6 +463,24 @@ int ConsecutiveLosses()
    return losses;
 }
 
+// v2.70 : perte nette de la semaine (depuis lundi 00:00, heure du serveur).
+double WeeklyNetProfit()
+{
+   datetime now=TimeCurrent(); MqlDateTime part; TimeToStruct(now,part);
+   datetime start=StartOfDay()-(datetime)(((part.day_of_week+6)%7)*86400);
+   if(!HistorySelect(start,now)) return 0.0;
+   double pnl=0.0;
+   for(int i=0;i<HistoryDealsTotal();i++)
+   {
+      ulong ticket=HistoryDealGetTicket(i);
+      if(ticket<=0 || HistoryDealGetInteger(ticket,DEAL_MAGIC)!=MagicNumber) continue;
+      long entry=HistoryDealGetInteger(ticket,DEAL_ENTRY);
+      if(entry==DEAL_ENTRY_OUT || entry==DEAL_ENTRY_OUT_BY)
+         pnl+=HistoryDealGetDouble(ticket,DEAL_PROFIT)+HistoryDealGetDouble(ticket,DEAL_SWAP)+HistoryDealGetDouble(ticket,DEAL_COMMISSION);
+   }
+   return pnl;
+}
+
 bool RiskCircuitOpen()
 {
    double daily=DailyNetProfit();
@@ -471,6 +496,12 @@ bool RiskCircuitOpen()
    }
 
    if(ConsecutiveLosses()>=MaximumConsecutiveLosses){ Print("Sera circuit breaker: pertes consecutives"); return true; }
+
+   if(MaximumWeeklyLossPercent>0 && balance>0)
+   {
+      double weekly=WeeklyNetProfit();
+      if(weekly<=-balance*MaximumWeeklyLossPercent/100.0){ Print("Sera circuit breaker: perte de la semaine ",DoubleToString(weekly,2)," (limite ",DoubleToString(MaximumWeeklyLossPercent,1),"% de la balance)"); return true; }
+   }
 
    double free=AccountInfoDouble(ACCOUNT_MARGIN_FREE),equityNow=AccountInfoDouble(ACCOUNT_EQUITY);
    double freePct=equityNow>0?free/equityNow*100.0:0.0;
@@ -720,8 +751,8 @@ void RunLocalSwingIntelligence()
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
    bool sent=side=="BUY"
-      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.69")
-      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.69");
+      ?trade.Buy(volume,symbol,0,sl,tp3,"Sera Local Swing v2.70")
+      :trade.Sell(volume,symbol,0,sl,tp3,"Sera Local Swing v2.70");
    if(sent)
    {
       StoreLevel("SERA_LOCALRISK_",symbol,riskDistance);
@@ -756,7 +787,7 @@ double AdaptiveRiskPercent()
    double daily=DailyNetProfit();
    if(daily>=DailyProfitBoostThresholdUSD) risk+=DailyProfitRiskBoost;
 
-   if(ConsecutiveLosses()>=1) risk=MathMin(risk,RiskPercent*0.75);
+   if(ConsecutiveLosses()>=1) risk=MathMin(risk,RiskPercent*MathMax(0.10,MathMin(1.0,LossRiskFactor)));
 
    double balance=AccountInfoDouble(ACCOUNT_BALANCE);
    if(balance>0)
@@ -1069,6 +1100,11 @@ bool PlaceOrUpdatePendingLimit(const string setup_id,const string symbol,const s
 
 // ---------- v1.90 : intelligence d'exécution ----------
 
+bool JsonHasKey(const string object,const string key)
+{
+   return StringFind(object,"\""+key+"\":")>=0;
+}
+
 bool JsonFlagFalse(const string object,const string key)
 {
    string token="\""+key+"\"";
@@ -1138,7 +1174,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Deriv v2.69";
+string g_email_ea="Sera EA Swing Intelligent Deriv v2.70";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -1223,6 +1259,7 @@ void EmailSignal(const string broker,const string market,const string symbol,con
    if(state!="") body+="\r\nEtat : "+state;
    body+=EmailPriceLine("Entree",price_symbol,entry)+EmailPriceLine("Stop loss",price_symbol,sl);
    body+=EmailPriceLine("TP1",price_symbol,tp1)+EmailPriceLine("TP2",price_symbol,tp2)+EmailPriceLine("TP3",price_symbol,tp3);
+   if(g_email_note!="") body+="\r\n\r\n"+g_email_note;
    body+=EmailFooter();
    if(SendSeraEmail(subject,body)) GlobalVariableSet(key,side);
 }
@@ -1485,7 +1522,7 @@ void PanelReset(PanelRow &r,const string market,const string mode,const string v
 {
    r.market=market; r.symbol=""; r.mode=mode; r.verdict=verdict; r.state=state; r.setup_side=""; r.decision="";
    r.confidence=confidence; r.conditions=conditions; r.exec_score=exec_score; r.engine_score=0; r.engine_min=0; r.opened=false;
-   r.entry=0; r.sl=0; r.tp1=0; r.tp2=0; r.tp3=0; r.since=0;
+   r.entry=0; r.sl=0; r.tp1=0; r.tp2=0; r.tp3=0; r.since=0; r.reliability="";
    for(int i=0;i<SERA_GATES;i++){ r.gate[i]=-1; r.detail[i]=""; }
 }
 
@@ -2038,7 +2075,7 @@ void RenderDashboard()
    string account=demo?"DEMO":"REEL";
    string horizons=TradeDaySignals?"Swing H1/H4/D1 + Day M15/H1":"Swing H1/H4/D1";
    if(TradeDriftPlaybook) horizons+=" + Derive H1";
-   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.69",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT DERIV v2.70",amber,10);
    if(active && !g_feed_ok) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  en attente des signaux (voir ci-dessous)",amber);
    else if(active) PanelText(line++,"BOT ACTIF  |  compte "+account+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
@@ -2072,6 +2109,9 @@ void RenderDashboard()
    PanelText(line++,"Compte : balance "+DoubleToString(balance,2)+"  equite "+DoubleToString(equity,2)+"  |  positions "+
              IntegerToString(OpenSeraPositions())+"  |  risque ouvert "+DoubleToString(risk,2)+" ("+
              DoubleToString(equity>0?risk/equity*100.0:0.0,1)+"% / max "+DoubleToString(MaximumTotalOpenRiskPercent,0)+"%)",white);
+   if(MaximumWeeklyLossPercent>0 && balance>0)
+      PanelText(line++,"Protection : semaine "+DoubleToString(WeeklyNetProfit(),2)+" / stop -"+DoubleToString(balance*MaximumWeeklyLossPercent/100.0,2)+
+                "  |  apres une perte le risque passe a "+DoubleToString(RiskPercent*MathMax(0.10,MathMin(1.0,LossRiskFactor)),2)+"%",grey);
    PanelText(line++,"Horizons : "+horizons+"  |  risque "+DoubleToString(RiskPercent,2)+
              "% par trade  |  analyse toutes les "+IntegerToString(MathMax(15,PollEverySeconds))+" s",grey);
 
@@ -2105,6 +2145,7 @@ void RenderDashboard()
          string detail=r.detail[g]!=""?" : "+r.detail[g]:"";
          PanelText(line++,"  "+mark+" "+g_gate_names[g]+detail,c);
       }
+      if(r.reliability!="") PanelText(line++,"FIABILITE MESUREE : "+r.reliability,(StringFind(r.reliability,"non mesuree")>=0)?grey:white);
       PanelText(line++,"DECISION : "+r.decision,r.opened?green:(StringFind(r.decision,"LIMITE")>=0?blue:amber),10);
 
    }
@@ -2174,6 +2215,21 @@ void Evaluate(const string json)
          execution_state="WAIT_CONFIRMATION";
          execution_score=0;
       }
+      // v2.70 : portail de precision et fiabilite mesuree (voir data/precision-report.json cote serveur).
+      double measured_n=JsonNumber(object,"measured_n"),measured_win=JsonNumber(object,"measured_win_pct");
+      bool has_measure=JsonHasKey(object,"measured_n");
+      double measured_r=JsonNumber(object,"measured_avg_r");
+      string reliability_text=has_measure?DoubleToString(measured_win,0)+" % gagnants sur "+DoubleToString(measured_n,0)+" cas, R moyen "+
+         (JsonHasKey(object,"measured_avg_r")?DoubleToString(measured_r,2):"?"):"non mesuree (moins de 12 cas) : le score n'est pas une probabilite";
+      string refuse_reason="";
+      if(RespectPrecisionGate && JsonNumber(object,"precision_blocked")>0) refuse_reason="portail precision : "+JsonString(object,"precision_reason");
+      else if(BlockNegativeMeasuredEdge && has_measure && measured_n>=MeasuredEdgeMinSamples && JsonHasKey(object,"measured_avg_r") && measured_r<0)
+         refuse_reason="fiabilite mesuree negative ("+reliability_text+")";
+      if(refuse_reason!="" && (verdict=="BUY" || verdict=="SELL"))
+      {
+         PrintOnce("Sera: "+JsonString(object,"market")+" "+verdict+" refuse - "+refuse_reason);
+         verdict="ATTENDRE"; execution_state="WAIT_CONFIRMATION"; execution_score=0;
+      }
       double setup_detected=JsonNumber(object,"setup_detected");
       string model_direction=JsonString(object,"model_ensemble_direction");
       double model_consensus=JsonNumber(object,"model_ensemble_consensus");
@@ -2207,6 +2263,8 @@ void Evaluate(const string json)
          PanelGate(pr,1,confidence>=MinimumConfidence,DoubleToString(confidence,0)+"% / min "+IntegerToString(MinimumConfidence)+"%");
          PanelGate(pr,2,conditions_percent>=MinimumAutonomousConditionsPercent,DoubleToString(conditions_percent,0)+"% / min "+IntegerToString(MinimumAutonomousConditionsPercent)+"%");
          pr.symbol=symbol;
+         pr.reliability=reliability_text;
+         if(refuse_reason!="") pr.decision="REFUSE : "+refuse_reason;
          pr.setup_side=setup_direction;
          pr.engine_score=JsonNumber(object,"engine_score");
          pr.engine_min=JsonNumber(object,"engine_minimum_score");
@@ -2255,6 +2313,7 @@ void Evaluate(const string json)
          int known=remembered!=-999?remembered:previous_alert_state;
          string email_horizon=ModeLabel(mode);
          if(directional_confirmed && alert_state!=known) SendTrendAlert(market_name,verdict,confidence,execution_state,mode);
+         g_email_note="Fiabilite mesuree : "+reliability_text+".\r\nUn score eleve n'est pas une garantie : seule cette mesure compte.";
          if(directional_confirmed) EmailSignal("Deriv",market_name,symbol,verdict,email_horizon,confidence,execution_state,pr.entry,pr.sl,pr.tp1,pr.tp2,pr.tp3);
          else if(row_fresh && state==0) EmailSignalClear(market_name,email_horizon);
          RememberAlertState(setup_id,alert_state);
@@ -2423,7 +2482,7 @@ void Evaluate(const string json)
                      CancelSeraPendingOrder(symbol,"ordre marche EXECUTE_NOW");
                      trade.SetExpertMagicNumber(MagicNumber);
                      trade.SetDeviationInPoints(DeviationPoints);
-                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.69"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.69");
+                     bool sent=verdict=="BUY"?trade.Buy(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.70"):trade.Sell(volume,symbol,0,sl,final_tp,"Sera EA Swing Intelligent v2.70");
                      if(sent)
                      {
                         StoreState("SERA_TRADESTATE_",setup_id,state);
@@ -2492,7 +2551,7 @@ int OnInit()
    string mode=trade_mode==ACCOUNT_TRADE_MODE_REAL?"REEL":trade_mode==ACCOUNT_TRADE_MODE_DEMO?"DEMO":"CONTEST";
    Comment("");
    RenderDashboard();
-   Print("Sera EA Swing Intelligent Deriv v2.69: compte ",mode,", actif=",AssetProfileName(_Symbol),
+   Print("Sera EA Swing Intelligent Deriv v2.70: compte ",mode,", actif=",AssetProfileName(_Symbol),
          ", auto serveur=",EnableAutomaticTrading,", auto local=",EnableLocalAutoEntry,
          ", reel=",AllowRealAccount,", risk=",DoubleToString(RiskPercent,2),
          "%, asset factor=",DoubleToString(AssetRiskFactor(_Symbol),2),
