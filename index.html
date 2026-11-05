@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="./forex.css?v=forex-20260831-1">
   <link rel="stylesheet" href="./chart.css?v=chart-20261021">
   <link rel="stylesheet" href="./weltrade.css?v=weltrade-20261101e">
+  <link rel="stylesheet" href="./copilot.css?v=copilot-20261105">
 </head>
 <body>
   <div class="welcome-overlay" id="welcomePopup" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -212,6 +213,7 @@
           <button class="signal-modal-close" id="closeSignalModal" type="button" aria-label="Fermer">✕</button>
         </div>
         <div class="signal-modal-body">
+          <div class="cp-ticker-strip" id="cpTickers" hidden aria-label="Cotations live"></div>
           <section class="analysis-grid">
       <article class="market-card panel">
         <div class="market-head">
@@ -291,6 +293,15 @@
 
       <aside class="decision-card panel">
         <div class="decision-title"><div><span class="eyebrow cyan">Signal final</span><h2>Sera Autonomous Engine + Luna Advisor</h2></div><span class="ai-chip">Aide à la décision</span></div>
+        <section class="copilot" id="copilotPanel" aria-label="Sera Copilot">
+          <div class="cp-head"><div><span class="eyebrow cyan">Sera Copilot</span><h3>Scan du marché</h3></div><span class="cp-chip neutral" id="cpBias">SYNC…</span></div>
+          <div class="cp-scan" id="cpScan"></div>
+          <div class="cp-block"><small>Résumé automatique · règles, pas un LLM</small><p id="cpOverview">Le scan démarre dès que l’historique est reçu.</p></div>
+          <div class="cp-signal wait" id="cpSignal"></div>
+          <ol class="cp-steps" id="cpSteps"></ol>
+          <div class="cp-block"><small>Performance mesurée · backtest, pas un compte réel</small><div id="cpPerf"></div></div>
+          <p class="cp-exec">Exécution : gérée par l’EA MT5 (voir « Installation »). Ce panneau n’envoie aucun ordre.</p>
+        </section>
         <div class="decision-orb wait" id="decisionOrb"><strong>ATTENDRE</strong><small id="decisionConfidence">Validation requise</small></div>
         <p class="decision-summary" id="decisionSummary">Le Swing haute conviction exige H1/H4/D1 alignés, un score minimal de 84/100, 72 % de consensus, 80 % des conditions et deux cycles cohérents. BUY/SELL clignote uniquement lorsque l’entrée est réellement prête. Luna reste un conseiller facultatif.</p>
         <div class="oss-ai-panel">
@@ -320,6 +331,7 @@
   </main>
   <script src="./vendor/lightweight-charts-4.1.3.standalone.js" defer></script>
   <script src="./chart-engine.js?v=forex-live-20261021" defer></script>
+  <script src="./copilot.js?v=copilot-20261105" defer></script>
   <script src="./app.js?v=forex-live-20261021" defer></script>
   <script src="./voice.js?v=voice-20261101b" defer></script>
   <script src="./weltrade.js?v=weltrade-20261101c" defer></script>
