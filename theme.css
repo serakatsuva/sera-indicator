@@ -1,0 +1,66 @@
+/* Sera — thème 2026-11-05 : plus lisible, un seul accent, signaux confirmés en tête, fenêtre de détail en colonne sur téléphone.
+   Chargé en dernier : il ne change aucun identifiant ni comportement, seulement l'apparence. */
+:root{
+  --bg:#0a0d12;--panel:#10151c;--panel2:#151b24;--line:rgba(255,255,255,.075);
+  --text:#eef2f7;--muted:#8b97a8;
+  --cyan:#5eead4;--green:#34d399;--amber:#fbbf24;--red:#fb7185;--violet:#a5b4fc;
+  --sera-buy-blue:#60a5fa;--sera-sell-red:#fb7185;
+  --radius:16px;
+}
+body{background:radial-gradient(ellipse at 20% -10%,rgba(94,234,212,.07),transparent 40%),var(--bg);letter-spacing:.005em}
+.topbar{height:60px;background:rgba(10,13,18,.86);border-bottom:1px solid var(--line)}
+.brand-mark{border-radius:12px;background:linear-gradient(135deg,#5eead4,#60a5fa);box-shadow:none}
+.panel{background:var(--panel);border-radius:var(--radius);box-shadow:none}
+.broker-panel{background:var(--panel)}
+.broker-tab{background:var(--panel2);border-radius:12px}
+.broker-tab.active{background:var(--text);color:#0a0d12;box-shadow:none}
+.primary{background:var(--cyan);color:#041512;box-shadow:none;border-radius:12px}
+.mode-filter.active{background:var(--text);color:#0a0d12}
+.eyebrow{color:var(--cyan);letter-spacing:.14em}
+
+/* Liste des marchés : les signaux confirmés d'abord, cartes plus aérées, détails secondaires atténués */
+.results-grid{gap:10px}
+.result-card.buy,.result-card.sell{order:-1}
+.result-card{background:var(--panel);border-radius:var(--radius);padding:16px;border-color:var(--line)}
+.result-card:hover,.result-card.selected{transform:none;background:var(--panel2);border-color:rgba(94,234,212,.35)}
+.result-card.buy{border-left:3px solid var(--sera-buy-blue)}
+.result-card.sell{border-left:3px solid var(--sera-sell-red)}
+.result-card:not(.buy):not(.sell){opacity:.82}
+.result-card:not(.buy):not(.sell):hover,.result-card:not(.buy):not(.sell).selected{opacity:1}
+.result-card h3{font-size:15px}
+.result-card .live-intelligence-mini,.result-card .card-profile{display:none}
+.result-score strong{font-size:22px}
+.result-bar{height:2px}
+
+/* Fenêtre de détail */
+.signal-modal-content{background:var(--panel);border-radius:20px}
+.signal-modal-backdrop{background:rgba(3,5,8,.8)}
+.signal-modal .panel{background:transparent;border:0}
+.signal-modal .copilot{background:var(--panel2);border-color:var(--line)}
+.signal-modal .decision-orb{width:96px;height:96px}
+
+@media(max-width:720px){
+  body{font-size:15px}
+  .shell{padding:12px}
+  .results-grid{grid-template-columns:1fr}
+  .result-card{padding:14px}
+  /* fenêtre de détail = feuille plein écran, une seule colonne lisible */
+  .signal-modal-content{width:100vw;max-height:100dvh;height:100dvh;margin:0;border-radius:0;border:0;display:flex;flex-direction:column}
+  .signal-modal-header{position:sticky;top:0;z-index:2;background:var(--panel);padding:12px 14px}
+  .signal-modal-close{width:44px;height:44px;border-radius:12px;font-size:16px}
+  .signal-modal-body{max-height:none;flex:1;padding:10px 10px 28px;-webkit-overflow-scrolling:touch}
+  .signal-modal .analysis-grid{grid-template-columns:1fr;gap:12px}
+  .signal-modal .chart-area{height:min(46vh,340px)}
+  .signal-modal .levels{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .signal-modal .levels strong{font-size:12px}
+  .signal-modal .technical-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cp-ticker-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .copilot{margin:12px 0}
+  .signal-actions button,.execution-actions button{min-height:46px}
+}
+
+/* Cartes compactes : on garde l'essentiel (marché, verdict, prix live, confiance) */
+.result-card .live-scan-motion{display:none}
+.result-card .live-scan-row{padding:8px 10px;margin:8px 0}
+.result-card:not(.buy):not(.sell) .trade-action-chip span{display:none}
+.result-card .swing-pips-mini{opacity:.8}
