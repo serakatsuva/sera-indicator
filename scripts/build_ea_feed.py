@@ -57,6 +57,17 @@ def compact_row(row: dict) -> dict:
     if row.get("mode") == "drift":
         # Drift Playbook: SMC liquidity sweep confluence (precision mode of the EA trades only these).
         out["liquidity_sweep"] = 1 if row.get("liquidity_sweep") else 0
+    # Precision gate + measured reliability (read by the EAs: refuse neutralised / negative-edge markets, show in alerts).
+    gate = row.get("precision_gate") or {}
+    if gate.get("blocked"):
+        out["precision_blocked"] = 1
+        out["precision_reason"] = str(gate.get("reason") or "marche neutralise par la mesure")[:160]
+    ev = row.get("adaptive_evidence") or {}
+    if finite(ev.get("sample_size")) and finite(ev.get("win_rate")) and ev["sample_size"] >= 12:
+        out["measured_n"] = int(ev["sample_size"])
+        out["measured_win_pct"] = round(number(ev.get("win_rate")), 1)
+        if finite(ev.get("avg_r")):
+            out["measured_avg_r"] = round(number(ev.get("avg_r")), 3)
     for key in ("entry_tf", "confirmation_tf"):
         tf = row.get(key) or {}
         if tf.get("side") in ("BUY", "SELL"):
@@ -184,6 +195,11 @@ def self_test() -> None:
     text = json.dumps(feed, separators=(",", ":"))
     assert '"condition_pass_percent":85' in text and '"freshness_gate":false' in text
     assert "setup_entry_plan" not in text and '"levels":null' not in text
+    gated = compact_row({"id": "g", "market": "BULL", "mode": "day", "final_verdict": "ATTENDRE",
+                         "precision_gate": {"blocked": True, "reason": "test"},
+                         "adaptive_evidence": {"sample_size": 40, "win_rate": 41.5, "avg_r": -0.2}})
+    assert gated["precision_blocked"] == 1 and gated["measured_n"] == 40 and gated["measured_win_pct"] == 41.5
+    assert "precision_blocked" not in compact_row({"id": "x", "market": "M", "mode": "day"})
     print("EA feed self-test passed")
 
 

@@ -1,5 +1,5 @@
 #property copyright "Sera EA Swing Intelligent Weltrade"
-#property version   "2.54"
+#property version   "2.55"
 #property strict
 #property description "Swing haute conviction H1/H4/D1 sur les indices synthetiques Weltrade (SyntX), analyse directement dans MT5."
 
@@ -91,6 +91,9 @@ input double MaximumDailyDrawdownPercent=3.00;
 input int MaximumConsecutiveLosses=2;
 input double MinimumFreeMarginPercent=25.0;
 input bool EnforceBrokerStopsLevel=true;
+input double MaximumWeeklyLossPercent=6.0;       // v2.70 : stop de la semaine : pause si la perte nette depuis lundi depasse X % de la balance (0 = desactive)
+input double LossRiskFactor=0.50;                // v2.70 : apres une perte aujourd'hui, le risque par trade est ramene a RiskPercent x ce facteur (max 1.0)
+string g_email_note="";                          // v2.70 : ligne de fiabilite mesuree ajoutee aux e-mails de signal
 input double EmergencyEquityStopPercent=15.0;
 
 // --- Gestion des positions
@@ -228,6 +231,24 @@ int ConsecutiveLosses()
    return losses;
 }
 
+// v2.70 : perte nette de la semaine (depuis lundi 00:00, heure du serveur).
+double WeeklyNetProfit()
+{
+   datetime now=TimeCurrent(); MqlDateTime part; TimeToStruct(now,part);
+   datetime start=StartOfDay()-(datetime)(((part.day_of_week+6)%7)*86400);
+   if(!HistorySelect(start,now)) return 0.0;
+   double pnl=0.0;
+   for(int i=0;i<HistoryDealsTotal();i++)
+   {
+      ulong ticket=HistoryDealGetTicket(i);
+      if(ticket<=0 || HistoryDealGetInteger(ticket,DEAL_MAGIC)!=MagicNumber) continue;
+      long entry=HistoryDealGetInteger(ticket,DEAL_ENTRY);
+      if(entry==DEAL_ENTRY_OUT || entry==DEAL_ENTRY_OUT_BY)
+         pnl+=HistoryDealGetDouble(ticket,DEAL_PROFIT)+HistoryDealGetDouble(ticket,DEAL_SWAP)+HistoryDealGetDouble(ticket,DEAL_COMMISSION);
+   }
+   return pnl;
+}
+
 bool RiskCircuitOpen()
 {
    double daily=DailyNetProfit();
@@ -243,6 +264,12 @@ bool RiskCircuitOpen()
    }
 
    if(ConsecutiveLosses()>=MaximumConsecutiveLosses){ Print("Sera circuit breaker: pertes consecutives"); return true; }
+
+   if(MaximumWeeklyLossPercent>0 && balance>0)
+   {
+      double weekly=WeeklyNetProfit();
+      if(weekly<=-balance*MaximumWeeklyLossPercent/100.0){ Print("Sera circuit breaker: perte de la semaine ",DoubleToString(weekly,2)," (limite ",DoubleToString(MaximumWeeklyLossPercent,1),"% de la balance)"); return true; }
+   }
 
    double free=AccountInfoDouble(ACCOUNT_MARGIN_FREE),equityNow=AccountInfoDouble(ACCOUNT_EQUITY);
    double freePct=equityNow>0?free/equityNow*100.0:0.0;
@@ -283,7 +310,7 @@ double AdaptiveRiskPercent()
    double daily=DailyNetProfit();
    if(daily>=DailyProfitBoostThresholdUSD) risk+=DailyProfitRiskBoost;
 
-   if(ConsecutiveLosses()>=1) risk=MathMin(risk,RiskPercent*0.75);
+   if(ConsecutiveLosses()>=1) risk=MathMin(risk,RiskPercent*MathMax(0.10,MathMin(1.0,LossRiskFactor)));
 
    double balance=AccountInfoDouble(ACCOUNT_BALANCE);
    if(balance>0)
@@ -574,7 +601,7 @@ void PrintOnce(const string message)
 }
 
 // --- Emails (MT5 > Outils > Options > Email) : nouveaux signaux, positions ouvertes / fermees, arret d'urgence.
-string g_email_ea="Sera EA Swing Intelligent Weltrade v2.54";
+string g_email_ea="Sera EA Swing Intelligent Weltrade v2.55";
 string g_email_status="";
 int g_email_sent=0;
 datetime g_email_hour=0;
@@ -659,6 +686,7 @@ void EmailSignal(const string broker,const string market,const string symbol,con
    if(state!="") body+="\r\nEtat : "+state;
    body+=EmailPriceLine("Entree",price_symbol,entry)+EmailPriceLine("Stop loss",price_symbol,sl);
    body+=EmailPriceLine("TP1",price_symbol,tp1)+EmailPriceLine("TP2",price_symbol,tp2)+EmailPriceLine("TP3",price_symbol,tp3);
+   if(g_email_note!="") body+="\r\n\r\n"+g_email_note;
    body+=EmailFooter();
    if(SendSeraEmail(subject,body)) GlobalVariableSet(key,side);
 }
@@ -1614,7 +1642,7 @@ bool TryMarketEntry(const SwxDecision &d,const bool can_trade,PanelRow &r)
    CancelSeraPendingOrder(d.symbol,"ordre au marche EXECUTE_NOW");
    trade.SetExpertMagicNumber(MagicNumber);
    trade.SetDeviationInPoints(DeviationPoints);
-   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.54"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.54");
+   bool sent=d.verdict=="BUY"?trade.Buy(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.55"):trade.Sell(volume,d.symbol,0,d.sl,final_tp,"Sera Weltrade v2.55");
    if(!sent)
    {
       r.decision="ORDRE REFUSE PAR LE BROKER : "+trade.ResultRetcodeDescription();
@@ -2197,7 +2225,7 @@ void RenderDashboard(const bool can_trade,const string mode_label)
    if(ObjectFind(0,"SWX_PANEL_BG")<0){ PanelClear(); PanelBackground(1); }
    bool algo=TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED);
 
-   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.54",amber,10);
+   PanelText(line++,"SERA EA SWING INTELLIGENT WELTRADE v2.55",amber,10);
    if(can_trade) PanelText(line++,"BOT ACTIF  |  compte "+mode_label+"  |  trading automatique autorise",green);
    else if(!algo) PanelText(line++,"BOT EN PAUSE  |  activez le bouton Algo Trading de MT5",red);
    else if(g_trade_block!="") PanelText(line++,"BOT EN PAUSE  |  "+g_trade_block,red);
@@ -2344,7 +2372,7 @@ datetime ServerToUtc(const datetime t){ return t<=0?0:t+(TimeGMT()-TimeCurrent()
 string BuildAppJson()
 {
    bool demo=AccountInfoInteger(ACCOUNT_TRADE_MODE)==ACCOUNT_TRADE_MODE_DEMO;
-   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.54\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
+   string json="{\"source\":\"Sera EA Swing Intelligent Weltrade\",\"version\":\"v2.55\",\"updated_at\":"+JsonText(IsoUtc(TimeGMT()))+
                ",\"account\":"+JsonText(demo?"DEMO":"REEL")+",\"markets\":[";
    int written=0;
    for(int i=0;i<ArraySize(g_symbols);i++)
@@ -2494,7 +2522,7 @@ int OnInit()
    trade.SetAsyncMode(false);
    RefreshSymbols();
    EventSetTimer(MathMax(15,PollEverySeconds));
-   Print("Sera EA Swing Intelligent Weltrade v2.54: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
+   Print("Sera EA Swing Intelligent Weltrade v2.55: ",ArraySize(g_symbols)," indices detectes, auto=",EnableAutomaticTrading,
          ", reel=",AllowRealAccount,", plafond positions=",MaximumOpenPositionsCap,
          ", risque cumule max=",DoubleToString(MaximumTotalOpenRiskPercent,1),"%");
    if(ArraySize(g_symbols)==0)
