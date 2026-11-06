@@ -29,7 +29,7 @@ jobs:
         run: |
           git config user.name "sera-bot"
           git config user.email "sera-bot@users.noreply.github.com"
-          git add data/crypto-signals.json || true
+          for f in data/crypto-signals.json data/binance-signals.json; do [ -f "$f" ] && git add "$f"; done; true
           if git diff --cached --quiet; then echo "no change"; else
             git commit -m "Crypto swing: update signals [skip ci]"
             for i in 1 2 3; do git pull --rebase origin main && git push && break || sleep 5; done
