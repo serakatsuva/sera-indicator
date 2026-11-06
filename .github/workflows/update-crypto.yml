@@ -1,0 +1,36 @@
+name: Sera Crypto Swing
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sera-crypto
+  cancel-in-progress: false
+
+jobs:
+  crypto:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Self-test
+        run: node scripts/update-crypto.mjs --self-test
+      - name: Analyse crypto
+        run: node scripts/update-crypto.mjs
+      - name: Commit
+        run: |
+          git config user.name "sera-bot"
+          git config user.email "sera-bot@users.noreply.github.com"
+          git add data/crypto-signals.json || true
+          if git diff --cached --quiet; then echo "no change"; else
+            git commit -m "Crypto swing: update signals [skip ci]"
+            for i in 1 2 3; do git pull --rebase origin main && git push && break || sleep 5; done
+          fi
