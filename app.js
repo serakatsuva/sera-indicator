@@ -303,6 +303,22 @@ function closeSignalModal(){
   setTimeout(()=>{signalModal.hidden=true;},160);
 }
 
+let topSwingOn=false;
+try{topSwingOn=localStorage.getItem("seraTopSwing")==="1";}catch(e){}
+function syncTopSwingButton(){
+  const button=$("topSwingToggle");
+  if(!button)return;
+  button.classList.toggle("active",topSwingOn);
+  button.setAttribute("aria-pressed",String(topSwingOn));
+}
+function setTopSwing(on){
+  topSwingOn=!!on;
+  try{localStorage.setItem("seraTopSwing",topSwingOn?"1":"0");}catch(e){}
+  syncTopSwingButton();
+  render();
+}
+document.addEventListener("click",event=>{const b=event.target.closest?.("#topSwingToggle");if(b)setTopSwing(!topSwingOn);});
+
 function syncModeButtons(){
   const forex=marketFamily==="forex";
   document.querySelectorAll(".mode-filter").forEach(button=>{
@@ -650,7 +666,7 @@ function render(){
           ?`Prix en direct · analyse serveur en retard depuis ${ageLabel(payload.updated_at)}. Validation locale à ${minuteValidationLabel()} (indicative). Signaux sur ATTENDRE jusqu’à une nouvelle analyse serveur.`
           :`Analyse serveur ancienne depuis ${ageLabel(payload.updated_at)} et flux live non validé. Les anciens BUY/SELL sont neutralisés sur ATTENDRE.`;
   const allowedMarkets=new Set(marketsForIndexFamily());
-  let rows=payload.markets.filter(row=>allowedMarkets.has(row.market)&&(tradingMode==="all"||row.mode===tradingMode));
+  let rows=payload.markets.filter(row=>allowedMarkets.has(row.market)&&(topSwingOn?row.mode==="swing":(tradingMode==="all"||row.mode===tradingMode)));
 
   // In "Tous", show one card per market. Day and Swing remain available
   // through their dedicated filters, but are not duplicated side by side.
@@ -677,7 +693,10 @@ function render(){
     rows=[...grouped.values()];
   }
 
-  rows.slice().sort(compareSignalPriority).forEach(row=>results.appendChild(resultCard(row,fresh)));
+  let ordered=rows.slice().sort(compareSignalPriority);
+  if(topSwingOn)ordered=ordered.slice(0,10);
+  syncTopSwingButton();
+  ordered.forEach(row=>results.appendChild(resultCard(row,fresh)));
   $("visibleResultsCount")?.remove?.();
   renderSelected();
 }
