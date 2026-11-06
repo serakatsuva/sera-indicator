@@ -25,6 +25,30 @@ const call=(ws,payload,id)=>new Promise((res,rej)=>{
 });
 const candles=m=>(m.candles||[]).map(c=>({time:c.epoch,open:+c.open,high:+c.high,low:+c.low,close:+c.close}));
 
+// Binance (données de marché publiques, sans clé) -> data/binance-signals.json. Indépendant du bloc Deriv ci-dessous.
+const BINANCE=["BTC","ETH","BNB","SOL","XRP","ADA","DOGE","AVAX","LINK","LTC","DOT","TRX"].map(c=>[c+"USDT",c+"/USDT"]);
+async function binanceUpdate(){
+  try{
+    const get=async(symbol,interval,limit)=>{
+      const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      return (await r.json()).map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));
+    };
+    const markets=[];
+    for(const [symbol,name] of BINANCE){
+      try{
+        const h1=await get(symbol,"1h",500),h4=await get(symbol,"4h",300),d1=await get(symbol,"1d",200);
+        markets.push({symbol,name,price:h1.length?h1[h1.length-1].close:null,...E.analyze(h1,h4,d1,{strict:true})});
+      }catch(e){console.log(`skip binance ${symbol}: ${e.message}`);}
+    }
+    if(!markets.length)throw new Error("aucune paire Binance analysée");
+    fs.writeFileSync("data/binance-signals.json",JSON.stringify({schema:"sera-binance-v1",updated_at:new Date().toISOString(),rule:"strict",
+      note:"Score moteur non calibré ; aucun avantage démontré (voir README).",markets},null,1)+"\n");
+    console.log(`binance-signals.json : ${markets.length} marchés, ${markets.filter(m=>m.verdict!=="ATTENDRE").length} swing(s)`);
+  }catch(e){console.log("Binance non mis à jour :",e.message);}
+}
+await binanceUpdate();
+
 try{
   const ws=new WebSocket(WS_URL);
   await new Promise((res,rej)=>{ws.onopen=res;ws.onerror=()=>rej(new Error("ws"));setTimeout(()=>rej(new Error("ws timeout")),15000);});

@@ -5,6 +5,7 @@ Sera Indicator est un système d’aide à la décision pour les indices synthé
 ## Onglet Crypto — Swing H1/H4/D1 (2026-11-06)
 - Onglet **Crypto** (à côté de Deriv | Weltrade | Forex All) : cryptos Deriv (`cry*`, découvertes via `active_symbols`) analysées dans le navigateur avec `crypto-engine.js` (bougies H1/H4/D1 du WebSocket public).
 - Règle **stricte** (défaut) : H1, H4 et D1 dans le même sens (EMA 20/50 + structure + ADX), entrée sur repli H1 (RSI), stop derrière le dernier creux/sommet, objectifs 1R/2R/3R. Règle **souple** : H4 et D1 alignés.
+- **Binance** : bouton « Binance » dans l'onglet (12 paires USDT : BTC, ETH, BNB, SOL, XRP, ADA, DOGE, AVAX, LINK, LTC, DOT, TRX) ; bougies publiques `data-api.binance.vision` (sans clé), même moteur et mêmes réserves ; repli `data/binance-signals.json`. Analyse seulement : aucun ordre Binance n'est passé.
 - Côté serveur : `scripts/update-crypto.mjs` + workflow `update-crypto.yml` (toutes les heures) écrivent `data/crypto-signals.json` (repli si le flux direct échoue). Indépendant du moteur principal : une erreur ne touche pas les autres signaux.
 - **Mesure** (`node research/crypto_backtest.cjs deriv-real-history.json.gz strict|soft`) : ETH/USD, ~1 an, avant frais — stricte : 62 trades, 50 % gagnants, −0,06 R/trade ; souple : 96 trades, 52 %, +0,01 R/trade. **Aucun avantage démontré** (un seul actif exploitable ; BTC n'a que 1000 bougies H1). Le score est un score moteur non calibré.
 

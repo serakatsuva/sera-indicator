@@ -6,6 +6,10 @@
   const FALLBACK=[["cryBTCUSD","BTC/USD"],["cryETHUSD","ETH/USD"],["cryLTCUSD","LTC/USD"],["cryXRPUSD","XRP/USD"],["cryBNBUSD","BNB/USD"],["crySOLUSD","SOL/USD"],["cryADAUSD","ADA/USD"],["cryDOGUSD","DOGE/USD"]];
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
+  const BINANCE_API="https://data-api.binance.vision/api/v3/klines";
+  const BINANCE_PAIRS=["BTC","ETH","BNB","SOL","XRP","ADA","DOGE","AVAX","LINK","LTC","DOT","TRX"].map(c=>[c+"USDT",c+"/USDT"]);
+  let source="deriv";
+  try{source=localStorage.getItem("seraCryptoSource")==="binance"?"binance":"deriv";}catch(e){}
   let rows=[],onlySignals=false,strict=true,busy=false,timer=null,savedActive=[];
   try{onlySignals=localStorage.getItem("seraCryptoOnly")==="1";}catch(e){}
 
@@ -38,8 +42,24 @@
     try{ws.close();}catch(e){}
     return out;
   }
+  async function fetchBinance(){
+    const get=async(symbol,interval,limit)=>{
+      const r=await fetch(`${BINANCE_API}?symbol=${symbol}&interval=${interval}&limit=${limit}`,{cache:"no-store"});
+      if(!r.ok)throw new Error("binance "+r.status);
+      return (await r.json()).map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));
+    };
+    const out=[];let failed=0;
+    await Promise.all(BINANCE_PAIRS.map(async([symbol,name])=>{
+      try{
+        const [h1,h4,d1]=await Promise.all([get(symbol,"1h",500),get(symbol,"4h",300),get(symbol,"1d",200)]);
+        out.push(Object.assign({symbol,name,price:h1.length?h1[h1.length-1].close:null},window.SeraCryptoEngine.analyze(h1,h4,d1,{strict})));
+      }catch(e){failed++;}
+    }));
+    if(!out.length)throw new Error("binance indisponible");
+    return BINANCE_PAIRS.map(p=>out.find(o=>o.symbol===p[0])).filter(Boolean);
+  }
   async function fetchServer(){
-    try{const r=await fetch(`./data/crypto-signals.json?t=${Date.now()}`,{cache:"no-store"});if(!r.ok)return null;const j=await r.json();return Array.isArray(j.markets)?j.markets:null;}catch(e){return null;}
+    try{const r=await fetch(`./data/${source==="binance"?"binance":"crypto"}-signals.json?t=${Date.now()}`,{cache:"no-store"});if(!r.ok)return null;const j=await r.json();return Array.isArray(j.markets)?j.markets:null;}catch(e){return null;}
   }
   const fmt=v=>{const n=Number(v);if(!Number.isFinite(n))return "—";return n>=100?n.toFixed(2):n>=1?n.toFixed(4):n.toFixed(6);};
   const dot=d=>`<i class="cr-dot ${d>0?"up":d<0?"down":""}">${d>0?"▲":d<0?"▼":"•"}</i>`;
@@ -56,17 +76,17 @@
     if(onlySignals)list=list.filter(m=>m.verdict!=="ATTENDRE");
     box.innerHTML=list.length?list.map(card).join(""):`<p class="cr-empty">${onlySignals?"Aucun swing crypto ne remplit toutes les conditions pour l'instant. C'est normal en mode strict : attendre vaut mieux que forcer.":"Aucune donnée."}</p>`;
     const n=rows.filter(m=>m.verdict!=="ATTENDRE").length;
-    if($("crNotice")){$("crNotice").className="notice "+(rows.length?"success":"warning");$("crNotice").textContent=note||(`${rows.length} cryptos analysées · ${n} swing(s) valide(s) · règle ${strict?"stricte (H1, H4 et D1 alignés)":"souple (H4 et D1 alignés)"}.`);}
+    if($("crNotice")){$("crNotice").className="notice "+(rows.length?"success":"warning");$("crNotice").textContent=note||(`${rows.length} cryptos ${source==="binance"?"Binance":"Deriv"} analysées · ${n} swing(s) valide(s) · règle ${strict?"stricte (H1, H4 et D1 alignés)":"souple (H4 et D1 alignés)"}.`);}
     $("crOnly")?.classList.toggle("active",onlySignals);$("crOnly")?.setAttribute("aria-pressed",String(onlySignals));
   }
   async function refresh(){
     if(busy||!window.SeraCryptoEngine)return;busy=true;
     if($("crNotice")){$("crNotice").className="notice loading";$("crNotice").textContent="Analyse des cryptos en cours…";}
-    try{rows=await fetchAll();render();}
+    try{rows=source==="binance"?await fetchBinance():await fetchAll();render();}
     catch(e){
       const srv=await fetchServer();
       if(srv){rows=srv;render("Flux direct indisponible : dernière analyse serveur affichée.");}
-      else render("Crypto indisponible pour l'instant (flux Deriv injoignable).");
+      else render("Crypto indisponible pour l'instant (flux "+(source==="binance"?"Binance":"Deriv")+" injoignable).");
     }
     busy=false;
   }
@@ -88,6 +108,13 @@
     $("crOnly")?.addEventListener("click",()=>{onlySignals=!onlySignals;try{localStorage.setItem("seraCryptoOnly",onlySignals?"1":"0");}catch(e){}render();});
     $("crStrict")?.addEventListener("click",()=>{strict=!strict;$("crStrict").textContent=strict?"Règle stricte":"Règle souple";$("crStrict").setAttribute("aria-pressed",String(strict));refresh();});
     $("crRefresh")?.addEventListener("click",refresh);
+    document.querySelectorAll("[data-cr-source]").forEach(b=>{
+      const sync=()=>{const on=b.dataset.crSource===source;b.classList.toggle("active",on);b.setAttribute("aria-pressed",String(on));};
+      sync();
+      b.addEventListener("click",()=>{source=b.dataset.crSource;try{localStorage.setItem("seraCryptoSource",source);}catch(e){}
+        document.querySelectorAll("[data-cr-source]").forEach(x=>{const on=x.dataset.crSource===source;x.classList.toggle("active",on);x.setAttribute("aria-pressed",String(on));});
+        rows=[];refresh();});
+    });
     if(location.hash==="#crypto")setMode(true);
   }
   window.SeraCrypto={open:()=>setMode(true),refresh};
