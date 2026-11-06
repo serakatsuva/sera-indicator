@@ -47,7 +47,28 @@
     const down=cl[n]<e50[n]&&e20[n]<e50[n]&&e50[n]<e50[n-5];
     let dir=0;
     if(up&&(hh||hl))dir=1;else if(down&&(lh||ll))dir=-1;
-    return {dir,adx:adx(c),atr:atr(c),rsi:rsi(c),ema20:e20[n],ema50:e50[n],pivots:piv};
+    return {dir,adx:adx(c),atr:atr(c),rsi:rsi(c),ema20:e20[n],ema50:e50[n],close:cl[n],pivots:piv};
+  }
+  const pct=(a,b)=>b?100*(a-b)/b:0;
+  const strength=a=>a>=30?"forte":a>=20?"modérée":"faible";
+  const word=d=>d>0?"haussier":d<0?"baissier":"sans tendance claire";
+  /* Lecture détaillée : tendance, force, repli, volatilité, supports/résistances, variation et volume 24 h. */
+  function describe(a1,t1,t4,td){
+    const px=t1.close,lines=[];
+    const near=(t,above)=>{const l=above?t.pivots.hi:t.pivots.lo;const v=l.map(x=>x.p).filter(p=>above?p>px:p<px);return v.length?(above?Math.min(...v):Math.max(...v)):null;};
+    const res=near(t4,true)??near(td,true),sup=near(t4,false)??near(td,false);
+    lines.push(`D1 ${word(td.dir)} (ADX ${td.adx.toFixed(0)}, tendance ${strength(td.adx)}).`);
+    lines.push(`H4 ${word(t4.dir)} (ADX ${t4.adx.toFixed(0)}, tendance ${strength(t4.adx)}).`);
+    const r=t1.rsi;
+    lines.push(`H1 ${word(t1.dir)} · RSI ${r.toFixed(0)} (${r>70?"surachat":r<30?"survente":r>=55?"momentum haussier":r<=45?"momentum baissier":"neutre"}).`);
+    lines.push(`Volatilité : ATR H1 = ${(100*t1.atr/px).toFixed(2)} % du prix, ATR H4 = ${(100*t4.atr/px).toFixed(2)} %.`);
+    if(res)lines.push(`Résistance proche ${res.toPrecision(6)} (${pct(res,px)>=0?"+":""}${pct(res,px).toFixed(2)} %).`);
+    if(sup)lines.push(`Support proche ${sup.toPrecision(6)} (${pct(sup,px).toFixed(2)} %).`);
+    if(a1.length>25){const c24=a1[a1.length-25].close;lines.push(`Variation 24 h : ${pct(px,c24)>=0?"+":""}${pct(px,c24).toFixed(2)} %.`);}
+    const vols=a1.map(x=>x.volume).filter(v=>Number.isFinite(v));
+    if(vols.length>=200){const last=vols.slice(-24).reduce((x,y)=>x+y,0),prev=vols.slice(-24*8,-24).reduce((x,y)=>x+y,0)/7;
+      if(prev>0)lines.push(`Volume 24 h = ${(last/prev).toFixed(1)} × la moyenne des 7 jours précédents (${last/prev>1.5?"forte activité":last/prev<0.6?"faible activité":"activité normale"}).`);}
+    return {lines,support:sup,resistance:res};
   }
   /* h1/h4/d1 : tableaux de bougies {open,high,low,close} du plus ancien au plus récent (la dernière bougie peut être en cours : on la retire). */
   function analyze(h1,h4,d1,opts={}){
@@ -57,6 +78,7 @@
     const t1=trendOf(a1),t4=trendOf(a4),td=trendOf(ad);
     const out={verdict:"ATTENDRE",side:"NEUTRE",score:0,reason:"",tf:{h1:t1?.dir??0,h4:t4?.dir??0,d1:td?.dir??0}};
     if(!t1||!t4||!td){out.reason="Historique insuffisant";return out;}
+    out.detail=describe(a1,t1,t4,td);
     const dirs=[t1.dir,t4.dir,td.dir];
     const aligned=o.strict?dirs.every(d=>d!==0&&d===dirs[0]):(t4.dir!==0&&t4.dir===td.dir);
     if(!aligned){out.reason=o.strict?"H1, H4 et D1 ne vont pas dans le même sens":"H4 et D1 ne vont pas dans le même sens";return out;}

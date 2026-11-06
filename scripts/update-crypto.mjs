@@ -32,7 +32,7 @@ async function binanceUpdate(){
     const get=async(symbol,interval,limit)=>{
       const r=await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
       if(!r.ok)throw new Error("HTTP "+r.status);
-      return (await r.json()).map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));
+      return (await r.json()).map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5]}));
     };
     const markets=[];
     for(const [symbol,name] of BINANCE){

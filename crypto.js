@@ -46,7 +46,7 @@
     const get=async(symbol,interval,limit)=>{
       const r=await fetch(`${BINANCE_API}?symbol=${symbol}&interval=${interval}&limit=${limit}`,{cache:"no-store"});
       if(!r.ok)throw new Error("binance "+r.status);
-      return (await r.json()).map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));
+      return (await r.json()).map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4],volume:+k[5]}));
     };
     const out=[];let failed=0;
     await Promise.all(BINANCE_PAIRS.map(async([symbol,name])=>{
@@ -63,12 +63,17 @@
   }
   const fmt=v=>{const n=Number(v);if(!Number.isFinite(n))return "—";return n>=100?n.toFixed(2):n>=1?n.toFixed(4):n.toFixed(6);};
   const dot=d=>`<i class="cr-dot ${d>0?"up":d<0?"down":""}">${d>0?"▲":d<0?"▼":"•"}</i>`;
+  function detailHtml(m){
+    const lines=m.detail?.lines;
+    if(!lines||!lines.length)return "";
+    return `<details class="cr-detail"><summary>Analyse détaillée</summary><ul>${lines.map(l=>`<li>${esc(l)}</li>`).join("")}</ul></details>`;
+  }
   function card(m){
     const cls=m.verdict==="BUY"?"buy":m.verdict==="SELL"?"sell":"wait";
     const levels=m.verdict==="ATTENDRE"?"":`<dl class="cr-levels"><div><dt>Entrée</dt><dd>${fmt(m.entry)}</dd></div><div><dt>Stop</dt><dd class="sl">${fmt(m.sl)}</dd></div><div><dt>TP1 · 1R</dt><dd class="tp">${fmt(m.tp1)}</dd></div><div><dt>TP2 · 2R</dt><dd class="tp">${fmt(m.tp2)}</dd></div><div><dt>TP3 · 3R</dt><dd class="tp">${fmt(m.tp3)}</dd></div></dl>`;
     return `<article class="cr-card ${cls}"><div class="cr-top"><div><h3>${esc(m.name)}</h3><small>${esc(m.symbol)} · ${fmt(m.price)}</small></div><span class="cr-chip ${cls}">${m.verdict==="ATTENDRE"?"ATTENDRE":esc(m.verdict)}</span></div>
       <div class="cr-tf"><span>H1 ${dot(m.tf?.h1)}</span><span>H4 ${dot(m.tf?.h4)}</span><span>D1 ${dot(m.tf?.d1)}</span>${m.verdict!=="ATTENDRE"?`<b title="Score moteur, non calibré">${m.score}</b>`:""}</div>
-      <p class="cr-reason">${esc(m.reason||"")}</p>${levels}</article>`;
+      <p class="cr-reason">${esc(m.reason||"")}</p>${levels}${detailHtml(m)}</article>`;
   }
   function render(note){
     const box=$("crResults");if(!box)return;
