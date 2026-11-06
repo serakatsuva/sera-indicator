@@ -1,0 +1,28 @@
+/* Onglet Crypto */
+#crypto{display:none}
+body.cr-mode #crypto{display:block}
+body.cr-mode #scanner .scanner-controls>.control-group:not(:first-child),
+body.cr-mode #scanner .compact-meta,body.cr-mode #trendWatchPanel,body.cr-mode #notice,body.cr-mode #results{display:none}
+body.cr-mode #scanner{padding-bottom:6px}
+.cr-actions{display:flex;gap:8px;flex-wrap:wrap}
+.cr-btn{border:1px solid var(--line);background:var(--panel2,#151b24);color:var(--text,#eef2f7);border-radius:999px;padding:9px 14px;font:700 12px inherit;cursor:pointer;min-height:40px}
+.cr-btn.active{background:#fbbf24;border-color:#fbbf24;color:#1a1200}
+.cr-honest{margin:8px 0 12px;font-size:11px;line-height:1.55;color:#ffd9a3;border-left:2px solid rgba(255,209,102,.45);padding-left:9px}
+.cr-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.cr-card{border:1px solid var(--line);border-radius:14px;background:var(--panel,#10151c);padding:14px;min-width:0}
+.cr-card.buy{border-left:3px solid #60a5fa}.cr-card.sell{border-left:3px solid #fb7185}.cr-card.wait{opacity:.82}
+.cr-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.cr-top h3{font-size:15px;margin:0}.cr-top small{color:#8b97a8;font:600 10px var(--mono,monospace)}
+.cr-chip{font:800 10px var(--mono,monospace);border-radius:7px;padding:5px 9px;background:rgba(255,209,102,.1);color:#fbbf24}
+.cr-chip.buy{background:rgba(96,165,250,.15);color:#60a5fa}.cr-chip.sell{background:rgba(251,113,133,.15);color:#fb7185}
+.cr-tf{display:flex;gap:12px;align-items:center;margin:10px 0 6px;font:700 11px var(--mono,monospace);color:#8b97a8}
+.cr-tf b{margin-left:auto;color:#dce8f4}
+.cr-dot{font-style:normal}.cr-dot.up{color:#34d399}.cr-dot.down{color:#fb7185}
+.cr-reason{font-size:11px;line-height:1.5;color:#9fb0c4;margin:0}
+.cr-levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0 0}
+.cr-levels div{border:1px solid var(--line);border-radius:9px;padding:6px 8px}
+.cr-levels dt{font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#697b91}
+.cr-levels dd{margin:3px 0 0;font:700 11px var(--mono,monospace);color:#dce8f4}.cr-levels dd.tp{color:#34d399}.cr-levels dd.sl{color:#fb7185}
+.cr-empty{grid-column:1/-1;color:#9fb0c4;font-size:12px;padding:16px;border:1px dashed var(--line);border-radius:12px}
+@media(max-width:900px){.cr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.cr-grid{grid-template-columns:1fr}}
