@@ -199,7 +199,7 @@
       family=b.dataset.wtFamilyFilter;
       render();
     });
-    // Onglet "Weltrade · SyntX" dans le choix du marché (à côté de Synthétiques et Forex).
+    // Onglet "Weltrade · SyntX" dans le choix du marché (Deriv | Weltrade | Forex All).
     $("weltradeFilter")?.addEventListener("click",()=>setMode(true,true));
     ["syntheticFilter","forexFilter"].forEach(id=>$(id)?.addEventListener("click",()=>setMode(false,false)));
     document.querySelectorAll('a[href="#weltrade"]').forEach(a=>a.addEventListener("click",event=>{event.preventDefault();setMode(true,true);}));
