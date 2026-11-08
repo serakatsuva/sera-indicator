@@ -1,17 +1,17 @@
 {
  "schema": "sera-binance-v1",
- "updated_at": "2026-11-08T00:36:16.202Z",
+ "updated_at": "2026-11-08T07:20:54.422Z",
  "rule": "strict",
  "note": "Score moteur non calibré ; aucun avantage démontré (voir README).",
  "markets": [
   {
    "symbol": "BTCUSDT",
    "name": "BTC/USDT",
-   "price": 75735.64,
-   "verdict": "ATTENDRE",
+   "price": 75857,
+   "verdict": "SELL",
    "side": "SELL",
-   "score": 0,
-   "reason": "Pas de rebond H1 : attendre un RSI H1 entre 45 et 65",
+   "score": 74,
+   "reason": "H1, H4 et D1 alignés, repli H1 validé",
    "tf": {
     "h1": -1,
     "h4": -1,
@@ -21,49 +21,71 @@
     "lines": [
      "D1 baissier (ADX 22, tendance modérée).",
      "H4 baissier (ADX 34, tendance forte).",
-     "H1 baissier · RSI 39 (momentum baissier).",
-     "Volatilité : ATR H1 = 0.19 % du prix, ATR H4 = 0.87 %.",
-     "Résistance proche 76250.0 (+0.50 %).",
-     "Support proche 75736.4 (-0.17 %).",
-     "Variation 24 h : +0.03 %.",
-     "Volume 24 h = 0.4 × la moyenne des 7 jours précédents (faible activité)."
+     "H1 baissier · RSI 55 (momentum haussier).",
+     "Volatilité : ATR H1 = 0.17 % du prix, ATR H4 = 0.76 %.",
+     "Résistance proche 76250.0 (+0.55 %).",
+     "Support proche 75736.4 (-0.12 %).",
+     "Variation 24 h : -0.30 %.",
+     "Volume 24 h = 0.3 × la moyenne des 7 jours précédents (faible activité)."
     ],
     "support": 75736.38,
     "resistance": 76249.99
-   }
+   },
+   "entry": 75831.12,
+   "sl": 76047.93435714286,
+   "tp1": 75614.30564285713,
+   "tp2": 75397.49128571426,
+   "tp3": 75180.6769285714,
+   "risk": 216.81435714286636,
+   "rr": 2,
+   "atr": 127.53785714285497,
+   "rsi": 55.47112841243704,
+   "adxD1": 21.778767738758184,
+   "adxH4": 34.32267954559243
   },
   {
    "symbol": "ETHUSDT",
    "name": "ETH/USDT",
-   "price": 2235.81,
-   "verdict": "ATTENDRE",
-   "side": "NEUTRE",
-   "score": 0,
-   "reason": "H1, H4 et D1 ne vont pas dans le même sens",
+   "price": 2236,
+   "verdict": "SELL",
+   "side": "SELL",
+   "score": 80,
+   "reason": "H1, H4 et D1 alignés, repli H1 validé",
    "tf": {
-    "h1": 0,
+    "h1": -1,
     "h4": -1,
     "d1": -1
    },
    "detail": {
     "lines": [
      "D1 baissier (ADX 28, tendance modérée).",
-     "H4 baissier (ADX 25, tendance modérée).",
-     "H1 sans tendance claire · RSI 44 (momentum baissier).",
-     "Volatilité : ATR H1 = 0.31 % du prix, ATR H4 = 1.08 %.",
-     "Résistance proche 2254.26 (+0.63 %).",
-     "Support proche 2237.38 (-0.13 %).",
-     "Variation 24 h : +0.07 %.",
+     "H4 baissier (ADX 26, tendance modérée).",
+     "H1 baissier · RSI 51 (neutre).",
+     "Volatilité : ATR H1 = 0.25 % du prix, ATR H4 = 0.97 %.",
+     "Résistance proche 2254.26 (+0.91 %).",
+     "Support proche 2226.44 (-0.34 %).",
+     "Variation 24 h : -0.56 %.",
      "Volume 24 h = 0.3 × la moyenne des 7 jours précédents (faible activité)."
     ],
-    "support": 2237.38,
+    "support": 2226.44,
     "resistance": 2254.26
-   }
+   },
+   "entry": 2234.04,
+   "sl": 2243.4252142857144,
+   "tp1": 2224.6547857142855,
+   "tp2": 2215.269571428571,
+   "tp3": 2205.8843571428565,
+   "risk": 9.385214285714483,
+   "rr": 2,
+   "atr": 5.520714285714283,
+   "rsi": 50.551223447163025,
+   "adxD1": 28.26468611227024,
+   "adxH4": 26.079010550074862
   },
   {
    "symbol": "BNBUSDT",
    "name": "BNB/USDT",
-   "price": 695.76,
+   "price": 698.95,
    "verdict": "ATTENDRE",
    "side": "NEUTRE",
    "score": 0,
@@ -76,12 +98,12 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 31, tendance forte).",
-     "H4 baissier (ADX 16, tendance faible).",
-     "H1 sans tendance claire · RSI 59 (momentum haussier).",
-     "Volatilité : ATR H1 = 0.21 % du prix, ATR H4 = 0.79 %.",
-     "Résistance proche 699.510 (+0.48 %).",
-     "Support proche 691.660 (-0.65 %).",
-     "Variation 24 h : +0.36 %.",
+     "H4 baissier (ADX 18, tendance faible).",
+     "H1 sans tendance claire · RSI 68 (momentum haussier).",
+     "Volatilité : ATR H1 = 0.22 % du prix, ATR H4 = 0.71 %.",
+     "Résistance proche 699.510 (+0.15 %).",
+     "Support proche 691.660 (-0.98 %).",
+     "Variation 24 h : +0.55 %.",
      "Volume 24 h = 0.4 × la moyenne des 7 jours précédents (faible activité)."
     ],
     "support": 691.66,
@@ -91,46 +113,7 @@
   {
    "symbol": "SOLUSDT",
    "name": "SOL/USDT",
-   "price": 89.44,
-   "verdict": "SELL",
-   "side": "SELL",
-   "score": 83,
-   "reason": "H1, H4 et D1 alignés, repli H1 validé",
-   "tf": {
-    "h1": -1,
-    "h4": -1,
-    "d1": -1
-   },
-   "detail": {
-    "lines": [
-     "D1 baissier (ADX 44, tendance forte).",
-     "H4 baissier (ADX 18, tendance faible).",
-     "H1 baissier · RSI 45 (neutre).",
-     "Volatilité : ATR H1 = 0.48 % du prix, ATR H4 = 1.36 %.",
-     "Résistance proche 91.6200 (+2.02 %).",
-     "Support proche 88.3000 (-1.68 %).",
-     "Variation 24 h : -0.36 %.",
-     "Volume 24 h = 0.3 × la moyenne des 7 jours précédents (faible activité)."
-    ],
-    "support": 88.3,
-    "resistance": 91.62
-   },
-   "entry": 89.81,
-   "sl": 90.541,
-   "tp1": 89.07900000000001,
-   "tp2": 88.34800000000001,
-   "tp3": 87.61700000000002,
-   "risk": 0.7309999999999945,
-   "rr": 2,
-   "atr": 0.4299999999999987,
-   "rsi": 45.195729537366596,
-   "adxD1": 43.93612264541231,
-   "adxH4": 17.70717082969771
-  },
-  {
-   "symbol": "XRPUSDT",
-   "name": "XRP/USDT",
-   "price": 1.1602,
+   "price": 89.11,
    "verdict": "ATTENDRE",
    "side": "SELL",
    "score": 0,
@@ -142,23 +125,62 @@
    },
    "detail": {
     "lines": [
+     "D1 baissier (ADX 44, tendance forte).",
+     "H4 baissier (ADX 15, tendance faible).",
+     "H1 baissier · RSI 43 (momentum baissier).",
+     "Volatilité : ATR H1 = 0.47 % du prix, ATR H4 = 1.23 %.",
+     "Résistance proche 91.6200 (+2.87 %).",
+     "Support proche 88.3000 (-0.85 %).",
+     "Variation 24 h : -1.31 %.",
+     "Volume 24 h = 0.3 × la moyenne des 7 jours précédents (faible activité)."
+    ],
+    "support": 88.3,
+    "resistance": 91.62
+   }
+  },
+  {
+   "symbol": "XRPUSDT",
+   "name": "XRP/USDT",
+   "price": 1.1628,
+   "verdict": "SELL",
+   "side": "SELL",
+   "score": 81,
+   "reason": "H1, H4 et D1 alignés, repli H1 validé",
+   "tf": {
+    "h1": -1,
+    "h4": -1,
+    "d1": -1
+   },
+   "detail": {
+    "lines": [
      "D1 baissier (ADX 29, tendance modérée).",
-     "H4 baissier (ADX 46, tendance forte).",
-     "H1 baissier · RSI 42 (momentum baissier).",
-     "Volatilité : ATR H1 = 0.59 % du prix, ATR H4 = 1.98 %.",
-     "Résistance proche 1.26000 (+8.25 %).",
-     "Support proche 1.15190 (-1.04 %).",
-     "Variation 24 h : -1.27 %.",
-     "Volume 24 h = 0.9 × la moyenne des 7 jours précédents (activité normale)."
+     "H4 baissier (ADX 47, tendance forte).",
+     "H1 baissier · RSI 56 (momentum haussier).",
+     "Volatilité : ATR H1 = 0.48 % du prix, ATR H4 = 1.87 %.",
+     "Résistance proche 1.26000 (+8.26 %).",
+     "Support proche 1.15190 (-1.03 %).",
+     "Variation 24 h : -0.45 %.",
+     "Volume 24 h = 0.6 × la moyenne des 7 jours précédents (activité normale)."
     ],
     "support": 1.1519,
     "resistance": 1.26
-   }
+   },
+   "entry": 1.1639,
+   "sl": 1.173335,
+   "tp1": 1.1544649999999999,
+   "tp2": 1.1450299999999998,
+   "tp3": 1.1355949999999997,
+   "risk": 0.009435000000000082,
+   "rr": 2,
+   "atr": 0.005550000000000023,
+   "rsi": 55.90062111801262,
+   "adxD1": 29.468291185119554,
+   "adxH4": 47.04264021437652
   },
   {
    "symbol": "ADAUSDT",
    "name": "ADA/USDT",
-   "price": 0.1809,
+   "price": 0.1802,
    "verdict": "ATTENDRE",
    "side": "SELL",
    "score": 0,
@@ -171,12 +193,12 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 58, tendance forte).",
-     "H4 baissier (ADX 27, tendance modérée).",
-     "H1 baissier · RSI 42 (momentum baissier).",
-     "Volatilité : ATR H1 = 0.60 % du prix, ATR H4 = 1.99 %.",
-     "Résistance proche 0.189700 (+4.35 %).",
-     "Support proche 0.177700 (-2.26 %).",
-     "Variation 24 h : -1.25 %.",
+     "H4 baissier (ADX 26, tendance modérée).",
+     "H1 baissier · RSI 38 (momentum baissier).",
+     "Volatilité : ATR H1 = 0.60 % du prix, ATR H4 = 1.87 %.",
+     "Résistance proche 0.189700 (+5.45 %).",
+     "Support proche 0.177700 (-1.22 %).",
+     "Variation 24 h : -2.65 %.",
      "Volume 24 h = 0.4 × la moyenne des 7 jours précédents (faible activité)."
     ],
     "support": 0.1777,
@@ -186,7 +208,7 @@
   {
    "symbol": "DOGEUSDT",
    "name": "DOGE/USDT",
-   "price": 0.07141,
+   "price": 0.07111,
    "verdict": "ATTENDRE",
    "side": "SELL",
    "score": 0,
@@ -199,12 +221,12 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 41, tendance forte).",
-     "H4 baissier (ADX 28, tendance modérée).",
-     "H1 baissier · RSI 44 (momentum baissier).",
-     "Volatilité : ATR H1 = 0.44 % du prix, ATR H4 = 1.44 %.",
-     "Résistance proche 0.0733700 (+2.40 %).",
-     "Support proche 0.0702000 (-2.02 %).",
-     "Variation 24 h : -1.08 %.",
+     "H4 baissier (ADX 30, tendance modérée).",
+     "H1 baissier · RSI 37 (momentum baissier).",
+     "Volatilité : ATR H1 = 0.47 % du prix, ATR H4 = 1.35 %.",
+     "Résistance proche 0.0733700 (+3.27 %).",
+     "Support proche 0.0702000 (-1.20 %).",
+     "Variation 24 h : -1.26 %.",
      "Volume 24 h = 0.4 × la moyenne des 7 jours précédents (faible activité)."
     ],
     "support": 0.0702,
@@ -214,11 +236,11 @@
   {
    "symbol": "AVAXUSDT",
    "name": "AVAX/USDT",
-   "price": 8.195,
-   "verdict": "ATTENDRE",
+   "price": 8.196,
+   "verdict": "SELL",
    "side": "SELL",
-   "score": 0,
-   "reason": "Pas de rebond H1 : attendre un RSI H1 entre 45 et 65",
+   "score": 74,
+   "reason": "H1, H4 et D1 alignés, repli H1 validé",
    "tf": {
     "h1": -1,
     "h4": -1,
@@ -227,22 +249,33 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 27, tendance modérée).",
-     "H4 baissier (ADX 17, tendance faible).",
-     "H1 baissier · RSI 42 (momentum baissier).",
-     "Volatilité : ATR H1 = 0.60 % du prix, ATR H4 = 1.84 %.",
-     "Résistance proche 8.47600 (+2.95 %).",
-     "Support proche 8.08400 (-1.81 %).",
-     "Variation 24 h : -1.32 %.",
+     "H4 baissier (ADX 20, tendance modérée).",
+     "H1 baissier · RSI 48 (neutre).",
+     "Volatilité : ATR H1 = 0.57 % du prix, ATR H4 = 1.66 %.",
+     "Résistance proche 8.47600 (+3.68 %).",
+     "Support proche 8.08400 (-1.11 %).",
+     "Variation 24 h : -1.94 %.",
      "Volume 24 h = 0.3 × la moyenne des 7 jours précédents (faible activité)."
     ],
     "support": 8.084,
     "resistance": 8.476
-   }
+   },
+   "entry": 8.175,
+   "sl": 8.253564285714287,
+   "tp1": 8.096435714285715,
+   "tp2": 8.017871428571429,
+   "tp3": 7.9393071428571425,
+   "risk": 0.07856428571428609,
+   "rr": 2,
+   "atr": 0.04621428571428573,
+   "rsi": 48.387096774193715,
+   "adxD1": 26.921005546930125,
+   "adxH4": 20.35407635720418
   },
   {
    "symbol": "LINKUSDT",
    "name": "LINK/USDT",
-   "price": 10.801,
+   "price": 10.744,
    "verdict": "ATTENDRE",
    "side": "NEUTRE",
    "score": 0,
@@ -256,24 +289,24 @@
     "lines": [
      "D1 baissier (ADX 26, tendance modérée).",
      "H4 baissier (ADX 10, tendance faible).",
-     "H1 baissier · RSI 49 (neutre).",
-     "Volatilité : ATR H1 = 0.68 % du prix, ATR H4 = 1.80 %.",
-     "Résistance proche 11.0410 (+1.88 %).",
-     "Support proche 10.7390 (-0.90 %).",
-     "Variation 24 h : -0.21 %.",
+     "H1 baissier · RSI 35 (momentum baissier).",
+     "Volatilité : ATR H1 = 0.53 % du prix, ATR H4 = 1.67 %.",
+     "Résistance proche 10.9650 (+2.22 %).",
+     "Support proche 10.6310 (-0.89 %).",
+     "Variation 24 h : -1.17 %.",
      "Volume 24 h = 0.3 × la moyenne des 7 jours précédents (faible activité)."
     ],
-    "support": 10.739,
-    "resistance": 11.041
+    "support": 10.631,
+    "resistance": 10.965
    }
   },
   {
    "symbol": "LTCUSDT",
    "name": "LTC/USDT",
-   "price": 51.99,
+   "price": 52.1,
    "verdict": "SELL",
    "side": "SELL",
-   "score": 89,
+   "score": 90,
    "reason": "H1, H4 et D1 alignés, repli H1 validé",
    "tf": {
     "h1": -1,
@@ -283,37 +316,37 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 39, tendance forte).",
-     "H4 baissier (ADX 24, tendance modérée).",
-     "H1 baissier · RSI 50 (neutre).",
-     "Volatilité : ATR H1 = 0.48 % du prix, ATR H4 = 1.53 %.",
-     "Résistance proche 53.5000 (+2.53 %).",
-     "Support proche 52.1000 (-0.15 %).",
-     "Variation 24 h : -0.80 %.",
+     "H4 baissier (ADX 25, tendance modérée).",
+     "H1 baissier · RSI 51 (neutre).",
+     "Volatilité : ATR H1 = 0.46 % du prix, ATR H4 = 1.40 %.",
+     "Résistance proche 53.5000 (+2.65 %).",
+     "Support proche 52.1000 (-0.04 %).",
+     "Variation 24 h : -0.65 %.",
      "Volume 24 h = 0.7 × la moyenne des 7 jours précédents (activité normale)."
     ],
     "support": 52.1,
     "resistance": 53.5
    },
-   "entry": 52.18,
-   "sl": 52.605,
-   "tp1": 51.755,
-   "tp2": 51.330000000000005,
-   "tp3": 50.90500000000001,
-   "risk": 0.42499999999999716,
+   "entry": 52.12,
+   "sl": 52.531642857142856,
+   "tp1": 51.70835714285714,
+   "tp2": 51.29671428571428,
+   "tp3": 50.88507142857142,
+   "risk": 0.41164285714285853,
    "rr": 2,
-   "atr": 0.2499999999999995,
-   "rsi": 50,
+   "atr": 0.2421428571428572,
+   "rsi": 50.847457627118466,
    "adxD1": 39.43515421776287,
-   "adxH4": 24.35550799258685
+   "adxH4": 25.261611618433314
   },
   {
    "symbol": "DOTUSDT",
    "name": "DOT/USDT",
-   "price": 0.896,
-   "verdict": "ATTENDRE",
+   "price": 0.898,
+   "verdict": "SELL",
    "side": "SELL",
-   "score": 0,
-   "reason": "Pas de rebond H1 : attendre un RSI H1 entre 45 et 65",
+   "score": 90,
+   "reason": "H1, H4 et D1 alignés, repli H1 validé",
    "tf": {
     "h1": -1,
     "h4": -1,
@@ -322,40 +355,51 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 44, tendance forte).",
-     "H4 baissier (ADX 30, tendance modérée).",
-     "H1 baissier · RSI 44 (momentum baissier).",
-     "Volatilité : ATR H1 = 0.74 % du prix, ATR H4 = 2.31 %.",
-     "Résistance proche 0.949000 (+5.68 %).",
-     "Support proche 0.886000 (-1.34 %).",
-     "Variation 24 h : -1.64 %.",
-     "Volume 24 h = 0.6 × la moyenne des 7 jours précédents (activité normale)."
+     "H4 baissier (ADX 32, tendance forte).",
+     "H1 baissier · RSI 47 (neutre).",
+     "Volatilité : ATR H1 = 0.67 % du prix, ATR H4 = 2.02 %.",
+     "Résistance proche 0.949000 (+5.80 %).",
+     "Support proche 0.886000 (-1.23 %).",
+     "Variation 24 h : -1.32 %.",
+     "Volume 24 h = 0.5 × la moyenne des 7 jours précédents (faible activité)."
     ],
     "support": 0.886,
     "resistance": 0.949
-   }
+   },
+   "entry": 0.897,
+   "sl": 0.9142,
+   "tp1": 0.8798,
+   "tp2": 0.8626,
+   "tp3": 0.8454,
+   "risk": 0.017199999999999993,
+   "rr": 2,
+   "atr": 0.006000000000000005,
+   "rsi": 47.368421052631575,
+   "adxD1": 44.44444444444442,
+   "adxH4": 31.640866873065146
   },
   {
    "symbol": "TRXUSDT",
    "name": "TRX/USDT",
-   "price": 0.3203,
+   "price": 0.3206,
    "verdict": "ATTENDRE",
    "side": "NEUTRE",
    "score": 0,
    "reason": "H1, H4 et D1 ne vont pas dans le même sens",
    "tf": {
     "h1": 1,
-    "h4": -1,
+    "h4": 0,
     "d1": 0
    },
    "detail": {
     "lines": [
      "D1 sans tendance claire (ADX 11, tendance faible).",
-     "H4 baissier (ADX 38, tendance forte).",
-     "H1 haussier · RSI 59 (momentum haussier).",
-     "Volatilité : ATR H1 = 0.14 % du prix, ATR H4 = 0.31 %.",
-     "Résistance proche 0.331200 (+3.47 %).",
-     "Support proche 0.318800 (-0.41 %).",
-     "Variation 24 h : +0.57 %.",
+     "H4 sans tendance claire (ADX 54, tendance forte).",
+     "H1 haussier · RSI 61 (momentum haussier).",
+     "Volatilité : ATR H1 = 0.13 % du prix, ATR H4 = 0.28 %.",
+     "Résistance proche 0.331200 (+3.27 %).",
+     "Support proche 0.318800 (-0.59 %).",
+     "Variation 24 h : +0.60 %.",
      "Volume 24 h = 0.3 × la moyenne des 7 jours précédents (faible activité)."
     ],
     "support": 0.3188,
