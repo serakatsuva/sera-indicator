@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-08T17:05:23.276343Z",
+  "updated_at": "2026-11-08T17:10:10.092430Z",
   "records": [
-    {
-      "key": "JD25:day|1793884500|SELL",
-      "id": "JD25:day",
-      "market": "Jump 25 Index",
-      "symbol": "JD25",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1793884500,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 88,
-      "execution_score": 81.0,
-      "active_strategies": [
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 139895.86,
-        "sl": 141866.27,
-        "tp1": 136940.245,
-        "tp2": 135166.876,
-        "tp3": 132802.38399999996,
-        "tp4": 130437.89199999996,
-        "tp5": 128073.39999999997
-      },
-      "status": "resolved",
-      "created_at": "2026-11-05T13:34:58.949626Z",
-      "max_stage": 0,
-      "last_epoch": 1793893500,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1793900700
-    },
     {
       "key": "stpRNG2:day|1793885400|SELL",
       "id": "stpRNG2:day",
@@ -23784,18 +23746,42 @@
       "created_at": "2026-11-08T16:37:58.858135Z",
       "max_stage": 0,
       "last_epoch": 1794156300
+    },
+    {
+      "key": "CRASH150N:day|1794156300|SELL",
+      "id": "CRASH150N:day",
+      "market": "Crash 150 Index",
+      "symbol": "CRASH150N",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1794156300,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 91,
+      "execution_score": 79.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation"
+      ],
+      "levels": {
+        "entry": 9374.26107,
+        "sl": 9390.64154,
+        "tp1": 9349.690365,
+        "tp2": 9334.947942,
+        "tp3": 9315.291378,
+        "tp4": 9295.634814000001,
+        "tp5": 9275.97825
+      },
+      "status": "open",
+      "created_at": "2026-11-08T17:10:10.001933Z"
     }
   ],
   "profiles": {
-    "Jump 25 Index|day|GENERIC|TRANSITION": {
-      "samples": 11,
-      "decisive_samples": 9,
-      "win_rate": 88.9,
-      "avg_r": 1.573,
-      "losses": 1,
-      "breakeven_or_flat": 2,
-      "wins": 8
-    },
     "Step Index 200|day|GENERIC|TRANSITION": {
       "samples": 6,
       "decisive_samples": 6,
@@ -24354,6 +24340,15 @@
       "breakeven_or_flat": 0,
       "wins": 0
     },
+    "Jump 25 Index|day|GENERIC|TRANSITION": {
+      "samples": 10,
+      "decisive_samples": 8,
+      "win_rate": 100.0,
+      "avg_r": 1.83,
+      "losses": 0,
+      "breakeven_or_flat": 2,
+      "wins": 8
+    },
     "Volatility 50 (1s) Index|day|BREAKOUT_CONTINUATION|TRANSITION": {
       "samples": 1,
       "decisive_samples": 1,
@@ -24545,17 +24540,17 @@
     }
   },
   "strategy_profiles": {
+    "SMC structure": {
+      "samples": 150,
+      "decisive_samples": 103,
+      "win_rate": 38.8,
+      "avg_r": 0.308
+    },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 106,
       "win_rate": 34.9,
       "avg_r": 0.254
-    },
-    "FVG / Order Block": {
-      "samples": 150,
-      "decisive_samples": 104,
-      "win_rate": 38.5,
-      "avg_r": 0.337
     },
     "Trend memory": {
       "samples": 150,
@@ -24587,11 +24582,11 @@
       "win_rate": 34.7,
       "avg_r": 0.212
     },
-    "SMC structure": {
+    "FVG / Order Block": {
       "samples": 150,
-      "decisive_samples": 103,
-      "win_rate": 38.8,
-      "avg_r": 0.308
+      "decisive_samples": 104,
+      "win_rate": 38.5,
+      "avg_r": 0.337
     },
     "Trend following": {
       "samples": 116,
