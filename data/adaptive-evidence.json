@@ -1,51 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-08T21:05:44.744913Z",
+  "updated_at": "2026-11-08T21:09:50.252331Z",
   "records": [
-    {
-      "key": "stpRNG5:day|1793915100|SELL",
-      "id": "stpRNG5:day",
-      "market": "Step Index 500",
-      "symbol": "stpRNG5",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1793915100,
-      "setup_type": "GENERIC",
-      "regime": "TRENDING",
-      "confidence": 92,
-      "execution_score": 80.0,
-      "active_strategies": [
-        "SMC structure",
-        "Breakout + impulse",
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "ADX / DMI trend strength",
-        "MACD momentum alignment",
-        "Donchian breakout",
-        "Trend efficiency ratio",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 4530.5,
-        "sl": 4663.5,
-        "tp1": 4331,
-        "tp2": 4211.3,
-        "tp3": 4051.7,
-        "tp4": 3892.1,
-        "tp5": 3732.5
-      },
-      "status": "resolved",
-      "created_at": "2026-11-05T22:06:14.420839Z",
-      "max_stage": 1,
-      "last_epoch": 1794005100,
-      "result": "BREAKEVEN",
-      "r": 0.0,
-      "resolved_epoch": 1794006000
-    },
     {
       "key": "CRASH1000:day|1793916000|SELL",
       "id": "CRASH1000:day",
@@ -23834,7 +23790,9 @@
         "tp5": 84475.50999999997
       },
       "status": "open",
-      "created_at": "2026-11-08T21:05:44.652692Z"
+      "created_at": "2026-11-08T21:05:44.652692Z",
+      "max_stage": 0,
+      "last_epoch": 1794170700
     },
     {
       "key": "R_50:day|1794170700|SELL",
@@ -23874,19 +23832,45 @@
         "tp5": 69.10410000000005
       },
       "status": "open",
-      "created_at": "2026-11-08T21:05:44.652763Z"
+      "created_at": "2026-11-08T21:05:44.652763Z",
+      "max_stage": 0,
+      "last_epoch": 1794170700
+    },
+    {
+      "key": "JD100:day|1794170700|SELL",
+      "id": "JD100:day",
+      "market": "Jump 100 Index",
+      "symbol": "JD100",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1794170700,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 95,
+      "execution_score": 90.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 81.35,
+        "sl": 85.81,
+        "tp1": 74.65999999999998,
+        "tp2": 70.64599999999997,
+        "tp3": 65.29399999999997,
+        "tp4": 59.94199999999996,
+        "tp5": 54.58999999999995
+      },
+      "status": "open",
+      "created_at": "2026-11-08T21:09:50.179319Z"
     }
   ],
   "profiles": {
-    "Step Index 500|day|GENERIC|TRENDING": {
-      "samples": 5,
-      "decisive_samples": 4,
-      "win_rate": 0.0,
-      "avg_r": -0.8,
-      "losses": 4,
-      "breakeven_or_flat": 1,
-      "wins": 0
-    },
     "Crash 1000 Index|day|GENERIC|TRANSITION": {
       "samples": 4,
       "decisive_samples": 3,
@@ -24221,6 +24205,15 @@
       "wins": 0
     },
     "Volatility 50 (1s) Index|day|BREAKOUT_CONTINUATION|TRENDING": {
+      "samples": 4,
+      "decisive_samples": 4,
+      "win_rate": 0.0,
+      "avg_r": -1.0,
+      "losses": 4,
+      "breakeven_or_flat": 0,
+      "wins": 0
+    },
+    "Step Index 500|day|GENERIC|TRENDING": {
       "samples": 4,
       "decisive_samples": 4,
       "win_rate": 0.0,
@@ -24624,12 +24617,6 @@
       "win_rate": 41.4,
       "avg_r": 0.377
     },
-    "Breakout + impulse": {
-      "samples": 132,
-      "decisive_samples": 104,
-      "win_rate": 15.4,
-      "avg_r": -0.378
-    },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 109,
@@ -24666,35 +24653,41 @@
       "win_rate": 42.9,
       "avg_r": 0.491
     },
-    "ADX / DMI trend strength": {
-      "samples": 111,
-      "decisive_samples": 84,
-      "win_rate": 13.1,
-      "avg_r": -0.447
-    },
-    "MACD momentum alignment": {
-      "samples": 133,
-      "decisive_samples": 104,
-      "win_rate": 12.5,
-      "avg_r": -0.454
-    },
-    "Donchian breakout": {
-      "samples": 128,
-      "decisive_samples": 102,
-      "win_rate": 13.7,
-      "avg_r": -0.42
-    },
-    "Trend efficiency ratio": {
-      "samples": 104,
-      "decisive_samples": 79,
-      "win_rate": 8.9,
-      "avg_r": -0.513
-    },
     "HH/HL or LH/LL structure": {
       "samples": 150,
       "decisive_samples": 101,
       "win_rate": 35.6,
       "avg_r": 0.221
+    },
+    "Breakout + impulse": {
+      "samples": 131,
+      "decisive_samples": 104,
+      "win_rate": 15.4,
+      "avg_r": -0.381
+    },
+    "ADX / DMI trend strength": {
+      "samples": 110,
+      "decisive_samples": 84,
+      "win_rate": 13.1,
+      "avg_r": -0.451
+    },
+    "MACD momentum alignment": {
+      "samples": 132,
+      "decisive_samples": 104,
+      "win_rate": 12.5,
+      "avg_r": -0.458
+    },
+    "Donchian breakout": {
+      "samples": 127,
+      "decisive_samples": 102,
+      "win_rate": 13.7,
+      "avg_r": -0.424
+    },
+    "Trend efficiency ratio": {
+      "samples": 103,
+      "decisive_samples": 79,
+      "win_rate": 8.9,
+      "avg_r": -0.518
     },
     "Trend following": {
       "samples": 116,
