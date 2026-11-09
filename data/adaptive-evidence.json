@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-09T17:37:00.039994Z",
+  "updated_at": "2026-11-09T17:41:32.799760Z",
   "records": [
-    {
-      "key": "JD25:day|1793988000|SELL",
-      "id": "JD25:day",
-      "market": "Jump 25 Index",
-      "symbol": "JD25",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1793988000,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 96,
-      "execution_score": 77.0,
-      "active_strategies": [
-        "SMC structure",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 141653.48,
-        "sl": 143987.96,
-        "tp1": 138151.76000000004,
-        "tp2": 136050.72800000006,
-        "tp3": 133249.35200000007,
-        "tp4": 130447.9760000001,
-        "tp5": 127646.60000000012
-      },
-      "status": "resolved",
-      "created_at": "2026-11-06T18:21:21.860369Z",
-      "max_stage": 1,
-      "last_epoch": 1794152700,
-      "result": "BREAKEVEN",
-      "r": 0.0,
-      "resolved_epoch": 1794153600
-    },
     {
       "key": "WLDXAU:day|1793989800|BUY",
       "id": "WLDXAU:day",
@@ -23874,19 +23836,45 @@
         "tp5": 8484.800000000003
       },
       "status": "open",
-      "created_at": "2026-11-09T17:36:59.948574Z"
+      "created_at": "2026-11-09T17:36:59.948574Z",
+      "max_stage": 0,
+      "last_epoch": 1794244500
+    },
+    {
+      "key": "R_50:day|1794244500|SELL",
+      "id": "R_50:day",
+      "market": "Volatility 50 Index",
+      "symbol": "R_50",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1794244500,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 95,
+      "execution_score": 98.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation"
+      ],
+      "levels": {
+        "entry": 87.5685,
+        "sl": 88.8774,
+        "tp1": 85.60515000000001,
+        "tp2": 84.42714000000001,
+        "tp3": 82.85646000000003,
+        "tp4": 81.28578000000003,
+        "tp5": 79.71510000000004
+      },
+      "status": "open",
+      "created_at": "2026-11-09T17:41:32.709817Z"
     }
   ],
   "profiles": {
-    "Jump 25 Index|day|GENERIC|TRANSITION": {
-      "samples": 4,
-      "decisive_samples": 2,
-      "win_rate": 100.0,
-      "avg_r": 1.275,
-      "losses": 0,
-      "breakeven_or_flat": 2,
-      "wins": 2
-    },
     "Gold Basket|day|GENERIC|TRANSITION": {
       "samples": 1,
       "decisive_samples": 0,
@@ -23940,6 +23928,15 @@
       "losses": 1,
       "breakeven_or_flat": 0,
       "wins": 0
+    },
+    "Jump 25 Index|day|GENERIC|TRANSITION": {
+      "samples": 3,
+      "decisive_samples": 2,
+      "win_rate": 100.0,
+      "avg_r": 1.7,
+      "losses": 0,
+      "breakeven_or_flat": 1,
+      "wins": 2
     },
     "Volatility 25 Index|day|GENERIC|TRANSITION": {
       "samples": 1,
@@ -24615,6 +24612,12 @@
       "win_rate": 27.4,
       "avg_r": 0.029
     },
+    "Momentum": {
+      "samples": 150,
+      "decisive_samples": 113,
+      "win_rate": 27.4,
+      "avg_r": 0.037
+    },
     "FVG / Order Block": {
       "samples": 150,
       "decisive_samples": 119,
@@ -24639,23 +24642,11 @@
       "win_rate": 28.2,
       "avg_r": 0.049
     },
-    "Family context confirmation": {
-      "samples": 150,
-      "decisive_samples": 113,
-      "win_rate": 29.2,
-      "avg_r": 0.043
-    },
     "HH/HL or LH/LL structure": {
       "samples": 150,
       "decisive_samples": 107,
       "win_rate": 29.0,
       "avg_r": 0.069
-    },
-    "Momentum": {
-      "samples": 150,
-      "decisive_samples": 113,
-      "win_rate": 27.4,
-      "avg_r": 0.037
     },
     "Trend following": {
       "samples": 144,
@@ -24692,6 +24683,12 @@
       "decisive_samples": 114,
       "win_rate": 22.8,
       "avg_r": -0.101
+    },
+    "Family context confirmation": {
+      "samples": 150,
+      "decisive_samples": 113,
+      "win_rate": 29.2,
+      "avg_r": 0.043
     },
     "ADX / DMI trend strength": {
       "samples": 134,
