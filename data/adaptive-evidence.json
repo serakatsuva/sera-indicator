@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-10T11:49:10.837460Z",
+  "updated_at": "2026-11-10T11:52:18.137256Z",
   "records": [
-    {
-      "key": "RDBEAR:day|1794090600|SELL",
-      "id": "RDBEAR:day",
-      "market": "Bear Market Index",
-      "symbol": "RDBEAR",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1794090600,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 85,
-      "execution_score": 91.0,
-      "active_strategies": [
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 948.2583,
-        "sl": 982.2249,
-        "tp1": 897.3083999999999,
-        "tp2": 866.7384599999998,
-        "tp3": 825.9785399999996,
-        "tp4": 785.2186199999995,
-        "tp5": 744.4586999999995
-      },
-      "status": "resolved",
-      "created_at": "2026-11-07T22:48:06.399783Z",
-      "max_stage": 0,
-      "last_epoch": 1794095100,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1794096000
-    },
     {
       "key": "CRASH50:day|1794090600|SELL",
       "id": "CRASH50:day",
@@ -23561,7 +23523,9 @@
         "tp5": 4644.629999999998
       },
       "status": "open",
-      "created_at": "2026-11-10T11:49:10.744403Z"
+      "created_at": "2026-11-10T11:49:10.744403Z",
+      "max_stage": 0,
+      "last_epoch": 1794310200
     },
     {
       "key": "1HZ15V:day|1794310200|SELL",
@@ -23594,7 +23558,9 @@
         "tp5": 13658.849999999991
       },
       "status": "open",
-      "created_at": "2026-11-10T11:49:10.744441Z"
+      "created_at": "2026-11-10T11:49:10.744441Z",
+      "max_stage": 0,
+      "last_epoch": 1794310200
     },
     {
       "key": "R_75:day|1794310200|SELL",
@@ -23627,19 +23593,50 @@
         "tp5": 35681.362100000035
       },
       "status": "open",
-      "created_at": "2026-11-10T11:49:10.744469Z"
+      "created_at": "2026-11-10T11:49:10.744469Z",
+      "max_stage": 0,
+      "last_epoch": 1794310200
+    },
+    {
+      "key": "RB100:day|1794310200|BUY",
+      "id": "RB100:day",
+      "market": "Range Break 100 Index",
+      "symbol": "RB100",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1794310200,
+      "setup_type": "BREAKOUT_CONTINUATION",
+      "regime": "TRANSITION",
+      "confidence": 94,
+      "execution_score": 87.0,
+      "active_strategies": [
+        "Trend following",
+        "SMC structure",
+        "Breakout + impulse",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "ADX / DMI trend strength",
+        "MACD momentum alignment",
+        "Bollinger squeeze release"
+      ],
+      "levels": {
+        "entry": 53568,
+        "sl": 53137,
+        "tp1": 54214.5,
+        "tp2": 54602.4,
+        "tp3": 55119.6,
+        "tp4": 55636.8,
+        "tp5": 56154
+      },
+      "status": "open",
+      "created_at": "2026-11-10T11:52:18.082461Z"
     }
   ],
   "profiles": {
-    "Bear Market Index|day|GENERIC|TRANSITION": {
-      "samples": 8,
-      "decisive_samples": 7,
-      "win_rate": 0.0,
-      "avg_r": -0.875,
-      "losses": 7,
-      "breakeven_or_flat": 1,
-      "wins": 0
-    },
     "Crash 50 Index|day|GENERIC|TRANSITION": {
       "samples": 9,
       "decisive_samples": 1,
@@ -23971,6 +23968,15 @@
       "avg_r": -1.0,
       "losses": 3,
       "breakeven_or_flat": 0,
+      "wins": 0
+    },
+    "Bear Market Index|day|GENERIC|TRANSITION": {
+      "samples": 7,
+      "decisive_samples": 6,
+      "win_rate": 0.0,
+      "avg_r": -0.857,
+      "losses": 6,
+      "breakeven_or_flat": 1,
       "wins": 0
     },
     "Step Index 100|day|BREAKOUT_CONTINUATION|TRENDING": {
