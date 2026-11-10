@@ -55,6 +55,17 @@ Tout ce qui suit ne fait que **réduire** le risque ; rien n'augmente les lots.
 - **E-mails de signal** : ajoutent la fiabilité mesurée (ou « non mesurée ») et rappellent qu'un score n'est pas une probabilité.
 - Non testé dans MT5 ici (pas de compilateur) : à compiler et à essayer en démo d'abord.
 
+### Indicateur Sera SMC Zones v1.10 — structure du marché
+- **HH / HL / LH / LL** sur chaque sommet / creux (3 bougies de chaque côté, `StructureStrength`).
+- **BOS** (cassure dans le sens de la tendance) et **CHoCH** (changement de tendance), avec la ligne pointillée du niveau cassé.
+- **Zones de demande** (bleu : dernière bougie baissière avant une cassure haussière) et **d'offre** (gris : dernière bougie
+  haussière avant une cassure baissière), affichées tant qu'aucune clôture ne les traverse (4 de chaque côté, `OrderBlocksMax`).
+- **Cadre en haut à droite** : signal Sera de la dernière bougie clôturée avec entrée, stop loss, TP1, TP3 et leurs lignes ;
+  sinon « Pas de signal maintenant » et l'âge du dernier signal ; sur Volatility / Forex : « Pas d'avantage mesuré ».
+- Marques « $ » de balayage limitées aux 120 dernières bougies. Les flèches BUY/SELL restent celles de la stratégie mesurée
+  (identiques au moteur en ligne, `scripts/qa_indicator.py`). La structure SMC est une lecture du graphique : mesurée seule,
+  elle ne donne pas d'avantage (voir « Recherche SMC »).
+
 ### v2.69 (Deriv) / v2.54 (Weltrade) — indicateur Sera SMC Zones sur le graphique ouvert
 - Nouvel indicateur `mt5/Sera_SMC_Zones.mq5` : zones **Premium / Équilibre / Discount** du dernier swing (60 bougies),
   **Strong / Weak High-Low**, marques « $ balayage » (liquidité prise), ligne de tendance bleue (monte) / orange (baisse),

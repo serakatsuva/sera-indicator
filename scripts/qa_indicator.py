@@ -26,7 +26,7 @@ bool SetIndexBuffer(int i,std::vector<double>& b,ENUM_INDEXBUFFER_TYPE){ if((int
 bool IndicatorSetString(ENUM_CUSTOMIND_PROPERTY,const string&){ return true; }
 bool IndicatorSetInteger(ENUM_CUSTOMIND_PROPERTY,long){ return true; }
 int _Digits=3; int SIM_PERIOD=3600; int PeriodSeconds(){ return SIM_PERIOD; }
-const color clrTomato=0x4763FF,clrSilver=0xC0C0C0,clrMediumSeaGreen=0x71B33C,clrOrange=0x00A5FF,clrLime=0x00FF00,clrRed=0x0000FF;
+const color clrTomato=0x4763FF,clrSilver=0xC0C0C0,clrMediumSeaGreen=0x71B33C,clrOrange=0x00A5FF,clrLime=0x00FF00,clrRed=0x0000FF,clrWhite=0xFFFFFF;
 '''
 MAIN = r'''
 #include <fstream>
@@ -45,6 +45,9 @@ int main(int argc,char** argv){
     if(kv.first.rfind("SERASMC_SIG_A",0)==0) printf("ARROW %s %d\n",kv.first.c_str()+13,kv.second.type==OBJ_ARROW_BUY?1:-1);
     else if(kv.first.rfind("SERASMC_",0)==0) printf("OBJ %s %s\n",kv.first.c_str()+8,kv.second.strs[OBJPROP_TEXT].c_str());
   }
+  if(argc>2) for(auto& kv:SIM_OBJ){ auto& ob=kv.second;      // geometry for the preview renderer
+    printf("GEOM %s %d %ld %.8g %ld %.8g %ld|%s\n",kv.first.c_str(),ob.type,ob.ints.count(OBJPROP_TIME*10)?ob.ints[OBJPROP_TIME*10]:0L,ob.prices[0],
+           ob.ints.count(OBJPROP_TIME*10+1)?ob.ints[OBJPROP_TIME*10+1]:0L,ob.prices[1],ob.ints.count(OBJPROP_COLOR)?ob.ints[OBJPROP_COLOR]:0L,ob.strs[OBJPROP_TEXT].c_str()); }
   OnDeinit(0);
   int left=0; for(auto& kv:SIM_OBJ) if(kv.first.rfind("SERASMC_",0)==0) left++;
   printf("LEFT %d\n",left);
@@ -88,11 +91,11 @@ def main() -> int:
     exe = BUILD / "indicator"
     subprocess.run(["g++", "-std=c++17", "-O1", "-w", "-o", str(exe), str(cpp)], check=True)
     (ROOT / "scripts" / "_ind_parity.mjs").write_text(JS)
-    errors, total_arrows = [], 0
+    errors, total_arrows, boxes = [], 0, []
     try:
         for name, drift, expect in (("Crash 500 Index", 0.0012, 1), ("PainX 800", 0.0010, 1), ("Boom 1000 Index", -0.0012, -1),
                                      ("GainX 1200", -0.0010, -1), ("Volatility 75 Index", 0.0, 0), ("EURUSD", 0.0006, 0)):
-            rnd = random.Random(hash(name) % 1000)
+            rnd = random.Random(sum(map(ord, name)))
             o, h, l, c = candles(rnd, 1400, drift, 13)
             f = BUILD / "ind_case.txt"
             f.write_text(name + "\n" + str(len(c)) + "\n" + " ".join(f"{a!r} {b!r} {x!r} {y!r}" for a, b, x, y in zip(o, h, l, c)) + "\n")
@@ -107,6 +110,27 @@ def main() -> int:
             if not (("Strong High" in objs.get("HIGH_T", "") and "Weak Low" in objs.get("LOW_T", "")) or
                     ("Weak High" in objs.get("HIGH_T", "") and "Strong Low" in objs.get("LOW_T", ""))):
                 errors.append(f"{name}: Strong/Weak High-Low labels inconsistent: {objs.get('HIGH_T')} / {objs.get('LOW_T')}")
+            texts = list(objs.values())
+            if not any(t in ("HH", "LH") for t in texts) or not any(t in ("HL", "LL") for t in texts):
+                errors.append(f"{name}: HH/LH/HL/LL structure labels missing")
+            if "BOS" not in texts or "CHoCH" not in texts:
+                errors.append(f"{name}: BOS / CHoCH not both drawn ({texts.count('BOS')} BOS, {texts.count('CHoCH')} CHoCH)")
+            if not any(k.startswith("STR_BL") or k.startswith("STR_SL") for k in objs):
+                errors.append(f"{name}: no break line for BOS / CHoCH")
+            zones_d = [k for k in objs if k.startswith("OB_D")]
+            zones_s = [k for k in objs if k.startswith("OB_S")]
+            if len(zones_d) > 4 or len(zones_s) > 4 or not (zones_d or zones_s):
+                errors.append(f"{name}: supply / demand zones wrong ({len(zones_d)} demand, {len(zones_s)} supply)")
+            box = " | ".join(v for k, v in sorted(objs.items()) if k.startswith("BOX_"))
+            if "Sera SMC Zones" not in box:
+                errors.append(f"{name}: signal box missing")
+            if expect == 0 and "Pas d'avantage mesure" not in box:
+                errors.append(f"{name}: the box must say there is no measured edge on this market")
+            if expect and not ("SIGNAL" in box or "Pas de signal maintenant" in box):
+                errors.append(f"{name}: the box does not give the signal state: {box}")
+            if "SIGNAL" in box and not all(x in box for x in ("Entree :", "Stop Loss :", "TP1 :", "TP3 :")):
+                errors.append(f"{name}: active signal without entry / SL / TP in the box")
+            boxes.append(f"{name}: {box}")
             if "LEFT 0" not in out:
                 errors.append(f"{name}: objects left on the chart after removing the indicator")
             if expect == 0 and arrows:
@@ -122,12 +146,33 @@ def main() -> int:
                 total_arrows += len(arrows)
     finally:
         (ROOT / "scripts" / "_ind_parity.mjs").unlink(missing_ok=True)
+    # Active signal on the last closed candle: cut the Crash series right after one of its arrows.
+    rnd = random.Random(sum(map(ord, "Crash 500 Index")))
+    o, h, l, c = candles(rnd, 1400, 0.0012, 13)
+    f = BUILD / "ind_case.txt"
+    f.write_text("Crash 500 Index\n1400\n" + " ".join(f"{a!r} {b!r} {x!r} {y!r}" for a, b, x, y in zip(o, h, l, c)) + "\n")
+    full = subprocess.run([str(exe), str(f)], capture_output=True, text=True, check=True).stdout
+    bars = sorted(int(a.split()[1]) for a in full.splitlines() if a.startswith("ARROW "))
+    if bars:
+        n = bars[-1] + 2
+        f.write_text(f"Crash 500 Index\n{n}\n" + " ".join(f"{a!r} {b!r} {x!r} {y!r}" for a, b, x, y in zip(o[:n], h[:n], l[:n], c[:n])) + "\n")
+        cut = subprocess.run([str(exe), str(f)], capture_output=True, text=True, check=True).stdout
+        objs = {a.split()[1]: " ".join(a.split()[2:]) for a in cut.splitlines() if a.startswith("OBJ ")}
+        box = " | ".join(v for k, v in sorted(objs.items()) if k.startswith("BOX_"))
+        boxes.append("Crash 500 Index (signal actif): " + box)
+        if "SIGNAL BUY Sera" not in box or not all(x in box for x in ("Entree :", "Stop Loss :", "TP1 :", "TP3 :")):
+            errors.append(f"active signal not shown with entry / SL / TP in the box: {box}")
+        if not all(k in objs for k in ("BOX_LE", "BOX_LS", "BOX_LT1", "BOX_LT3")):
+            errors.append("active signal: entry / SL / TP lines not drawn")
     if total_arrows < 3:
         errors.append(f"only {total_arrows} arrows in the drift cases: signals not exercised")
     if errors:
         print("\n".join("ERROR: " + e for e in errors[:20]))
         return 1
-    print(f"Sera SMC Zones indicator passed: zones, Strong/Weak labels, {total_arrows} arrows identical to the online engine")
+    if "-v" in sys.argv:
+        print("\n".join(boxes))
+    print(f"Sera SMC Zones indicator passed: zones, structure (HH/HL/LH/LL, BOS, CHoCH), supply/demand zones, signal box, "
+          f"{total_arrows} arrows identical to the online engine")
     return 0
 
 
