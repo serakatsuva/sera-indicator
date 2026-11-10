@@ -1,31 +1,49 @@
 {
   "version": "Sera OSS Ensemble v1.1",
-  "updated_at": "2026-11-10T15:17:31.529574Z",
-  "foundation_ran": false,
-  "foundation_updated_at": "2026-11-10T15:01:08.493906Z",
+  "updated_at": "2026-11-10T15:22:39.596302Z",
+  "foundation_ran": true,
+  "foundation_updated_at": "2026-11-10T15:22:39.596325Z",
   "markets": {
     "WLDAUD:day": {
-      "latest_epoch": 1794321900,
-      "foundation_updated_at": null,
+      "latest_epoch": 1794322800,
+      "foundation_updated_at": "2026-11-10T15:22:39.544128Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "error",
+        "direction": "NEUTRAL",
+        "error": "Could not infer frequency for series WLDAUD:day"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 53.9,
+        "reference_price": 928.43597412,
+        "forecast_price": 928.3848877,
+        "expected_return_pct": -0.0055,
+        "volatility_threshold_pct": 0.02,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "WLDAUD:swing": {
       "latest_epoch": 1794319200,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-10T15:22:39.544172Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "error",
+        "direction": "NEUTRAL",
+        "error": "Could not infer frequency for series WLDAUD:swing"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "BUY",
+        "confidence": 68.0,
+        "reference_price": 928.09399414,
+        "forecast_price": 928.85913086,
+        "expected_return_pct": 0.0824,
+        "volatility_threshold_pct": 0.0641,
+        "horizon_steps": 6,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "RDBEAR:day": {
@@ -438,14 +456,23 @@
     },
     "WLDGBP:day": {
       "latest_epoch": 1794322800,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-10T15:22:39.544588Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "error",
+        "direction": "NEUTRAL",
+        "error": "Could not infer frequency for series WLDGBP:day"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 57.4,
+        "reference_price": 1016.70800781,
+        "forecast_price": 1016.81506348,
+        "expected_return_pct": 0.0105,
+        "volatility_threshold_pct": 0.02,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "WLDGBP:swing": {
@@ -582,26 +609,58 @@
     },
     "JD75:day": {
       "latest_epoch": 1794322800,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-10T15:22:39.544729Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "NEUTRAL",
+        "confidence": 50.3,
+        "reference_price": 4348.44,
+        "forecast_price": 4348.68408203,
+        "expected_return_pct": 0.0056,
+        "volatility_threshold_pct": 0.2371,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "BUY",
+        "confidence": 76.3,
+        "reference_price": 4348.43994141,
+        "forecast_price": 4367.78613281,
+        "expected_return_pct": 0.4449,
+        "volatility_threshold_pct": 0.2371,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "JD75:swing": {
       "latest_epoch": 1794319200,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-10T15:22:39.544747Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "NEUTRAL",
+        "confidence": 61.6,
+        "reference_price": 4363.61,
+        "forecast_price": 4384.08984375,
+        "expected_return_pct": 0.4693,
+        "volatility_threshold_pct": 0.5658,
+        "horizon_steps": 6,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 60.2,
+        "reference_price": 4363.60986328,
+        "forecast_price": 4381.61669922,
+        "expected_return_pct": 0.4127,
+        "volatility_threshold_pct": 0.5657,
+        "horizon_steps": 6,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "RB100:day": {
@@ -1086,14 +1145,30 @@
     },
     "1HZ90V:day": {
       "latest_epoch": 1794322800,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-10T15:22:39.545216Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "NEUTRAL",
+        "confidence": 52.7,
+        "reference_price": 27132.808,
+        "forecast_price": 27122.59765625,
+        "expected_return_pct": -0.0376,
+        "volatility_threshold_pct": 0.1977,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 63.9,
+        "reference_price": 27132.80859375,
+        "forecast_price": 27079.59960938,
+        "expected_return_pct": -0.1961,
+        "volatility_threshold_pct": 0.1977,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "1HZ90V:swing": {
@@ -1386,14 +1461,23 @@
     },
     "AUDUSD-STD:swing": {
       "latest_epoch": 1794319200,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-10T15:22:39.545511Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "error",
+        "direction": "NEUTRAL",
+        "error": "Could not infer frequency for series AUDUSD-STD:swing"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 52.4,
+        "reference_price": 0.68799448,
+        "forecast_price": 0.68807793,
+        "expected_return_pct": 0.0121,
+        "volatility_threshold_pct": 0.0707,
+        "horizon_steps": 6,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "EURUSD-STD:swing": {
@@ -1422,14 +1506,23 @@
     },
     "NZDUSD-STD:swing": {
       "latest_epoch": 1794319200,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-10T15:22:39.545550Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "error",
+        "direction": "NEUTRAL",
+        "error": "Could not infer frequency for series NZDUSD-STD:swing"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "SELL",
+        "confidence": 64.9,
+        "reference_price": 0.56113577,
+        "forecast_price": 0.56076717,
+        "expected_return_pct": -0.0657,
+        "volatility_threshold_pct": 0.0618,
+        "horizon_steps": 6,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     }
   }
