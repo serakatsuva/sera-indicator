@@ -1,50 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-11T08:05:08.947670Z",
+  "updated_at": "2026-11-11T08:09:49.617666Z",
   "records": [
-    {
-      "key": "1HZ30V:day|1794159000|BUY",
-      "id": "1HZ30V:day",
-      "market": "Volatility 30 (1s) Index",
-      "symbol": "1HZ30V",
-      "mode": "day",
-      "direction": "BUY",
-      "opened_epoch": 1794159000,
-      "setup_type": "GENERIC",
-      "regime": "TRENDING",
-      "confidence": 86,
-      "execution_score": 74.0,
-      "active_strategies": [
-        "SMC structure",
-        "Breakout + impulse",
-        "Momentum",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "ADX / DMI trend strength",
-        "MACD momentum alignment",
-        "Donchian breakout",
-        "Trend efficiency ratio",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 6067.034,
-        "sl": 5991.795,
-        "tp1": 6179.892499999999,
-        "tp2": 6247.6075999999985,
-        "tp3": 6337.894399999998,
-        "tp4": 6428.181199999997,
-        "tp5": 6518.467999999997
-      },
-      "status": "resolved",
-      "created_at": "2026-11-08T17:50:49.111020Z",
-      "max_stage": 0,
-      "last_epoch": 1794176100,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1794177000
-    },
     {
       "key": "CRASH150N:day|1794159900|SELL",
       "id": "CRASH150N:day",
@@ -23642,7 +23599,9 @@
         "tp5": 93388.33799999993
       },
       "status": "open",
-      "created_at": "2026-11-11T08:05:08.854275Z"
+      "created_at": "2026-11-11T08:05:08.854275Z",
+      "max_stage": 0,
+      "last_epoch": 1794383100
     },
     {
       "key": "CRASH200:day|1794383100|SELL",
@@ -23681,7 +23640,9 @@
         "tp5": 99415.359
       },
       "status": "open",
-      "created_at": "2026-11-11T08:05:08.854328Z"
+      "created_at": "2026-11-11T08:05:08.854328Z",
+      "max_stage": 0,
+      "last_epoch": 1794383100
     },
     {
       "key": "JD25:day|1794383100|SELL",
@@ -23714,19 +23675,46 @@
         "tp5": 134207.89000000013
       },
       "status": "open",
-      "created_at": "2026-11-11T08:05:08.854361Z"
+      "created_at": "2026-11-11T08:05:08.854361Z",
+      "max_stage": 0,
+      "last_epoch": 1794383100
+    },
+    {
+      "key": "R_25:day|1794383100|BUY",
+      "id": "R_25:day",
+      "market": "Volatility 25 Index",
+      "symbol": "R_25",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1794383100,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 96,
+      "execution_score": 92.0,
+      "active_strategies": [
+        "SMC structure",
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 2871.861,
+        "sl": 2845.486,
+        "tp1": 2911.4235,
+        "tp2": 2935.161,
+        "tp3": 2966.8109999999997,
+        "tp4": 2998.461,
+        "tp5": 3030.111
+      },
+      "status": "open",
+      "created_at": "2026-11-11T08:09:49.527938Z"
     }
   ],
   "profiles": {
-    "Volatility 30 (1s) Index|day|GENERIC|TRENDING": {
-      "samples": 1,
-      "decisive_samples": 1,
-      "win_rate": 0.0,
-      "avg_r": -1.0,
-      "losses": 1,
-      "breakeven_or_flat": 0,
-      "wins": 0
-    },
     "Crash 150 Index|day|GENERIC|TRANSITION": {
       "samples": 2,
       "decisive_samples": 0,
@@ -24473,12 +24461,6 @@
       "win_rate": 19.8,
       "avg_r": -0.247
     },
-    "Breakout + impulse": {
-      "samples": 136,
-      "decisive_samples": 105,
-      "win_rate": 12.4,
-      "avg_r": -0.504
-    },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 104,
@@ -24509,30 +24491,6 @@
       "win_rate": 21.1,
       "avg_r": -0.223
     },
-    "ADX / DMI trend strength": {
-      "samples": 121,
-      "decisive_samples": 91,
-      "win_rate": 9.9,
-      "avg_r": -0.534
-    },
-    "MACD momentum alignment": {
-      "samples": 131,
-      "decisive_samples": 99,
-      "win_rate": 12.1,
-      "avg_r": -0.497
-    },
-    "Donchian breakout": {
-      "samples": 126,
-      "decisive_samples": 94,
-      "win_rate": 12.8,
-      "avg_r": -0.484
-    },
-    "Trend efficiency ratio": {
-      "samples": 115,
-      "decisive_samples": 85,
-      "win_rate": 9.4,
-      "avg_r": -0.547
-    },
     "HH/HL or LH/LL structure": {
       "samples": 150,
       "decisive_samples": 92,
@@ -24545,17 +24503,47 @@
       "win_rate": 13.1,
       "avg_r": -0.471
     },
+    "Breakout + impulse": {
+      "samples": 135,
+      "decisive_samples": 104,
+      "win_rate": 12.5,
+      "avg_r": -0.501
+    },
     "FVG / Order Block": {
       "samples": 150,
       "decisive_samples": 95,
       "win_rate": 17.9,
       "avg_r": -0.288
     },
+    "ADX / DMI trend strength": {
+      "samples": 120,
+      "decisive_samples": 90,
+      "win_rate": 10.0,
+      "avg_r": -0.53
+    },
+    "MACD momentum alignment": {
+      "samples": 130,
+      "decisive_samples": 98,
+      "win_rate": 12.2,
+      "avg_r": -0.493
+    },
+    "Donchian breakout": {
+      "samples": 125,
+      "decisive_samples": 93,
+      "win_rate": 12.9,
+      "avg_r": -0.48
+    },
     "Bollinger squeeze release": {
       "samples": 93,
       "decisive_samples": 67,
       "win_rate": 11.9,
       "avg_r": -0.486
+    },
+    "Trend efficiency ratio": {
+      "samples": 114,
+      "decisive_samples": 84,
+      "win_rate": 9.5,
+      "avg_r": -0.543
     }
   }
 }
