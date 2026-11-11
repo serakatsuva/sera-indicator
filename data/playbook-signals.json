@@ -1,5 +1,5 @@
 {
- "updated_at": "2026-11-11T05:40:43.542Z",
+ "updated_at": "2026-11-11T05:45:02.599Z",
  "strategy": "Sera Drift Playbook",
  "period": {
   "from": "2025-12-11",
@@ -165,7 +165,7 @@
    }
   }
  },
- "signals": 3,
+ "signals": 4,
  "markets": [
   {
    "id": "RDBEAR:drift",
@@ -231,6 +231,48 @@
     "total_r": 140.5,
     "positive_months": 11,
     "months": 11
+   }
+  },
+  {
+   "id": "BOOM100:drift",
+   "market": "Boom 100 Index",
+   "symbol": "BOOM100",
+   "family": "boom",
+   "mode": "drift",
+   "strategy": "drift_playbook",
+   "group": "spike",
+   "label": "Boom / Crash · GainX / PainX",
+   "drift_side": "SELL",
+   "final_verdict": "ATTENDRE",
+   "final_confidence": 79,
+   "execution_state": "WAIT_CONFIRMATION",
+   "execution_score": 0,
+   "setup_detected": 0,
+   "setup_direction": "NEUTRE",
+   "decision_engine": {
+    "condition_pass_percent": 0,
+    "score": 0,
+    "minimum_score": 90,
+    "freshness_gate": true
+   },
+   "liquidity_sweep": 0,
+   "measured_precision": null,
+   "rsi": 78.2,
+   "rsi_threshold": 55,
+   "trend_ok": false,
+   "pullback": true,
+   "price": 96422.196,
+   "closed_at": 1794369600,
+   "levels": null,
+   "measured": null,
+   "measured_group": {
+    "trades": 3566,
+    "tp1_rate": 78.5,
+    "losing_rate": 21.5,
+    "expectancy_r": 0.075,
+    "total_r": 268.4,
+    "positive_months": 11,
+    "months": 12
    }
   },
   {
@@ -790,6 +832,56 @@
    }
   },
   {
+   "id": "CRASH100:drift",
+   "market": "Crash 100 Index",
+   "symbol": "CRASH100",
+   "family": "crash",
+   "mode": "drift",
+   "strategy": "drift_playbook",
+   "group": "spike",
+   "label": "Boom / Crash · GainX / PainX",
+   "drift_side": "BUY",
+   "final_verdict": "BUY",
+   "final_confidence": 79,
+   "execution_state": "EXECUTE_NOW",
+   "execution_score": 90,
+   "setup_detected": 1,
+   "setup_direction": "BUY",
+   "decision_engine": {
+    "condition_pass_percent": 100,
+    "score": 90,
+    "minimum_score": 90,
+    "freshness_gate": true
+   },
+   "liquidity_sweep": 0,
+   "measured_precision": null,
+   "rsi": 43.9,
+   "rsi_threshold": 45,
+   "trend_ok": true,
+   "pullback": true,
+   "price": 94404.348,
+   "closed_at": 1794369600,
+   "levels": {
+    "entry": 94404.348,
+    "sl": 94325.25121039384,
+    "tp1": 94428.07703688185,
+    "tp2": 94455.760913244,
+    "tp3": 94483.44478960616,
+    "tp4": 94487.39962908646,
+    "tp5": 94491.35446856677
+   },
+   "measured": null,
+   "measured_group": {
+    "trades": 3566,
+    "tp1_rate": 78.5,
+    "losing_rate": 21.5,
+    "expectancy_r": 0.075,
+    "total_r": 268.4,
+    "positive_months": 11,
+    "months": 12
+   }
+  },
+  {
    "id": "CRASH1000:drift",
    "market": "Crash 1000 Index",
    "symbol": "CRASH1000",
@@ -895,6 +987,48 @@
     "positive_months": 7,
     "months": 11
    },
+   "measured_group": {
+    "trades": 3566,
+    "tp1_rate": 78.5,
+    "losing_rate": 21.5,
+    "expectancy_r": 0.075,
+    "total_r": 268.4,
+    "positive_months": 11,
+    "months": 12
+   }
+  },
+  {
+   "id": "CRASH200:drift",
+   "market": "Crash 200 Index",
+   "symbol": "CRASH200",
+   "family": "crash",
+   "mode": "drift",
+   "strategy": "drift_playbook",
+   "group": "spike",
+   "label": "Boom / Crash · GainX / PainX",
+   "drift_side": "BUY",
+   "final_verdict": "ATTENDRE",
+   "final_confidence": 79,
+   "execution_state": "WAIT_CONFIRMATION",
+   "execution_score": 0,
+   "setup_detected": 0,
+   "setup_direction": "NEUTRE",
+   "decision_engine": {
+    "condition_pass_percent": 50,
+    "score": 0,
+    "minimum_score": 90,
+    "freshness_gate": true
+   },
+   "liquidity_sweep": 0,
+   "measured_precision": null,
+   "rsi": 49.8,
+   "rsi_threshold": 45,
+   "trend_ok": true,
+   "pullback": false,
+   "price": 101624.88,
+   "closed_at": 1794369600,
+   "levels": null,
+   "measured": null,
    "measured_group": {
     "trades": 3566,
     "tp1_rate": 78.5,
@@ -1193,6 +1327,48 @@
     "positive_months": 10,
     "months": 12
    },
+   "measured_group": {
+    "trades": 3566,
+    "tp1_rate": 78.5,
+    "losing_rate": 21.5,
+    "expectancy_r": 0.075,
+    "total_r": 268.4,
+    "positive_months": 11,
+    "months": 12
+   }
+  },
+  {
+   "id": "CRASH99:drift",
+   "market": "Crash 99 Index",
+   "symbol": "CRASH99",
+   "family": "crash",
+   "mode": "drift",
+   "strategy": "drift_playbook",
+   "group": "spike",
+   "label": "Boom / Crash · GainX / PainX",
+   "drift_side": "BUY",
+   "final_verdict": "ATTENDRE",
+   "final_confidence": 79,
+   "execution_state": "WAIT_CONFIRMATION",
+   "execution_score": 0,
+   "setup_detected": 0,
+   "setup_direction": "NEUTRE",
+   "decision_engine": {
+    "condition_pass_percent": 50,
+    "score": 0,
+    "minimum_score": 90,
+    "freshness_gate": true
+   },
+   "liquidity_sweep": 0,
+   "measured_precision": null,
+   "rsi": 70.2,
+   "rsi_threshold": 45,
+   "trend_ok": true,
+   "pullback": false,
+   "price": 95064.027,
+   "closed_at": 1794369600,
+   "levels": null,
+   "measured": null,
    "measured_group": {
     "trades": 3566,
     "tp1_rate": 78.5,
