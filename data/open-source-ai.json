@@ -1,8 +1,8 @@
 {
   "version": "Sera OSS Ensemble v1.1",
-  "updated_at": "2026-11-12T14:56:42.195042Z",
-  "foundation_ran": false,
-  "foundation_updated_at": "2026-11-12T14:42:57.980722Z",
+  "updated_at": "2026-11-12T15:04:17.925516Z",
+  "foundation_ran": true,
+  "foundation_updated_at": "2026-11-12T15:04:17.925537Z",
   "markets": {
     "WLDAUD:day": {
       "latest_epoch": 1794493800,
@@ -54,14 +54,30 @@
     },
     "BOOM100:day": {
       "latest_epoch": 1794493800,
-      "foundation_updated_at": null,
+      "foundation_updated_at": "2026-11-12T15:04:17.837892Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "NEUTRAL",
+        "confidence": 62.9,
+        "reference_price": 96209.829,
+        "forecast_price": 96192.1328125,
+        "expected_return_pct": -0.0184,
+        "volatility_threshold_pct": 0.02,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 61.1,
+        "reference_price": 96209.828125,
+        "forecast_price": 96194.640625,
+        "expected_return_pct": -0.0158,
+        "volatility_threshold_pct": 0.02,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "BOOM100:swing": {
@@ -533,7 +549,7 @@
       }
     },
     "CRASH99:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -545,7 +561,7 @@
       }
     },
     "CRASH99:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -557,7 +573,7 @@
       }
     },
     "WLDEUR:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -569,7 +585,7 @@
       }
     },
     "WLDEUR:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -581,7 +597,7 @@
       }
     },
     "WLDGBP:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -593,7 +609,7 @@
       }
     },
     "WLDGBP:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -605,31 +621,49 @@
       }
     },
     "WLDXAU:day": {
-      "latest_epoch": 1794493800,
-      "foundation_updated_at": null,
+      "latest_epoch": 1794494700,
+      "foundation_updated_at": "2026-11-12T15:04:17.838824Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "error",
+        "direction": "NEUTRAL",
+        "error": "Could not infer frequency for series WLDXAU:day"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "BUY",
+        "confidence": 68.3,
+        "reference_price": 905889.1875,
+        "forecast_price": 906597.75,
+        "expected_return_pct": 0.0782,
+        "volatility_threshold_pct": 0.0597,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "WLDXAU:swing": {
-      "latest_epoch": 1794488400,
-      "foundation_updated_at": null,
+      "latest_epoch": 1794492000,
+      "foundation_updated_at": "2026-11-12T15:04:17.838860Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "error",
+        "direction": "NEUTRAL",
+        "error": "Could not infer frequency for series WLDXAU:swing"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "SELL",
+        "confidence": 95.0,
+        "reference_price": 905889.1875,
+        "forecast_price": 901439.5,
+        "expected_return_pct": -0.4912,
+        "volatility_threshold_pct": 0.146,
+        "horizon_steps": 6,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "JD10:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -641,7 +675,7 @@
       }
     },
     "JD10:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -653,7 +687,7 @@
       }
     },
     "JD100:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -665,7 +699,7 @@
       }
     },
     "JD100:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -677,19 +711,35 @@
       }
     },
     "JD25:day": {
-      "latest_epoch": 1794493800,
-      "foundation_updated_at": null,
+      "latest_epoch": 1794494700,
+      "foundation_updated_at": "2026-11-12T15:04:17.838983Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "SELL",
+        "confidence": 64.5,
+        "reference_price": 133822.77,
+        "forecast_price": 133725.921875,
+        "expected_return_pct": -0.0724,
+        "volatility_threshold_pct": 0.0701,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 52.8,
+        "reference_price": 133822.765625,
+        "forecast_price": 133841.84375,
+        "expected_return_pct": 0.0143,
+        "volatility_threshold_pct": 0.0701,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "JD25:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -701,7 +751,7 @@
       }
     },
     "JD50:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -713,7 +763,7 @@
       }
     },
     "JD50:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -725,7 +775,7 @@
       }
     },
     "JD75:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -737,7 +787,7 @@
       }
     },
     "JD75:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -749,7 +799,7 @@
       }
     },
     "RB100:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -761,7 +811,7 @@
       }
     },
     "RB100:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -773,7 +823,7 @@
       }
     },
     "RB200:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -785,7 +835,7 @@
       }
     },
     "RB200:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -797,7 +847,7 @@
       }
     },
     "stpRNG:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -809,7 +859,7 @@
       }
     },
     "stpRNG:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -821,19 +871,35 @@
       }
     },
     "stpRNG2:day": {
-      "latest_epoch": 1794493800,
-      "foundation_updated_at": null,
+      "latest_epoch": 1794494700,
+      "foundation_updated_at": "2026-11-12T15:04:17.839199Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "NEUTRAL",
+        "confidence": 51.7,
+        "reference_price": 11490.0,
+        "forecast_price": 11490.31738281,
+        "expected_return_pct": 0.0028,
+        "volatility_threshold_pct": 0.0223,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 51.0,
+        "reference_price": 11490.0,
+        "forecast_price": 11489.81445312,
+        "expected_return_pct": -0.0016,
+        "volatility_threshold_pct": 0.0223,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "stpRNG2:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -845,7 +911,7 @@
       }
     },
     "stpRNG3:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -857,7 +923,7 @@
       }
     },
     "stpRNG3:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -869,7 +935,7 @@
       }
     },
     "stpRNG4:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -881,7 +947,7 @@
       }
     },
     "stpRNG4:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -893,7 +959,7 @@
       }
     },
     "stpRNG5:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -905,7 +971,7 @@
       }
     },
     "stpRNG5:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -917,19 +983,35 @@
       }
     },
     "WLDUSD:day": {
-      "latest_epoch": 1794493800,
-      "foundation_updated_at": null,
+      "latest_epoch": 1794494700,
+      "foundation_updated_at": "2026-11-12T15:04:17.839371Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "NEUTRAL",
+        "confidence": 61.1,
+        "reference_price": 1252.669,
+        "forecast_price": 1252.4699707,
+        "expected_return_pct": -0.0159,
+        "volatility_threshold_pct": 0.02,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "SELL",
+        "confidence": 67.9,
+        "reference_price": 1252.66894531,
+        "forecast_price": 1252.34887695,
+        "expected_return_pct": -0.0256,
+        "volatility_threshold_pct": 0.02,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "WLDUSD:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -941,7 +1023,7 @@
       }
     },
     "1HZ10V:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -953,7 +1035,7 @@
       }
     },
     "1HZ10V:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -965,7 +1047,7 @@
       }
     },
     "R_10:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -977,7 +1059,7 @@
       }
     },
     "R_10:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -989,7 +1071,7 @@
       }
     },
     "1HZ100V:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1001,7 +1083,7 @@
       }
     },
     "1HZ100V:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1013,7 +1095,7 @@
       }
     },
     "R_100:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1025,7 +1107,7 @@
       }
     },
     "R_100:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1037,7 +1119,7 @@
       }
     },
     "1HZ15V:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1049,7 +1131,7 @@
       }
     },
     "1HZ15V:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1061,7 +1143,7 @@
       }
     },
     "1HZ25V:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1073,7 +1155,7 @@
       }
     },
     "1HZ25V:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1085,7 +1167,7 @@
       }
     },
     "R_25:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1097,7 +1179,7 @@
       }
     },
     "R_25:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1109,7 +1191,7 @@
       }
     },
     "1HZ30V:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1121,7 +1203,7 @@
       }
     },
     "1HZ30V:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1133,7 +1215,7 @@
       }
     },
     "1HZ50V:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1145,7 +1227,7 @@
       }
     },
     "1HZ50V:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1157,7 +1239,7 @@
       }
     },
     "R_50:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1169,7 +1251,7 @@
       }
     },
     "R_50:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1181,7 +1263,7 @@
       }
     },
     "1HZ75V:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1193,7 +1275,7 @@
       }
     },
     "1HZ75V:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1205,19 +1287,35 @@
       }
     },
     "R_75:day": {
-      "latest_epoch": 1794493800,
-      "foundation_updated_at": null,
+      "latest_epoch": 1794494700,
+      "foundation_updated_at": "2026-11-12T15:04:17.839893Z",
       "chronos2": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "Chronos-2 small",
+        "direction": "NEUTRAL",
+        "confidence": 52.2,
+        "reference_price": 39560.1926,
+        "forecast_price": 39549.13671875,
+        "expected_return_pct": -0.0279,
+        "volatility_threshold_pct": 0.1794,
+        "horizon_steps": 4,
+        "model_id": "autogluon/chronos-2-small"
       },
       "timesfm25": {
-        "status": "pending",
-        "direction": "NEUTRAL"
+        "status": "ok",
+        "model": "TimesFM 2.5",
+        "direction": "NEUTRAL",
+        "confidence": 53.9,
+        "reference_price": 39560.19140625,
+        "forecast_price": 39540.22265625,
+        "expected_return_pct": -0.0505,
+        "volatility_threshold_pct": 0.1794,
+        "horizon_steps": 4,
+        "model_id": "google/timesfm-2.5-200m-pytorch"
       }
     },
     "R_75:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1229,7 +1327,7 @@
       }
     },
     "1HZ90V:day": {
-      "latest_epoch": 1794493800,
+      "latest_epoch": 1794494700,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1241,7 +1339,7 @@
       }
     },
     "1HZ90V:swing": {
-      "latest_epoch": 1794488400,
+      "latest_epoch": 1794492000,
       "foundation_updated_at": null,
       "chronos2": {
         "status": "pending",
@@ -1458,7 +1556,7 @@
     },
     "USDSGD-STD:swing": {
       "latest_epoch": 1794488400,
-      "foundation_updated_at": "2026-11-12T14:42:57.898383Z",
+      "foundation_updated_at": "2026-11-12T15:04:17.840334Z",
       "chronos2": {
         "status": "error",
         "direction": "NEUTRAL",
@@ -1468,10 +1566,10 @@
         "status": "ok",
         "model": "TimesFM 2.5",
         "direction": "SELL",
-        "confidence": 69.9,
+        "confidence": 69.7,
         "reference_price": 1.28570998,
-        "forecast_price": 1.2853179,
-        "expected_return_pct": -0.0305,
+        "forecast_price": 1.28532112,
+        "expected_return_pct": -0.0302,
         "volatility_threshold_pct": 0.0215,
         "horizon_steps": 6,
         "model_id": "google/timesfm-2.5-200m-pytorch"
