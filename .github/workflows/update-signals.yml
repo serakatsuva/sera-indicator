@@ -143,11 +143,13 @@ jobs:
           # (the strict check runs in "Sera QA Agents") so one market never blocks every signal.
           python scripts/qa_ea_parser.py --warn-only
 
-      - name: Send Gmail Swing alerts
+      - name: Send Swing alerts (Telegram + Gmail)
         env:
           GMAIL_ALERT_FROM: ${{ secrets.GMAIL_ALERT_FROM }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           GMAIL_ALERT_TO: ${{ secrets.GMAIL_ALERT_TO }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python scripts/send_gmail_alerts.py
 
       - name: Commit validated signals
