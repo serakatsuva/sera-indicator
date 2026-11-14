@@ -585,3 +585,8 @@ GitHub ne garantit pas les tâches planifiées : sur ce dépôt, le `cron` toute
 - **Rapport de précision** : `data/precision-report.json` (rejeu du vrai moteur sur 1 an : `scripts/backtest.mjs` puis `research/analyze_events.py`). Résultat : aucun avantage solide sur le moteur générique, et la confiance affichée ne prédit pas le résultat.
 - **Garde-fou mesuré** : sur Bull Market / Bear Market, le moteur générique perd (309 trades Day, −84 R, −0,27 R / trade). `scripts/adaptive_evidence.py` neutralise ses signaux (`precision_gate`) ; le Drift Playbook s'en occupe. Les EA ne sont pas modifiés : ils lisent simplement ATTENDRE.
 - **Graphique** : prix actuel avec compte à rebours de la bougie sur l'axe, distance et % des boîtes stop / objectif, entrée en gris façon TradingView.
+
+## Preset « Paliers » (lot qui monte avec le solde)
+
+`mt5/presets/Sera_Preset_PALIERS_Deriv.set` et `Sera_Preset_PALIERS_Weltrade.set` : MT5 > clic droit sur l'EA > Propriétés > Paramètres > Charger.
+Risque de base 0,50 % par trade ; chaque +25 % de croissance de l'équité ajoute +0,25 % de risque, plafonné à 2,0 %. Après une perte, le risque revient à la moitié de la base ; les paliers redescendent seuls si l'équité baisse. Les protections (risque ouvert total, perte, drawdown) restent actives. Ce mécanisme existait déjà dans les EA (`EnableAdaptiveLot`) ; le preset ne fait que le rendre plus marqué. Aucun gain n'est garanti.
