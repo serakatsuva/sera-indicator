@@ -5,6 +5,8 @@ import json
 import os
 import smtplib
 import ssl
+import urllib.parse
+import urllib.request
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Any
@@ -123,13 +125,42 @@ def send_email(sender: str, password: str, recipient: str, subject: str, body: s
         smtp.send_message(msg)
 
 
+def send_telegram(token: str, chat_id: str, text: str):
+    """Envoie un message Telegram (limite 4096 caractères, coupé proprement)."""
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    for start in range(0, len(text), 4000):
+        data = urllib.parse.urlencode({"chat_id": chat_id, "text": text[start:start + 4000]}).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            if resp.status != 200:
+                raise RuntimeError(f"Telegram HTTP {resp.status}")
+
+
+def short_row(row: dict[str, Any]) -> str:
+    plan = row.get("setup_entry_plan") or {}
+    levels = row.get("levels") or row.get("projected_levels") or {}
+    timing = row.get("timing") or {}
+    return (
+        f"{row.get('market','—')} — SWING {row.get('final_verdict','—')}\n"
+        f"Etat : {row.get('execution_state','WAIT_CONFIRMATION')} | plan {plan.get('status','—')}\n"
+        f"Entree {fmt(plan.get('suggested_entry'))} (zone {fmt(plan.get('zone_min'))} - {fmt(plan.get('zone_max'))})\n"
+        f"SL {fmt(levels.get('sl'))} | TP1 {fmt(levels.get('tp1'))} | TP2 {fmt(levels.get('tp2'))} | TP3 {fmt(levels.get('tp3'))}\n"
+        f"Duree estimee : {timing.get('swing_days_label') or '—'} | confiance {row.get('final_confidence','—')}%"
+    )
+
+
 def main():
     sender = os.getenv("GMAIL_ALERT_FROM", "").strip()
     password = os.getenv("GMAIL_APP_PASSWORD", "").strip()
     recipient = os.getenv("GMAIL_ALERT_TO", "").strip()
 
-    if not sender or not password or not recipient:
-        print("Sera Gmail alert: secrets not configured; skipping email delivery.")
+    tg_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    tg_chat = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    email_on = bool(sender and password and recipient)
+    tg_on = bool(tg_token and tg_chat)
+
+    if not email_on and not tg_on:
+        print("Sera alert: neither Gmail nor Telegram secrets configured; skipping delivery.")
         return
 
     signals = load(SIGNALS, {})
@@ -181,9 +212,25 @@ def main():
         "",
         "Sera n'exécute automatiquement que les signaux qui passent à EXECUTE_NOW et les garde-fous EA. Aucun gain ni absence de retournement n'est garanti.",
     ]
-    send_email(sender, password, recipient, subject, "\n".join(body))
-    save(STATE, {"updated_at": signals.get("updated_at"), "setups": current})
-    print(f"Sera Gmail alert: sent {len(actionable)} setup(s).")
+    delivered = False
+    if email_on:
+        try:
+            send_email(sender, password, recipient, subject, "\n".join(body))
+            delivered = True
+            print(f"Sera Gmail alert: sent {len(actionable)} setup(s).")
+        except Exception as exc:  # un canal en échec ne bloque pas l'autre
+            print(f"Sera Gmail alert: FAILED ({exc.__class__.__name__}).")
+    if tg_on:
+        try:
+            text = subject + "\n\n" + "\n\n".join(short_row(row) for row in actionable)
+            text += "\n\nAucun gain n'est garanti. Verifier l'etat d'entree avant d'agir."
+            send_telegram(tg_token, tg_chat, text)
+            delivered = True
+            print(f"Sera Telegram alert: sent {len(actionable)} setup(s).")
+        except Exception as exc:
+            print(f"Sera Telegram alert: FAILED ({exc.__class__.__name__}).")
+    if delivered:   # sinon on réessaie au prochain cycle au lieu de perdre le signal
+        save(STATE, {"updated_at": signals.get("updated_at"), "setups": current})
 
 
 if __name__ == "__main__":
