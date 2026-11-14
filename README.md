@@ -1,5 +1,15 @@
 # Sera Indicator
 
+## Kit MT5 — un robot et un indicateur par plateforme
+
+| Plateforme | Robot Swing (trade automatique) | Indicateur graphique |
+|---|---|---|
+| **Deriv** | `mt5/Sera_EA_Swing_Intelligent_Deriv_v2.70.mq5` — lit les signaux publiés par l'application (`data/ea-signals.json`) | `mt5/Sera_Indicator_Deriv_v1.00.mq5` — reconnaît Boom, Crash, Volatility, Step, Jump, Range Break, Drift Switch, DEX, Bull/Bear Market… |
+| **Weltrade** | `mt5/Sera_EA_Swing_Intelligent_Weltrade_v2.55.mq5` — analyse dans MT5 et publie sur l'onglet Weltrade de l'application | `mt5/Sera_Indicator_Weltrade_v1.00.mq5` — reconnaît PainX, GainX, FlipX, SwitchX, BreakX, TrendX, PlusX, FiboX, QuadX, FX Vol, SFX Vol |
+
+Les deux indicateurs (v1.00) partent de Sera SMC Vault 6.5 : structure BOS/CHoCH/MSS, Order Blocks et FVG notés, zones, kill zones, setup détaillé multi-timeframe, swing signalé, alertes push et email. Non compilés ni testés dans MT5 ici : compiler dans MetaEditor et essayer en démo d'abord. Un score n'est pas une probabilité de gain.
+Le scalping (`Sera_EA_Scalping_Intelligent`) reste un outil séparé.
+
 Sera Indicator est un système d’aide à la décision pour les indices synthétiques Deriv et 27 paires Forex. Le Day trading utilise M15/H1. Le Swing haute conviction utilise H1/H4 avec un filtre macro D1 et deux cycles de confirmation.
 
 ## Onglet Crypto — Swing H1/H4/D1 (2026-11-06)
