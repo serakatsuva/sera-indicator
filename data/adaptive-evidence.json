@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-16T20:19:28.359367Z",
+  "updated_at": "2026-11-16T20:23:04.519794Z",
   "records": [
-    {
-      "key": "JD10:day|1794577500|SELL",
-      "id": "JD10:day",
-      "market": "Jump 10 Index",
-      "symbol": "JD10",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1794577500,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 92,
-      "execution_score": 77.0,
-      "active_strategies": [
-        "SMC structure",
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation"
-      ],
-      "levels": {
-        "entry": 89266.45,
-        "sl": 89611.49,
-        "tp1": 88748.88999999998,
-        "tp2": 88438.35399999998,
-        "tp3": 88024.30599999997,
-        "tp4": 87610.25799999996,
-        "tp5": 87196.20999999995
-      },
-      "status": "resolved",
-      "created_at": "2026-11-13T14:05:15.791307Z",
-      "max_stage": 0,
-      "last_epoch": 1794648600,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1794649500
-    },
     {
       "key": "1HZ30V:day|1794577500|BUY",
       "id": "1HZ30V:day",
@@ -24127,7 +24089,9 @@
         "tp5": 101009.77299999999
       },
       "status": "open",
-      "created_at": "2026-11-16T20:19:28.271566Z"
+      "created_at": "2026-11-16T20:19:28.271566Z",
+      "max_stage": 0,
+      "last_epoch": 1794859200
     },
     {
       "key": "R_25:day|1794859200|SELL",
@@ -24160,19 +24124,45 @@
         "tp5": 2674.379999999999
       },
       "status": "open",
-      "created_at": "2026-11-16T20:19:28.271666Z"
+      "created_at": "2026-11-16T20:19:28.271666Z",
+      "max_stage": 0,
+      "last_epoch": 1794859200
+    },
+    {
+      "key": "1HZ75V:day|1794859200|BUY",
+      "id": "1HZ75V:day",
+      "market": "Volatility 75 (1s) Index",
+      "symbol": "1HZ75V",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1794859200,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 89,
+      "execution_score": 98.0,
+      "active_strategies": [
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 4199.19,
+        "sl": 4162.73,
+        "tp1": 4253.879999999999,
+        "tp2": 4286.6939999999995,
+        "tp3": 4330.446,
+        "tp4": 4374.197999999999,
+        "tp5": 4417.95
+      },
+      "status": "open",
+      "created_at": "2026-11-16T20:23:04.457715Z"
     }
   ],
   "profiles": {
-    "Jump 10 Index|day|GENERIC|TRANSITION": {
-      "samples": 8,
-      "decisive_samples": 8,
-      "win_rate": 0.0,
-      "avg_r": -1.0,
-      "losses": 8,
-      "breakeven_or_flat": 0,
-      "wins": 0
-    },
     "Volatility 30 (1s) Index|day|GENERIC|TRANSITION": {
       "samples": 7,
       "decisive_samples": 5,
@@ -24198,6 +24188,15 @@
       "avg_r": -0.6,
       "losses": 6,
       "breakeven_or_flat": 4,
+      "wins": 0
+    },
+    "Jump 10 Index|day|GENERIC|TRANSITION": {
+      "samples": 7,
+      "decisive_samples": 7,
+      "win_rate": 0.0,
+      "avg_r": -1.0,
+      "losses": 7,
+      "breakeven_or_flat": 0,
       "wins": 0
     },
     "AUD Basket|day|BREAKOUT_CONTINUATION|TRENDING": {
@@ -25045,12 +25044,6 @@
       "win_rate": 12.9,
       "avg_r": -0.431
     },
-    "Momentum": {
-      "samples": 150,
-      "decisive_samples": 101,
-      "win_rate": 11.9,
-      "avg_r": -0.441
-    },
     "FVG / Order Block": {
       "samples": 150,
       "decisive_samples": 99,
@@ -25086,6 +25079,12 @@
       "decisive_samples": 98,
       "win_rate": 12.2,
       "avg_r": -0.429
+    },
+    "Momentum": {
+      "samples": 150,
+      "decisive_samples": 101,
+      "win_rate": 11.9,
+      "avg_r": -0.441
     },
     "Trend following": {
       "samples": 150,
