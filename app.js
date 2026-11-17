@@ -839,6 +839,7 @@ function renderSelected(){
   if(row?.precision_gate?.blocked)$("decisionSummary").textContent=`Précision : ${row.precision_gate.reason}`;
   renderOpenSourceModels(row);
   renderLiveEntry(row);
+  renderApa(row);
   renderTradeAction(row);
   renderPredictionPanel(row);
   renderLiveIntelligencePanel(row);
@@ -952,6 +953,42 @@ function liveEntryProposal(row){
     liveState="WAIT_CONFIRMATION";
   }
   return {...plan,live_price:live,proposed_entry:Number(proposed.toFixed(priceDecimals(proposed))),live_state:liveState,in_zone:inZone};
+}
+
+const APA_PATTERNS={PIN_BAR:"Pin bar",ENGULFING:"Englobante",INSIDE_BAR:"Inside bar",FAKEOUT:"Fausse cassure",BREAK_RETEST:"Cassure + retest",EMA_PULLBACK:"Pullback EMA20"};
+function apaLiveState(position,live){
+  const direction=position.side==="BUY"?1:-1;
+  if(!Number.isFinite(live))return position.status==="IN_ZONE"?"DANS LA ZONE":position.status==="TRIGGERED"?"DÉCLENCHÉE":position.order==="STOP"?"EN ATTENTE DU DÉCLENCHEUR":"ATTENDRE LE RETEST";
+  if((live-position.sl)*direction<=0)return "INVALIDÉE";
+  if((live-position.tp1)*direction>=0)return "OBJECTIF TP1 ATTEINT";
+  if(position.order==="STOP")return (live-position.trigger)*direction>0?"DÉCLENCHÉE":"EN ATTENTE DU DÉCLENCHEUR";
+  return Math.abs(live-position.entry)<=position.zone_tol?"DANS LA ZONE":"ATTENDRE LE RETEST";
+}
+function renderApa(row){
+  const panel=$("apaPanel");
+  if(!panel)return;
+  const apa=row?.apa;
+  if(!apa||!resultsAreFresh()){panel.hidden=true;return;}
+  panel.hidden=false;
+  const bias=$("apaBias");
+  bias.textContent=apa.bias==="BUY"||apa.bias==="SELL"?apa.bias:"NEUTRE";
+  bias.className=apa.bias==="BUY"?"buy":apa.bias==="SELL"?"sell":"";
+  $("apaSummary").textContent=apa.summary||"";
+  const live=hasLiveQuoteFor(row.market)?Number(liveQuote.price):Number(row.price);
+  const list=$("apaList");
+  list.textContent="";
+  for(const position of apa.positions||[]){
+    const item=document.createElement("div");
+    item.className=`apa-item ${position.side.toLowerCase()}`;
+    const title=document.createElement("strong");
+    title.textContent=`${position.side} · ${APA_PATTERNS[position.pattern]||position.pattern} · qualité ${position.quality}/95${position.aligned?"":" · non aligné"}`;
+    const state=document.createElement("span");
+    state.textContent=apaLiveState(position,live);
+    const levels=document.createElement("small");
+    levels.textContent=`${position.order==="STOP"?`Déclencheur ${fmtEntry(position.trigger)} · `:""}Entrée ${fmtEntry(position.entry)} · SL ${fmtEntry(position.sl)} · TP1 ${fmtEntry(position.tp1)} · TP2 ${fmtEntry(position.tp2)} · R:R ${position.rr1}`;
+    item.append(title,state,levels);
+    list.append(item);
+  }
 }
 
 function renderLiveEntry(row){
@@ -2050,6 +2087,7 @@ function scheduleLiveUi(market){
         const spec=chartSpecForRow(row);
         $("liveChange").textContent=`Live ${spec.entry} · ${live.label}`;
         renderLiveEntry(row);
+        renderApa(row);
         renderTradeAction(row);
         renderPredictionPanel(row);
         renderLiveIntelligencePanel(row);
