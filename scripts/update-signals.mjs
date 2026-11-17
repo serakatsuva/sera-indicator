@@ -188,6 +188,114 @@ function wilderAdx(rows,trSeries,period=14){
   return {adx:Number.isFinite(adx)?adx:(dx.at(-1)||0),plusDI,minusDI};
 }
 
+// ── APA (Advanced Price Action) : positions anticipées à partir des bougies ─────────────────────────────
+// Lit les bougies fermées de l'unité d'entrée et propose jusqu'à 3 positions possibles (déclencheur, entrée, SL, TP1/TP2).
+// Ne modifie PAS le verdict BUY/SELL : c'est une anticipation affichée, pas un ordre. La qualité (0-95) est un score
+// heuristique, pas une probabilité de gain.
+function apaPivots(c,strength=3){
+  const hi=[],lo=[];
+  for(let i=strength;i<c.length-strength;i++){
+    let isHigh=true,isLow=true;
+    for(let k=1;k<=strength;k++){
+      if(!(c[i].high>c[i-k].high&&c[i].high>=c[i+k].high))isHigh=false;
+      if(!(c[i].low<c[i-k].low&&c[i].low<=c[i+k].low))isLow=false;
+    }
+    if(isHigh)hi.push({i,price:c[i].high});
+    if(isLow)lo.push({i,price:c[i].low});
+  }
+  return {hi,lo};
+}
+
+function apaAnalyze(candles,atr,ema20,ema50){
+  if(!(atr>0)||!Array.isArray(candles)||candles.length<40)return null;
+  const slice=candles.slice(-90),n=slice.length,last=slice[n-1],prev=slice[n-2],before=slice[n-3];
+  const {hi,lo}=apaPivots(slice,3);
+  const levels=[...hi,...lo].map(p=>p.price);
+  const touches=price=>levels.filter(x=>Math.abs(x-price)<=atr*.25).length;
+  const trendSide=ema20>ema50?'BUY':ema20<ema50?'SELL':'NEUTRE';
+  const range=Math.max(last.high-last.low,atr*.01),body=Math.abs(last.close-last.open);
+  const lowWick=Math.min(last.open,last.close)-last.low,upWick=last.high-Math.max(last.open,last.close);
+  const nearSupport=value=>[...lo.map(p=>p.price),ema20,ema50].some(x=>Math.abs(x-value)<=atr*.6);
+  const nearResistance=value=>[...hi.map(p=>p.price),ema20,ema50].some(x=>Math.abs(x-value)<=atr*.6);
+  const found=[];
+
+  const make=(pattern,side,{trigger=null,entry,slBase,levelTouches=0,base})=>{
+    const direction=side==='BUY'?1:-1;
+    let risk=Math.max(Math.abs(entry-(slBase-direction*atr*.15)),atr*.5);
+    if(risk>atr*3)return;
+    const sl=entry-direction*risk;
+    const beyond=levels.filter(x=>(x-entry)*direction>=risk).sort((a,b)=>(a-b)*direction);
+    const tp1=beyond[0]!==undefined?beyond[0]:entry+direction*risk*1.5;
+    const next=levels.filter(x=>(x-tp1)*direction>=risk*.5).sort((a,b)=>(a-b)*direction);
+    const tp2=next[0]!==undefined?next[0]:entry+direction*risk*2.5;
+    const rr1=Math.abs(tp1-entry)/risk,rr2=Math.abs(tp2-entry)/risk;
+    let quality=base;
+    if(side===trendSide)quality+=15;else if(trendSide!=='NEUTRE')quality-=15;
+    if(levelTouches>=2)quality+=8;
+    if(rr1>=2)quality+=5;
+    // statut : le prix a-t-il déjà invalidé ou atteint l'objectif ?
+    const price=last.close;
+    if((price-sl)*direction<=0||(price-tp1)*direction>=0)return;
+    const stopStyle=trigger!==null;
+    let status;
+    if(stopStyle)status=(price-trigger)*direction>0?'TRIGGERED':'ARMED';
+    else status=Math.abs(price-entry)<=atr*.4?'IN_ZONE':'WAIT_RETEST';
+    found.push({pattern,side,order:stopStyle?'STOP':'LIMIT',status,trigger,entry,sl,tp1,tp2,rr1:Number(rr1.toFixed(2)),rr2:Number(rr2.toFixed(2)),
+      zone_tol:Number((atr*.4).toFixed(8)),quality:Math.round(clamp(quality,0,95)),with_trend:side===trendSide,at_key_level:levelTouches>=2});
+  };
+
+  // 1) Pin bar (rejet de mèche) sur support / résistance
+  if(lowWick/range>=.6&&body/range<=.35&&last.close>=last.low+range*.6&&nearSupport(last.low))
+    make('PIN_BAR','BUY',{trigger:last.high,entry:last.high+atr*.05,slBase:last.low,levelTouches:touches(last.low),base:55});
+  if(upWick/range>=.6&&body/range<=.35&&last.close<=last.high-range*.6&&nearResistance(last.high))
+    make('PIN_BAR','SELL',{trigger:last.low,entry:last.low-atr*.05,slBase:last.high,levelTouches:touches(last.high),base:55});
+
+  // 2) Englobante sur niveau
+  if(last.close>last.open&&prev.close<prev.open&&last.close>=prev.open&&last.open<=prev.close&&body>=atr*.6&&nearSupport(Math.min(last.low,prev.low)))
+    make('ENGULFING','BUY',{trigger:last.high,entry:last.high+atr*.05,slBase:Math.min(last.low,prev.low),levelTouches:touches(Math.min(last.low,prev.low)),base:52});
+  if(last.close<last.open&&prev.close>prev.open&&last.open>=prev.close&&last.close<=prev.open&&body>=atr*.6&&nearResistance(Math.max(last.high,prev.high)))
+    make('ENGULFING','SELL',{trigger:last.low,entry:last.low-atr*.05,slBase:Math.max(last.high,prev.high),levelTouches:touches(Math.max(last.high,prev.high)),base:52});
+
+  // 3) Inside bar dans le sens de la tendance
+  if(last.high<prev.high&&last.low>prev.low&&prev.high-prev.low>=atr*.8&&trendSide!=='NEUTRE'){
+    if(trendSide==='BUY')make('INSIDE_BAR','BUY',{trigger:prev.high,entry:prev.high+atr*.05,slBase:prev.low,base:48});
+    else make('INSIDE_BAR','SELL',{trigger:prev.low,entry:prev.low-atr*.05,slBase:prev.high,base:48});
+  }
+
+  // 4) Faux cassure (fakeout) : mèche au-delà d'un pivot puis clôture de retour
+  const oldLows=lo.filter(p=>p.i<n-5).map(p=>p.price),oldHighs=hi.filter(p=>p.i<n-5).map(p=>p.price);
+  for(const candle of [last,prev,before]){
+    const lowBroken=oldLows.filter(level=>candle.low<level-atr*.02&&candle.close>level).sort((a,b)=>b-a)[0];
+    if(lowBroken!==undefined&&last.close>=candle.low)
+      {make('FAKEOUT','BUY',{trigger:candle.high,entry:candle.high+atr*.05,slBase:candle.low,levelTouches:touches(lowBroken),base:60});break;}
+    const highBroken=oldHighs.filter(level=>candle.high>level+atr*.02&&candle.close<level).sort((a,b)=>a-b)[0];
+    if(highBroken!==undefined&&last.close<=candle.high)
+      {make('FAKEOUT','SELL',{trigger:candle.low,entry:candle.low-atr*.05,slBase:candle.high,levelTouches:touches(highBroken),base:60});break;}
+  }
+
+  // 5) Cassure puis retest d'un niveau
+  const recentCloses=slice.slice(-12);
+  const brokeUp=hi.filter(p=>p.i<=n-10).map(p=>p.price).filter(level=>recentCloses.some(c=>c.close>level+atr*.15)).sort((a,b)=>b-a)[0];
+  if(brokeUp!==undefined&&trendSide==='BUY'&&last.low<=brokeUp+atr*.4&&last.close>=brokeUp-atr*.2)
+    make('BREAK_RETEST','BUY',{entry:brokeUp,slBase:Math.min(last.low,brokeUp-atr*.5),levelTouches:touches(brokeUp),base:58});
+  const brokeDown=lo.filter(p=>p.i<=n-10).map(p=>p.price).filter(level=>recentCloses.some(c=>c.close<level-atr*.15)).sort((a,b)=>a-b)[0];
+  if(brokeDown!==undefined&&trendSide==='SELL'&&last.high>=brokeDown-atr*.4&&last.close<=brokeDown+atr*.2)
+    make('BREAK_RETEST','SELL',{entry:brokeDown,slBase:Math.max(last.high,brokeDown+atr*.5),levelTouches:touches(brokeDown),base:58});
+
+  // 6) Pullback sur la moyenne 20 dans la tendance
+  if(trendSide==='BUY'&&last.low<=ema20+atr*.2&&last.close>ema20&&last.close>last.open&&last.close-ema20<=atr*.8)
+    make('EMA_PULLBACK','BUY',{trigger:last.high,entry:last.high+atr*.05,slBase:Math.min(last.low,ema50),base:50});
+  if(trendSide==='SELL'&&last.high>=ema20-atr*.2&&last.close<ema20&&last.close<last.open&&ema20-last.close<=atr*.8)
+    make('EMA_PULLBACK','SELL',{trigger:last.low,entry:last.low-atr*.05,slBase:Math.max(last.high,ema50),base:50});
+
+  const unique=[];
+  for(const position of found.sort((a,b)=>b.quality-a.quality)){
+    if(!unique.some(u=>u.side===position.side&&Math.abs(u.entry-position.entry)<=atr*.3))unique.push(position);
+  }
+  return {trend_side:trendSide,key_levels:{support:lo.map(p=>p.price).filter(x=>x<last.close).sort((a,b)=>b-a).slice(0,3),resistance:hi.map(p=>p.price).filter(x=>x>last.close).sort((a,b)=>a-b).slice(0,3)},
+    positions:unique.slice(0,3)};
+}
+
 function inspectCandles(candles){
   if(!Array.isArray(candles)||candles.length<80)return null;
   const normalized=candles.map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close,epoch:+c.epoch}));
@@ -307,7 +415,8 @@ function inspectCandles(candles){
     bollingerWidth,squeeze,squeezeRelease,donchianBreakout,efficiencyRatio,autocorrelationLag1,
     hhhl,lhll,marketStructureAligned,engulfing,
     closedAt:last.epoch,price:last.close,
-    change:((last.close/closes.at(-2))-1)*100
+    change:((last.close/closes.at(-2))-1)*100,
+    apa:apaAnalyze(normalized,atr,ema20,ema50)
   };
 }
 
@@ -507,7 +616,7 @@ function publicSetup(setup){
     bollingerWidth:value.bollingerWidth,squeeze:value.squeeze,squeezeRelease:value.squeezeRelease,
     donchianBreakout:value.donchianBreakout,efficiencyRatio:value.efficiencyRatio,autocorrelationLag1:value.autocorrelationLag1,
     hhhl:value.hhhl,lhll:value.lhll,marketStructureAligned:value.marketStructureAligned,engulfing:value.engulfing,
-    closedAt:value.closedAt,price:value.price,change:value.change
+    closedAt:value.closedAt,price:value.price,change:value.change,apa:value.apa
   }):null;
   return {
     id:`${setup.symbol}:${setup.mode}`,market:setup.market,symbol:setup.symbol,family:setup.family,context_group:setup.context_group||null,
@@ -974,6 +1083,24 @@ function trendChange(setup,previous){
   };
 }
 
+function apaForSetup(setup){
+  const source=setup.entry_tf?.apa;
+  if(!source)return null;
+  const swing=setup.mode==='swing',c=setup.confirmation_tf,d=setup.macro_tf;
+  const positions=(source.positions||[]).map(position=>{
+    const aligned=Boolean(c&&position.side===c.side&&(!swing||(d&&position.side===d.side)));
+    return {...position,aligned,quality:Math.round(clamp(position.quality-(aligned?0:15),0,95))};
+  }).sort((a,b)=>b.quality-a.quality);
+  const best=positions[0];
+  return {
+    trend_side:source.trend_side,key_levels:source.key_levels,positions,
+    bias:best&&best.quality>=55?best.side:'NEUTRE',
+    summary:best
+      ?`APA · ${positions.length} position${positions.length>1?'s':''} anticipée${positions.length>1?'s':''} : ${best.side} ${best.pattern.replace('_',' ')} (qualité ${best.quality}/95, ${best.aligned?'aligné H1/H4/D1':'non aligné avec les autres unités de temps'}).`
+      :'APA · aucun pattern de price action exploitable pour le moment.'
+  };
+}
+
 function finalize(setup,previous){
   const engine=setup.autonomous||autonomousDecision(setup);
   const localConfirmed=engine.verdict!=='ATTENDRE';
@@ -1010,7 +1137,7 @@ function finalize(setup,previous){
   ];
 
   return {
-    ...publicSetup(setup),levels,projected_levels:projectedLevels,setup_entry_plan:entryPlan,trend_change,
+    ...publicSetup(setup),levels,projected_levels:projectedLevels,setup_entry_plan:entryPlan,trend_change,apa:apaForSetup(setup),
     swing_distance:swingDistance,projected_swing_distance:projectedSwingDistance,
     setup_detected:engine.setup_detected?1:0,setup_direction:engine.detected_side,
     final_verdict:finalVerdict,final_confidence:finalConfidence,timing,
@@ -1065,6 +1192,21 @@ async function selfTest(){
   const chopRows=Array.from({length:200},(_,i)=>{const p=100+(i%2?1:-1);return{open:100,high:Math.max(100,p)+.5,low:Math.min(100,p)-.5,close:p,epoch:lastEpoch-(199-i)*3600};});
   const trendInfo=inspectCandles(trendRows),chopInfo=inspectCandles(chopRows);
   if(!(trendInfo.adx>40&&trendInfo.rsi>70&&chopInfo.adx<20&&chopInfo.rsi>35&&chopInfo.rsi<65))throw new Error(`Indicator sanity self-test failed (trend ADX ${trendInfo.adx.toFixed(1)} RSI ${trendInfo.rsi.toFixed(1)}, chop ADX ${chopInfo.adx.toFixed(1)} RSI ${chopInfo.rsi.toFixed(1)})`);
+  // APA : un pullback haussier dans une tendance donne une position anticipée cohérente (SL < entrée < TP1 < TP2) sans toucher au verdict.
+  {
+    const rows=[];let price=100;
+    for(let i=0;i<89;i++){const open=price,close=price+(i<70?.35:-.25)+Math.sin(i/3)*.3;rows.push({open,high:Math.max(open,close)+.5,low:Math.min(open,close)-.5,close,epoch:lastEpoch-(89-i)*3600});price=close;}
+    const e20=emaValue(rows.map(r=>r.close),20),e50=emaValue(rows.map(r=>r.close),50);
+    rows.push({open:e20-.1,high:e20+.9,low:e20-.15,close:e20+.7,epoch:lastEpoch});
+    const apa=apaAnalyze(rows,1.2,emaValue(rows.map(r=>r.close),20),emaValue(rows.map(r=>r.close),50));
+    const buy=apa?.positions?.find(x=>x.side==='BUY');
+    if(!buy||!(buy.sl<buy.entry&&buy.entry<buy.tp1&&buy.tp1<buy.tp2)||buy.quality<0||buy.quality>95)throw new Error('APA self-test failed');
+    const flat=apaAnalyze(Array.from({length:60},(_,i)=>({open:100,high:100.2,low:99.8,close:100,epoch:i})),.4,100,100);
+    if(!flat||flat.positions.length!==0)throw new Error('APA flat-market self-test failed');
+    const decided=autonomousDecision(attachFamilyContext(attachTrendMemory(completeSwing,null),new Map()));
+    const withApa=autonomousDecision(attachFamilyContext(attachTrendMemory({...completeSwing,entry_tf:{...completeSwing.entry_tf,apa:apa}},null),new Map()));
+    if(decided.verdict!==withApa.verdict||decided.score!==withApa.score)throw new Error('APA must not change the verdict');
+  }
   // Forex D1 buckets start at 22:00 UTC (New York close).
   const fxRows=Array.from({length:48},(_,i)=>({open:1,high:1,low:1,close:1,epoch:Date.UTC(2026,0,5,0)/1000+i*3600}));
   const fxDays=aggregateCandles(fxRows,86400,7200).map(r=>new Date(r.epoch*1000).getUTCHours());
