@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-17T12:06:39.703860Z",
+  "updated_at": "2026-11-17T12:13:22.586301Z",
   "records": [
-    {
-      "key": "CRASH150N:day|1794638700|SELL",
-      "id": "CRASH150N:day",
-      "market": "Crash 150 Index",
-      "symbol": "CRASH150N",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1794638700,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 91,
-      "execution_score": 79.0,
-      "active_strategies": [
-        "SMC structure",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 9412.9861,
-        "sl": 9446.59786,
-        "tp1": 9362.56846,
-        "tp2": 9332.317876000001,
-        "tp3": 9291.983764,
-        "tp4": 9251.649652000002,
-        "tp5": 9211.315540000001
-      },
-      "status": "resolved",
-      "created_at": "2026-11-14T07:06:06.809878Z",
-      "max_stage": 0,
-      "last_epoch": 1794810600,
-      "result": "TIMEOUT_FLAT",
-      "r": 0.0,
-      "resolved_epoch": 1794811500
-    },
     {
       "key": "R_100:day|1794639600|SELL",
       "id": "R_100:day",
@@ -23936,7 +23898,9 @@
         "tp5": 58475.570000000036
       },
       "status": "open",
-      "created_at": "2026-11-17T12:06:39.575948Z"
+      "created_at": "2026-11-17T12:06:39.575948Z",
+      "max_stage": 0,
+      "last_epoch": 1794915900
     },
     {
       "key": "R_10:day|1794915900|SELL",
@@ -23969,19 +23933,45 @@
         "tp5": 4733.5560000000005
       },
       "status": "open",
-      "created_at": "2026-11-17T12:06:39.575994Z"
+      "created_at": "2026-11-17T12:06:39.575994Z",
+      "max_stage": 0,
+      "last_epoch": 1794915900
+    },
+    {
+      "key": "R_50:day|1794915900|SELL",
+      "id": "R_50:day",
+      "market": "Volatility 50 Index",
+      "symbol": "R_50",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1794915900,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 81,
+      "execution_score": 94.0,
+      "active_strategies": [
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 87.3678,
+        "sl": 88.6608,
+        "tp1": 85.42830000000001,
+        "tp2": 84.26460000000002,
+        "tp3": 82.71300000000004,
+        "tp4": 81.16140000000004,
+        "tp5": 79.60980000000005
+      },
+      "status": "open",
+      "created_at": "2026-11-17T12:13:22.462584Z"
     }
   ],
   "profiles": {
-    "Crash 150 Index|day|GENERIC|TRANSITION": {
-      "samples": 4,
-      "decisive_samples": 2,
-      "win_rate": 0.0,
-      "avg_r": -0.5,
-      "losses": 2,
-      "breakeven_or_flat": 2,
-      "wins": 0
-    },
     "Volatility 100 Index|day|GENERIC|TRANSITION": {
       "samples": 13,
       "decisive_samples": 10,
@@ -24006,6 +23996,15 @@
       "win_rate": 0.0,
       "avg_r": -0.875,
       "losses": 7,
+      "breakeven_or_flat": 1,
+      "wins": 0
+    },
+    "Crash 150 Index|day|GENERIC|TRANSITION": {
+      "samples": 3,
+      "decisive_samples": 2,
+      "win_rate": 0.0,
+      "avg_r": -0.667,
+      "losses": 2,
       "breakeven_or_flat": 1,
       "wins": 0
     },
@@ -24809,6 +24808,12 @@
       "win_rate": 15.2,
       "avg_r": -0.331
     },
+    "Momentum": {
+      "samples": 150,
+      "decisive_samples": 107,
+      "win_rate": 14.0,
+      "avg_r": -0.361
+    },
     "FVG / Order Block": {
       "samples": 150,
       "decisive_samples": 107,
@@ -24844,12 +24849,6 @@
       "decisive_samples": 103,
       "win_rate": 13.6,
       "avg_r": -0.401
-    },
-    "Momentum": {
-      "samples": 150,
-      "decisive_samples": 107,
-      "win_rate": 14.0,
-      "avg_r": -0.361
     },
     "Trend following": {
       "samples": 143,
