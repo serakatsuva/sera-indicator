@@ -1,17 +1,17 @@
 {
  "schema": "sera-crypto-v1",
- "updated_at": "2026-11-21T02:14:27.667Z",
+ "updated_at": "2026-11-21T09:53:23.690Z",
  "rule": "strict",
  "note": "Score moteur non calibré. Mesure : voir research/crypto_backtest.cjs (ETH 1 an : 62 trades, 50 % gagnants, -0,06 R/trade avant frais).",
  "markets": [
   {
    "symbol": "cryBTCUSD",
    "name": "BTC/USD",
-   "price": 59002.156,
-   "verdict": "ATTENDRE",
+   "price": 57879.326,
+   "verdict": "SELL",
    "side": "SELL",
-   "score": 0,
-   "reason": "Pas de rebond H1 : attendre un RSI H1 entre 45 et 65",
+   "score": 90,
+   "reason": "H1, H4 et D1 alignés, repli H1 validé",
    "tf": {
     "h1": -1,
     "h4": -1,
@@ -20,25 +20,36 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 62, tendance forte).",
-     "H4 baissier (ADX 47, tendance forte).",
-     "H1 baissier · RSI 24 (survente).",
-     "Volatilité : ATR H1 = 1.47 % du prix, ATR H4 = 2.07 %.",
-     "Résistance proche 64055.9 (+8.58 %).",
-     "Support proche 58087.2 (-1.54 %).",
-     "Variation 24 h : -4.14 %."
+     "H4 baissier (ADX 65, tendance forte).",
+     "H1 baissier · RSI 46 (neutre).",
+     "Volatilité : ATR H1 = 1.69 % du prix, ATR H4 = 2.58 %.",
+     "Résistance proche 64055.9 (+10.87 %).",
+     "Support proche 57773.5 (-0.00 %).",
+     "Variation 24 h : -6.51 %."
     ],
-    "support": 58087.153,
+    "support": 57773.494,
     "resistance": 64055.95
-   }
+   },
+   "entry": 57775.968,
+   "sl": 59566.906500000005,
+   "tp1": 55985.0295,
+   "tp2": 54194.09099999999,
+   "tp3": 52403.15249999999,
+   "risk": 1790.9385000000038,
+   "rr": 2,
+   "atr": 978.3475000000004,
+   "rsi": 45.61390981265472,
+   "adxD1": 62.11243851746593,
+   "adxH4": 65.12976299682418
   },
   {
    "symbol": "cryETHUSD",
    "name": "ETH/USD",
-   "price": 1625.365,
-   "verdict": "ATTENDRE",
+   "price": 1637.475,
+   "verdict": "SELL",
    "side": "SELL",
-   "score": 0,
-   "reason": "Pas de rebond H1 : attendre un RSI H1 entre 45 et 65",
+   "score": 90,
+   "reason": "H1, H4 et D1 alignés, repli H1 validé",
    "tf": {
     "h1": -1,
     "h4": -1,
@@ -47,21 +58,32 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 49, tendance forte).",
-     "H4 baissier (ADX 47, tendance forte).",
-     "H1 baissier · RSI 19 (survente).",
-     "Volatilité : ATR H1 = 1.89 % du prix, ATR H4 = 2.70 %.",
-     "Résistance proche 1816.47 (+11.78 %).",
-     "Support proche 1510.97 (-7.02 %).",
-     "Variation 24 h : -6.34 %."
+     "H4 baissier (ADX 58, tendance forte).",
+     "H1 baissier · RSI 53 (neutre).",
+     "Volatilité : ATR H1 = 1.88 % du prix, ATR H4 = 3.15 %.",
+     "Résistance proche 1816.47 (+11.60 %).",
+     "Support proche 1510.97 (-7.17 %).",
+     "Variation 24 h : -7.03 %."
     ],
     "support": 1510.975,
     "resistance": 1816.475
-   }
+   },
+   "entry": 1627.645,
+   "sl": 1765.2260142857142,
+   "tp1": 1490.0639857142858,
+   "tp2": 1352.4829714285715,
+   "tp3": 1214.9019571428573,
+   "risk": 137.58101428571422,
+   "rr": 2,
+   "atr": 30.605071428571396,
+   "rsi": 53.04034670710213,
+   "adxD1": 48.88674548646439,
+   "adxH4": 57.86084440932417
   },
   {
    "symbol": "cryLTCUSD",
    "name": "LTC/USD",
-   "price": 40.485,
+   "price": 38.965,
    "verdict": "ATTENDRE",
    "side": "SELL",
    "score": 0,
@@ -74,21 +96,20 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 63, tendance forte).",
-     "H4 baissier (ADX 49, tendance forte).",
-     "H1 baissier · RSI 41 (momentum baissier).",
-     "Volatilité : ATR H1 = 1.62 % du prix, ATR H4 = 2.51 %.",
-     "Résistance proche 44.7750 (+10.13 %).",
-     "Support proche 40.4750 (-0.44 %).",
-     "Variation 24 h : -2.31 %."
+     "H4 baissier (ADX 52, tendance forte).",
+     "H1 baissier · RSI 37 (momentum baissier).",
+     "Volatilité : ATR H1 = 1.94 % du prix, ATR H4 = 3.06 %.",
+     "Résistance proche 44.7750 (+15.59 %).",
+     "Variation 24 h : -7.30 %."
     ],
-    "support": 40.475,
+    "support": null,
     "resistance": 44.775
    }
   },
   {
    "symbol": "cryXRPUSD",
    "name": "XRP/USD",
-   "price": 0.9103,
+   "price": 0.8947,
    "verdict": "ATTENDRE",
    "side": "SELL",
    "score": 0,
@@ -101,21 +122,20 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 56, tendance forte).",
-     "H4 baissier (ADX 61, tendance forte).",
-     "H1 baissier · RSI 30 (survente).",
-     "Volatilité : ATR H1 = 1.72 % du prix, ATR H4 = 2.55 %.",
-     "Résistance proche 0.976200 (+7.22 %).",
-     "Support proche 0.892800 (-1.94 %).",
-     "Variation 24 h : -4.46 %."
+     "H4 baissier (ADX 49, tendance forte).",
+     "H1 baissier · RSI 43 (momentum baissier).",
+     "Volatilité : ATR H1 = 1.82 % du prix, ATR H4 = 2.97 %.",
+     "Résistance proche 0.976200 (+10.17 %).",
+     "Variation 24 h : -7.65 %."
     ],
-    "support": 0.8928,
+    "support": null,
     "resistance": 0.9762
    }
   },
   {
    "symbol": "cryBNBUSD",
    "name": "BNB/USD",
-   "price": 539.455,
+   "price": 525.595,
    "verdict": "ATTENDRE",
    "side": "SELL",
    "score": 0,
@@ -128,21 +148,20 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 64, tendance forte).",
-     "H4 baissier (ADX 38, tendance forte).",
-     "H1 baissier · RSI 19 (survente).",
-     "Volatilité : ATR H1 = 1.42 % du prix, ATR H4 = 2.03 %.",
-     "Résistance proche 594.295 (+10.22 %).",
-     "Support proche 537.610 (-0.30 %).",
-     "Variation 24 h : -5.95 %."
+     "H4 baissier (ADX 55, tendance forte).",
+     "H1 baissier · RSI 37 (momentum baissier).",
+     "Volatilité : ATR H1 = 1.60 % du prix, ATR H4 = 2.55 %.",
+     "Résistance proche 594.295 (+13.87 %).",
+     "Variation 24 h : -8.73 %."
     ],
-    "support": 537.61,
+    "support": null,
     "resistance": 594.295
    }
   },
   {
    "symbol": "crySOLUSD",
    "name": "SOL/USD",
-   "price": 68.76,
+   "price": 67.99,
    "verdict": "ATTENDRE",
    "side": "SELL",
    "score": 0,
@@ -155,14 +174,14 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 65, tendance forte).",
-     "H4 baissier (ADX 54, tendance forte).",
-     "H1 baissier · RSI 34 (momentum baissier).",
-     "Volatilité : ATR H1 = 1.80 % du prix, ATR H4 = 2.64 %.",
-     "Résistance proche 72.8900 (+5.96 %).",
-     "Support proche 67.3900 (-2.04 %).",
-     "Variation 24 h : -4.56 %."
+     "H4 baissier (ADX 46, tendance forte).",
+     "H1 baissier · RSI 43 (momentum baissier).",
+     "Volatilité : ATR H1 = 1.95 % du prix, ATR H4 = 3.05 %.",
+     "Résistance proche 72.8900 (+8.39 %).",
+     "Support proche 64.0200 (-4.80 %).",
+     "Variation 24 h : -7.24 %."
     ],
-    "support": 67.39,
+    "support": 64.02,
     "resistance": 72.89
    }
   },
@@ -182,9 +201,9 @@
    "detail": {
     "lines": [
      "D1 baissier (ADX 100, tendance forte).",
-     "H4 baissier (ADX 50, tendance forte).",
-     "H1 sans tendance claire · RSI 0 (survente).",
-     "Volatilité : ATR H1 = 1.02 % du prix, ATR H4 = 1.02 %.",
+     "H4 baissier (ADX 67, tendance forte).",
+     "H1 sans tendance claire · RSI 50 (neutre).",
+     "Volatilité : ATR H1 = 2.04 % du prix, ATR H4 = 2.04 %.",
      "Résistance proche 0.160000 (+14.29 %).",
      "Variation 24 h : -6.67 %."
     ],
