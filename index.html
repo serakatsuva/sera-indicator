@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="./weltrade.css?v=weltrade-20261101e">
   <link rel="stylesheet" href="./crypto.css?v=crypto-20261106">
   <link rel="stylesheet" href="./copilot.css?v=copilot-20261105">
+  <link rel="stylesheet" href="./positions.css?v=positions-20261122">
   <link rel="stylesheet" href="./theme.css?v=theme-20261105">
 </head>
 <body>
@@ -80,6 +81,7 @@
       <a href="#scanner">Voir les signaux</a>
       <a href="#weltrade">Weltrade</a>
       <a href="#playbook">Stratégie mesurée</a>
+      <a href="#positions">Positions</a>
     </section>
 
     <section class="execution-panel panel compact-execution" id="mt5Execution">
@@ -227,6 +229,21 @@
       <p class="pb-baseline" id="pbBaseline"></p>
     </section>
 
+    <section class="scanner-panel panel positions-panel" id="positions">
+      <div class="wt-heading">
+        <div><span class="eyebrow cyan">APA + MSNR</span><h2>Positions anticipées</h2></div>
+      </div>
+      <p class="pos-intro">Uniquement des anticipations de positions : price action (APA) et niveaux MSNR (OCL d’une grande unité de temps confirmé par un SNR de l’unité inférieure : Classic A/V, RBS/SBR, QML, dans le sens de la structure).
+        Ce ne sont pas des ordres. La qualité est un score heuristique, pas une probabilité de gain ; testez toujours en démo d’abord.</p>
+      <div class="pos-filters">
+        <label>Marché<select id="posMarket"><option value="">Tous</option></select></label>
+        <label>Méthode<select id="posMethod"><option value="">APA + MSNR</option><option value="MSNR">MSNR</option><option value="APA">APA</option></select></label>
+        <label>Sens<select id="posSide"><option value="">Tous</option><option value="BUY">BUY</option><option value="SELL">SELL</option></select></label>
+      </div>
+      <div id="posNotice" class="notice loading">Chargement des positions…</div>
+      <div id="posList" class="wt-grid" aria-live="polite"></div>
+    </section>
+
     <div class="signal-modal" id="signalModal" hidden aria-hidden="true">
       <div class="signal-modal-backdrop" id="signalModalBackdrop"></div>
       <div class="signal-modal-content" role="dialog" aria-modal="true" aria-labelledby="signalModalTitle">
@@ -369,5 +386,6 @@
   <script src="./crypto-engine.js?v=crypto-20261106" defer></script>
   <script src="./crypto.js?v=crypto-20261106" defer></script>
   <script src="./playbook.js?v=playbook-20261101c" defer></script>
+  <script src="./positions.js?v=positions-20261122" defer></script>
 </body>
 </html>

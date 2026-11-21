@@ -2,8 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {driftPlaybook,driftProfile} from './drift-playbook.mjs';
+import {msnrPositions} from './msnr-engine.mjs';
 
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
+const POSITIONS_OUTPUT=path.join(process.cwd(),'data','positions-signals.json');
 const PLAYBOOK_OUTPUT=path.join(process.cwd(),'data','playbook-signals.json');
 const PLAYBOOK_STATS=path.join(process.cwd(),'data','playbook-stats.json');
 const CANDLES_OUTPUT=process.env.CANDLES_OUTPUT||'';
@@ -1275,6 +1277,7 @@ async function main(){
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
   await fs.writeFile(OUTPUT,JSON.stringify(payload,null,2));
   await writePlaybook(candles,payload.updated_at);
+  await writePositions(candles,markets,payload.updated_at);
   console.log(`Wrote ${markets.length} analyses; ${trendChanges} trend change(s), ${trendFlips} flip(s); ${payload.confirmed_signals} confirmed signals.`);
 }
 
@@ -1315,8 +1318,45 @@ async function writePlaybook(candles,updatedAt){
   console.log(`Drift Playbook: ${rows.length} markets, ${out.signals} active signal(s).`);
 }
 
+// Positions page (data/positions-signals.json): only anticipated positions — APA (price action) and MSNR (OCL + SNR).
+// Anticipations, not orders; quality is a heuristic score, not a win probability.
+function positionRows(candles,rows,metas=MARKETS){
+  const out=[];
+  const closed=(symbol,tf,seconds)=>onlyClosedCandles(candles.get(`${symbol}:${tf}`)||[],seconds);
+  for(const meta of metas){
+    const series={D1:closed(meta.symbol,'D1',86400),H4:closed(meta.symbol,'H4',14400),
+      H1:closed(meta.symbol,'H1',3600),M15:closed(meta.symbol,'M15',900)};
+    const price=series.M15.at(-1)?.close??series.H1.at(-1)?.close;
+    const positions=[];
+    for(const position of msnrPositions(series))positions.push(position);
+    for(const row of rows.filter(r=>r.symbol===meta.symbol&&r.apa?.positions?.length)){
+      for(const position of row.apa.positions)
+        positions.push({method:'APA',setup:`APA ${String(position.pattern).replace('_',' ')}`,tf:row.mode==='swing'?'H1':'M15',
+          mode:row.mode,side:position.side,order:position.order||'LIMIT',status:position.status||'WAIT_RETEST',trigger:position.trigger??null,
+          entry:position.entry,zone_min:position.zone_min??position.entry,zone_max:position.zone_max??position.entry,
+          sl:position.sl,tp1:position.tp1,tp2:position.tp2,rr1:position.rr1,rr2:position.rr2,
+          quality:position.quality,aligned:Boolean(position.aligned),trend_side:row.apa.trend_side});
+    }
+    if(!positions.length)continue;
+    positions.sort((a,b)=>b.quality-a.quality);
+    out.push({id:`${meta.symbol}:positions`,market:meta.market,symbol:meta.symbol,family:meta.family,price:price??null,
+      positions:positions.slice(0,6)});
+  }
+  return out;
+}
+
+async function writePositions(candles,rows,updatedAt){
+  const list=positionRows(candles,rows);
+  const count=list.reduce((n,m)=>n+m.positions.length,0);
+  const out={updated_at:updatedAt,strategy:'Sera Positions (APA + MSNR)',
+    disclaimer:'Anticipations de positions, pas des ordres. Qualité = score heuristique, pas une probabilité de gain.',
+    positions:count,markets:list};
+  await fs.writeFile(POSITIONS_OUTPUT,JSON.stringify(out,null,1));
+  console.log(`Positions: ${count} anticipated position(s) on ${list.length} market(s).`);
+}
+
 // Importable by the backtester (scripts/backtest.mjs): run only when executed directly.
 export {inspectCandles,technicalSetup,attachTrendMemory,buildFamilyContexts,attachFamilyContext,autonomousDecision,finalize,
-  buildLevels,aggregateCandles,onlyClosedCandles,MODES,marketFamilyFromName,marketSpikeBias,playbookRows};
+  buildLevels,aggregateCandles,onlyClosedCandles,MODES,marketFamilyFromName,marketSpikeBias,playbookRows,positionRows};
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href)
   main().catch(error=>{console.error(error instanceof Error?error.message:error);process.exit(1);});
