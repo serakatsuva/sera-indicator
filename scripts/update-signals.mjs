@@ -3,6 +3,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {driftPlaybook,driftProfile} from './drift-playbook.mjs';
 import {msnrPositions} from './msnr-engine.mjs';
+import {positionPhase} from './position-phase.mjs';
 
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const POSITIONS_OUTPUT=path.join(process.cwd(),'data','positions-signals.json');
@@ -1394,8 +1395,11 @@ function positionRows(candles,rows,metas=MARKETS){
           sl:position.sl,tp1:position.tp1,tp2:position.tp2,rr1:position.rr1,rr2:position.rr2,
           quality:position.quality,aligned:Boolean(position.aligned),trend_side:row.apa.trend_side});
     }
+    const ORDER={NOW:0,PREP:1,UPCOMING:2};
+    const live=positions.map(x=>({...x,phase:positionPhase(x,price)})).filter(x=>x.phase!=='PASSED');
+    positions.length=0;positions.push(...live);
     if(!positions.length)continue;
-    positions.sort((a,b)=>b.quality-a.quality);
+    positions.sort((a,b)=>ORDER[a.phase]-ORDER[b.phase]||b.quality-a.quality);
     out.push({id:`${meta.symbol}:positions`,market:meta.market,symbol:meta.symbol,family:meta.family,price:price??null,
       positions:positions.slice(0,8)});
   }
