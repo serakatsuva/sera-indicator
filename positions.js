@@ -9,6 +9,7 @@
   const price=v=>{const n=num(v);if(n===null)return "—";return n.toLocaleString("fr-FR",{maximumFractionDigits:Math.abs(n)>=1000?2:Math.abs(n)>=10?3:5});};
   const STATUS={IN_ZONE:"Dans la zone",WAIT_RETEST:"Attendre le retest",ARMED:"Armée (déclencheur)"};
   const state={data:null,market:"",method:"",side:""};
+  let registry=[];
 
   async function load(){
     for(const url of [`${RAW}positions-signals.json?t=${Date.now()}`,`./data/positions-signals.json?t=${Date.now()}`]){
@@ -28,7 +29,7 @@
     return `prix à ${dist.toLocaleString("fr-FR",{maximumFractionDigits:1})} R de l’entrée`;
   }
 
-  function card(m,p){
+  function card(m,p,idx){
     const cls=p.side==="BUY"?"buy":"sell";
     const q=Math.max(0,Math.min(95,Number(p.quality)||0));
     const tags=[p.aligned?"aligné sur la structure":"contre / hors structure",p.liquidity_swept?"liquidité prise":"",p.ocl_double?"OCL double":""].filter(Boolean);
@@ -43,6 +44,7 @@
       </div>
       <div class="wt-meta"><span>${esc(STATUS[p.status]||p.status)}</span><span>R:R ${esc(p.rr1)} / ${esc(p.rr2)}</span><span>${esc(p.method)}</span></div>
       <p class="pos-note">${esc(tags.join(" · "))}${live(p,m.price)?` — ${esc(live(p,m.price))}`:""}</p>
+      <button type="button" class="pos-btn" data-pos-open="${idx}">📈 Voir le graphique</button>
     </article>`;
   }
 
@@ -63,11 +65,18 @@
       }
     }
     items.sort((a,b)=>b.p.quality-a.p.quality);
-    list.innerHTML=items.length?items.map(x=>card(x.m,x.p)).join(""):`<p class="wt-empty">Aucune position anticipée avec ces filtres.</p>`;
+    registry=items;
+    list.innerHTML=items.length?items.map((x,i)=>card(x.m,x.p,i)).join(""):`<p class="wt-empty">Aucune position anticipée avec ces filtres.</p>`;
     if(note){note.className="notice";note.textContent=`${items.length} position(s) affichée(s) · mise à jour ${d.updated_at?new Date(d.updated_at).toLocaleString("fr-FR"):"—"} · ${d.disclaimer||""}`;}
   }
 
   function bind(){
+    const list=$("posList");
+    if(list)list.addEventListener("click",e=>{
+      const b=e.target.closest("[data-pos-open]");if(!b)return;
+      const it=registry[Number(b.dataset.posOpen)];
+      if(it&&window.SeraPositionChart)window.SeraPositionChart.open(it.m,it.p);
+    });
     for(const [id,key] of [["posMarket","market"],["posMethod","method"],["posSide","side"]]){
       const el=$(id);if(el)el.addEventListener("change",()=>{state[key]=el.value;render();});
     }

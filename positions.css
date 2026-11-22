@@ -12,3 +12,26 @@
 .positions-panel{display:none}
 body.view-positions main.shell>:not(#positions):not(#viewTabs){display:none!important}
 body.view-positions .positions-panel{display:block}
+.pos-btn{margin-top:10px;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:inherit;font:inherit;font-size:12px;cursor:pointer}
+.pos-modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center}
+.pos-modal[hidden]{display:none}
+.pos-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.7)}
+.pos-modal-card{position:relative;width:min(960px,96vw);max-height:94vh;background:#0e1420;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.pos-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.pos-modal-head small{opacity:.7;margin-left:6px}
+.pos-modal-close{border:0;background:none;color:inherit;font-size:18px;cursor:pointer}
+.pos-chart-host{position:relative;height:min(68vh,560px)}
+.pos-chart{position:absolute;inset:0}
+.pos-overlay{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.pos-box{position:absolute}
+.pos-box.risk{background:rgba(255,95,118,.22)}
+.pos-box.reward{background:rgba(190,190,190,.42)}
+.pos-hline{position:absolute;height:0;border-top:1px solid rgba(232,237,245,.85)}
+.pos-hline span{position:absolute;right:6px;top:-14px;font-size:10px;color:#e8edf5;background:rgba(14,20,32,.55);padding:0 3px}
+.pos-hline.entry{border-top-color:#8a93a6}
+.pos-hline.tp2{border-top:1px dashed rgba(111,179,163,.8)}
+.pos-hline.key,.pos-hline.inv{border-top-color:rgba(232,237,245,.7)}
+.pos-hline.key span,.pos-hline.inv span{right:auto;left:30%}
+.pos-arrow{position:absolute;left:0;top:0;pointer-events:none}
+.pos-chart-note{font-size:11px;opacity:.75;margin:0}
+body.pos-modal-open{overflow:hidden}
