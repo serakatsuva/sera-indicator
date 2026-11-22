@@ -1,5 +1,5 @@
 // Sera Indicator — page « Positions » : uniquement les anticipations APA (price action) et MSNR (OCL + SNR).
-// Lit data/positions-signals.json. Anticipations, pas des ordres : la qualité est un score heuristique.
+// Lit data/positions-signals.json. Anticipations, pas des ordres : la fiabilité vient de mesures (data/msnr-stats.json).
 (function(){
   "use strict";
   const RAW="https://raw.githubusercontent.com/serakatsuva/sera-indicator/main/data/";
@@ -8,7 +8,7 @@
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
   const price=v=>{const n=num(v);if(n===null)return "—";return n.toLocaleString("fr-FR",{maximumFractionDigits:Math.abs(n)>=1000?2:Math.abs(n)>=10?3:5});};
   const STATUS={IN_ZONE:"Dans la zone",WAIT_RETEST:"Attendre le retest",ARMED:"Armée (déclencheur)"};
-  const state={data:null,market:"",method:"",side:"",style:"",phase:""};
+  const state={data:null,market:"",method:"",side:"",style:"",phase:"",rel:"edge"};
   let registry=[];
 
   async function load(){
@@ -62,6 +62,9 @@
   function setLiveBadge(on){const b=$("posLive");if(b){b.textContent=on?"● Prix en direct":"○ Prix publié (connexion…)";b.className="pos-live "+(on?"on":"off");}}
   window.SeraLive={get:s=>livePrice.get(s),subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);}};
 
+  const REL_LABEL={EDGE:"Avantage mesuré",PARTIAL:"Avantage sur 2 mois seulement",NEUTRAL:"Sans avantage net",NEGATIVE:"Perdant sur l’historique",UNMEASURED:"Non mesuré"};
+  const REL_ORDER={EDGE:0,PARTIAL:1,NEUTRAL:2,UNMEASURED:3,NEGATIVE:4};
+  const relOf=p=>p.reliability||"UNMEASURED";
   const PHASE_LABEL={NOW:"Entrer maintenant",PREP:"En préparation",UPCOMING:"À venir"};
   const PHASE_ORDER={NOW:0,PREP:1,UPCOMING:2};
 
@@ -76,6 +79,12 @@
     return `prix à ${dist.toLocaleString("fr-FR",{maximumFractionDigits:1})} R de l’entrée`;
   }
 
+  function relBlock(p){
+    const rel=relOf(p),mm=p.measured;
+    const line=mm?`Mesuré sur un an : TP1 atteint ${String(mm.tp1_rate).replace(".",",")} % (équilibre ${String(mm.breakeven_rate).replace(".",",")} %), ${mm.exp_r>=0?"+":""}${String(mm.exp_r).replace(".",",")} R par trade`:(p.method==="APA"?"Price action : pas encore mesuré":"Pas assez de recul pour mesurer");
+    return `<div class="pos-rel ${esc(rel)}"><b>${esc(REL_LABEL[rel])}</b><small>${esc(line)}</small></div>`;
+  }
+
   function card(m,p,idx,phase){
     const cls=p.side==="BUY"?"buy":"sell";
     const q=Math.max(0,Math.min(95,Number(p.quality)||0));
@@ -83,7 +92,7 @@
     return `<article class="wt-card ${cls} pos-card" data-pos-market="${esc(m.market)}">
       <div class="wt-top"><div><h3>${esc(m.market)}</h3><p>${esc(p.setup)} · ${esc(p.tf)}</p></div><span class="wt-signal ${cls}">${esc(p.side)}</span></div>
       <div class="pos-phase ${esc(phase)}">${esc(PHASE_LABEL[phase]||"")}</div> <span class="pos-px">Prix ${price(priceOf(m))}</span>
-      <div class="pos-quality" title="Score heuristique, pas une probabilité de gain"><i style="width:${q/0.95}%"></i><span>Qualité ${q}/95</span></div>
+      ${relBlock(p)}
       <div class="wt-levels">
         <div><small>${esc(p.order==="STOP"?"Entrée (stop)":"Entrée (limite)")}</small><strong>${price(p.entry)}</strong></div>
         <div class="danger"><small>SL</small><strong>${price(p.sl)}</strong></div>
@@ -110,13 +119,15 @@
         if(state.method&&p.method!==state.method)continue;
         if(state.side&&p.side!==state.side)continue;
         if(state.style&&p.mode!==state.style)continue;
+        const rel=relOf(p);
+        if(state.rel==="edge"&&rel!=="EDGE"&&rel!=="PARTIAL")continue;
         const phase=phaseOf(p,priceOf(m));
         if(phase==="PASSED")continue;
         if(state.phase&&phase!==state.phase)continue;
         items.push({m,p,phase});
       }
     }
-    items.sort((a,b)=>PHASE_ORDER[a.phase]-PHASE_ORDER[b.phase]||b.p.quality-a.p.quality);
+    items.sort((a,b)=>PHASE_ORDER[a.phase]-PHASE_ORDER[b.phase]||REL_ORDER[relOf(a.p)]-REL_ORDER[relOf(b.p)]||b.p.quality-a.p.quality);
     registry=items;
     list.innerHTML=items.length?items.map((x,i)=>card(x.m,x.p,i,x.phase)).join(""):`<p class="wt-empty">Aucune position anticipée avec ces filtres.</p>`;
     if(note){note.className="notice";note.textContent=`${items.length} position(s) affichée(s) · mise à jour ${d.updated_at?new Date(d.updated_at).toLocaleString("fr-FR"):"—"} · ${d.disclaimer||""}`;}
@@ -129,7 +140,7 @@
       const it=registry[Number(b.dataset.posOpen)];
       if(it&&window.SeraPositionChart)window.SeraPositionChart.open(it.m,it.p);
     });
-    for(const [id,key] of [["posMarket","market"],["posMethod","method"],["posSide","side"],["posStyle","style"],["posPhase","phase"]]){
+    for(const [id,key] of [["posMarket","market"],["posMethod","method"],["posSide","side"],["posStyle","style"],["posPhase","phase"],["posRel","rel"]]){
       const el=$(id);if(el)el.addEventListener("change",()=>{state[key]=el.value;render();});
     }
   }
