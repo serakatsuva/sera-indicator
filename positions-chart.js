@@ -4,7 +4,7 @@
 (function(){
   "use strict";
   const WS_URL="wss://api.derivws.com/trading/v1/options/ws/public?app_id=1089";
-  const TF_SECONDS={M15:900,H1:3600,H4:14400,D1:86400};
+  const TF_SECONDS={M1:60,M5:300,M15:900,M30:1800,H1:3600,H4:14400,D1:86400};
   const FUTURE_BARS=38;
   const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
   const fmt=v=>{const n=Number(v);if(!Number.isFinite(n))return "—";return n.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:Math.abs(n)>=1000?2:Math.abs(n)>=10?3:5});};

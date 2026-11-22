@@ -8,7 +8,7 @@
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
   const price=v=>{const n=num(v);if(n===null)return "—";return n.toLocaleString("fr-FR",{maximumFractionDigits:Math.abs(n)>=1000?2:Math.abs(n)>=10?3:5});};
   const STATUS={IN_ZONE:"Dans la zone",WAIT_RETEST:"Attendre le retest",ARMED:"Armée (déclencheur)"};
-  const state={data:null,market:"",method:"",side:""};
+  const state={data:null,market:"",method:"",side:"",style:""};
   let registry=[];
 
   async function load(){
@@ -61,6 +61,7 @@
       for(const p of m.positions){
         if(state.method&&p.method!==state.method)continue;
         if(state.side&&p.side!==state.side)continue;
+        if(state.style&&p.mode!==state.style)continue;
         items.push({m,p});
       }
     }
@@ -77,7 +78,7 @@
       const it=registry[Number(b.dataset.posOpen)];
       if(it&&window.SeraPositionChart)window.SeraPositionChart.open(it.m,it.p);
     });
-    for(const [id,key] of [["posMarket","market"],["posMethod","method"],["posSide","side"]]){
+    for(const [id,key] of [["posMarket","market"],["posMethod","method"],["posSide","side"],["posStyle","style"]]){
       const el=$(id);if(el)el.addEventListener("change",()=>{state[key]=el.value;render();});
     }
   }

@@ -5,9 +5,12 @@
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 
 export const MSNR_PAIRS=[
+  {high:'W1',low:'D1',mode:'long',label:'OCL W1 + SNR D1'},
   {high:'D1',low:'H4',mode:'swing',label:'OCL D1 + SNR H4'},
   {high:'H4',low:'H1',mode:'swing',label:'OCL H4 + SNR H1'},
-  {high:'H1',low:'M15',mode:'day',label:'OCL H1 + SNR M15'}
+  {high:'H1',low:'M15',mode:'day',label:'OCL H1 + SNR M15'},
+  {high:'M30',low:'M5',mode:'scalp',label:'OCL M30 + SNR M5',minQuality:65},
+  {high:'M15',low:'M1',mode:'scalp',label:'OCL M15 + SNR M1',minQuality:65}
 ];
 
 export function atrOf(c,n=14){
@@ -163,9 +166,9 @@ export function msnrPositions(candles){
       }
     }
     found.sort((a,b)=>b.quality-a.quality);
-    for(const position of found){
+    for(const position of found.filter(x=>x.quality>=(pair.minQuality||0))){
       if(!result.some(r=>r.side===position.side&&r.tf===position.tf&&Math.abs(r.entry-position.entry)<=atrL*.5))result.push(position);
     }
   }
-  return result.sort((a,b)=>b.quality-a.quality).slice(0,4);
+  return result.sort((a,b)=>b.quality-a.quality).slice(0,8);
 }
