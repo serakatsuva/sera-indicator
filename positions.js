@@ -35,6 +35,33 @@
     if(!onTarget)return "PASSED";
     return dist<=1.5?"PREP":"UPCOMING";
   }
+  // Prix en direct (ticks Deriv) — remplace le prix publié dès qu'un tick arrive.
+  const WS_URL="wss://api.derivws.com/trading/v1/options/ws/public?app_id=1089";
+  const livePrice=new Map(),listeners=new Set();
+  let liveWs=null,liveSymbols=[],liveRetry=0,liveDirty=false;
+  const priceOf=m=>livePrice.has(m.symbol)?livePrice.get(m.symbol):m.price;
+  function startLive(symbols){
+    const list=[...new Set(symbols)].sort();
+    if(liveWs&&list.join()===liveSymbols.join())return;
+    liveSymbols=list;
+    if(liveWs){try{liveWs.close();}catch(e){}liveWs=null;}
+    if(!list.length)return;
+    let ws;try{ws=new WebSocket(WS_URL);}catch(e){return;}
+    liveWs=ws;
+    ws.addEventListener("open",()=>{liveRetry=0;list.forEach(s=>ws.send(JSON.stringify({ticks:s,subscribe:1}))); setLiveBadge(true);});
+    ws.addEventListener("message",ev=>{
+      let msg;try{msg=JSON.parse(ev.data);}catch(e){return;}
+      const t=msg.tick;if(!t||!t.symbol)return;
+      const q=Number(t.quote);if(!Number.isFinite(q))return;
+      livePrice.set(t.symbol,q);liveDirty=true;
+      listeners.forEach(fn=>{try{fn(t.symbol,q,Number(t.epoch));}catch(e){}});
+    });
+    const retry=()=>{if(liveWs!==ws)return;liveWs=null;setLiveBadge(false);liveRetry=Math.min(liveRetry+1,6);setTimeout(()=>startLive(liveSymbols.slice()),1000*2**liveRetry);};
+    ws.addEventListener("close",retry);ws.addEventListener("error",()=>{try{ws.close();}catch(e){}});
+  }
+  function setLiveBadge(on){const b=$("posLive");if(b){b.textContent=on?"● Prix en direct":"○ Prix publié (connexion…)";b.className="pos-live "+(on?"on":"off");}}
+  window.SeraLive={get:s=>livePrice.get(s),subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);}};
+
   const PHASE_LABEL={NOW:"Entrer maintenant",PREP:"En préparation",UPCOMING:"À venir"};
   const PHASE_ORDER={NOW:0,PREP:1,UPCOMING:2};
 
@@ -55,7 +82,7 @@
     const tags=[p.aligned?"aligné sur la structure":"contre / hors structure",p.liquidity_swept?"liquidité prise":"",p.ocl_double?"OCL double":""].filter(Boolean);
     return `<article class="wt-card ${cls} pos-card" data-pos-market="${esc(m.market)}">
       <div class="wt-top"><div><h3>${esc(m.market)}</h3><p>${esc(p.setup)} · ${esc(p.tf)}</p></div><span class="wt-signal ${cls}">${esc(p.side)}</span></div>
-      <div class="pos-phase ${esc(phase)}">${esc(PHASE_LABEL[phase]||"")}</div>
+      <div class="pos-phase ${esc(phase)}">${esc(PHASE_LABEL[phase]||"")}</div> <span class="pos-px">Prix ${price(priceOf(m))}</span>
       <div class="pos-quality" title="Score heuristique, pas une probabilité de gain"><i style="width:${q/0.95}%"></i><span>Qualité ${q}/95</span></div>
       <div class="wt-levels">
         <div><small>${esc(p.order==="STOP"?"Entrée (stop)":"Entrée (limite)")}</small><strong>${price(p.entry)}</strong></div>
@@ -64,7 +91,7 @@
         <div><small>TP2</small><strong>${price(p.tp2)}</strong></div>
       </div>
       <div class="wt-meta"><span>${esc(STATUS[p.status]||p.status)}</span><span>R:R ${esc(p.rr1)} / ${esc(p.rr2)}</span><span>${esc(p.method)}</span></div>
-      <p class="pos-note">${esc(tags.join(" · "))}${live(p,m.price)?` — ${esc(live(p,m.price))}`:""}</p>
+      <p class="pos-note">${esc(tags.join(" · "))}${live(p,priceOf(m))?` — ${esc(live(p,priceOf(m)))}`:""}</p>
       <button type="button" class="pos-btn" data-pos-open="${idx}">📈 Voir le graphique</button>
     </article>`;
   }
@@ -83,7 +110,7 @@
         if(state.method&&p.method!==state.method)continue;
         if(state.side&&p.side!==state.side)continue;
         if(state.style&&p.mode!==state.style)continue;
-        const phase=phaseOf(p,m.price);
+        const phase=phaseOf(p,priceOf(m));
         if(phase==="PASSED")continue;
         if(state.phase&&phase!==state.phase)continue;
         items.push({m,p,phase});
@@ -126,7 +153,9 @@
     bind();
     state.data=await load();
     render();
-    setInterval(async()=>{const d=await load();if(d){state.data=d;render();}},120000);
+    startLive((state.data?.markets||[]).map(m=>m.symbol));
+    setInterval(()=>{if(liveDirty&&!document.hidden){liveDirty=false;render();}},5000);
+    setInterval(async()=>{const d=await load();if(d){state.data=d;render();startLive(d.markets.map(m=>m.symbol));}},120000);
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
 })();
