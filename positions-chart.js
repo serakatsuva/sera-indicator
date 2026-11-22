@@ -8,7 +8,8 @@
   const FUTURE_BARS=38;
   const esc=v=>String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
   const fmt=v=>{const n=Number(v);if(!Number.isFinite(n))return "—";return n.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:Math.abs(n)>=1000?2:Math.abs(n)>=10?3:5});};
-  let modal=null,chart=null,series=null,overlay=null,current=null,data=[],ro=null;
+  let modal=null,chart=null,series=null,overlay=null,current=null,data=[],ro=null,refreshTimer=null,unsub=null,lowSec=900;
+  const REFRESH_MS=300000; // le graphique se remet à jour toutes les 5 minutes
 
   function tfs(p){
     const parts=String(p.tf||"").split("/");
@@ -54,6 +55,8 @@
     if(!modal)return;
     modal.hidden=true;document.body.classList.remove("pos-modal-open");
     if(ro){ro.disconnect();ro=null;}
+    if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null;}
+    if(unsub){unsub();unsub=null;}
     if(chart){try{chart.remove();}catch(e){}chart=null;series=null;}
     current=null;
   }
@@ -98,6 +101,11 @@
     if(Number.isFinite(Number(p.tp2)))pl(p.tp2,"#6fb3a3","TP2",L.LineStyle.Dotted);
   }
 
+  function stamp(note,what){
+    const t=new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+    note.textContent=`Anticipation, pas un ordre : boîte rouge = risque (entrée → SL), grise = objectif (entrée → TP1). Prix en direct ; bougies ${what} à ${t}, remises à jour toutes les 5 min. Qualité = score heuristique.`;
+  }
+
   async function open(m,p){
     const L=window.LightweightCharts;
     ensureModal();
@@ -116,7 +124,7 @@
       return;
     }
     if(!current||current.p!==p||modal.hidden)return;
-    data=rows;
+    data=rows;lowSec=TF_SECONDS[low];
     const host=modal.querySelector("#posChart");
     chart=L.createChart(host,{autoSize:true,
       layout:{background:{type:L.ColorType.Solid,color:"transparent"},textColor:"#8fa3b8",fontSize:11,fontFamily:"JetBrains Mono, monospace"},
@@ -131,12 +139,32 @@
     series.setData(rows);
     addLevels();
     chart.timeScale().scrollToPosition(FUTURE_BARS+4,false);
-    note.textContent="Anticipation, pas un ordre : la boîte rouge est le risque (entrée → SL), la grise l’objectif (entrée → TP1). Qualité = score heuristique.";
     const redraw=()=>requestAnimationFrame(draw);
     chart.timeScale().subscribeVisibleLogicalRangeChange(redraw);
     chart.subscribeCrosshairMove(redraw);
     ro=new ResizeObserver(redraw);ro.observe(host);
     redraw();setTimeout(draw,150);
+    stamp(note,"chargées");
+    // Ticks en direct : prolongent la dernière bougie ou en ouvrent une nouvelle.
+    if(window.SeraLive)unsub=window.SeraLive.subscribe((symbol,quote,epoch)=>{
+      if(!series||!current||symbol!==m.symbol||!data.length)return;
+      const bucket=Math.floor((epoch||Date.now()/1000)/lowSec)*lowSec,last=data[data.length-1];
+      if(bucket<last.time)return;
+      const c=bucket===last.time?{time:last.time,open:last.open,high:Math.max(last.high,quote),low:Math.min(last.low,quote),close:quote}
+        :{time:bucket,open:last.close,high:Math.max(last.close,quote),low:Math.min(last.close,quote),close:quote};
+      if(bucket===last.time)data[data.length-1]=c;else data.push(c);
+      try{series.update(c);}catch(e){return;}
+      redraw();
+    });
+    // Rafraîchissement complet toutes les 5 minutes (remplace les bougies par celles de Deriv).
+    refreshTimer=setInterval(async()=>{
+      if(!current||current.p!==p||modal.hidden)return;
+      try{
+        const fresh=await fetchCandles(m.symbol,low);
+        if(!current||current.p!==p||!series||!fresh.length)return;
+        data=fresh;series.setData(fresh);redraw();stamp(note,"mises à jour");
+      }catch(e){/* on garde les bougies actuelles */}
+    },REFRESH_MS);
   }
 
   window.SeraPositionChart={open,close};
