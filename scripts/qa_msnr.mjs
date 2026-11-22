@@ -9,7 +9,8 @@ function gen(n,seed,step,base=1000,vol=6){
 }
 let total=0;
 for(const seed of [1,2,3,4,5,6,7,8]){
-  const c={D1:gen(200,seed,.8,1000,14),H4:gen(300,seed+10,.5,1000,10),H1:gen(300,seed+20,.3,1000,6),M15:gen(300,seed+30,.2,1000,3)};
+  const c={D1:gen(200,seed,.8,1000,14),H4:gen(300,seed+10,.5,1000,10),H1:gen(300,seed+20,.3,1000,6),M15:gen(300,seed+30,.2,1000,3),
+    W1:gen(120,seed+40,1.2,1000,25),M30:gen(300,seed+50,.15,1000,2),M5:gen(400,seed+60,.1,1000,1),M1:gen(400,seed+70,.05,1000,.5)};
   const pos=msnrPositions(c);total+=pos.length;
   for(const p of pos){
     const d=p.side==='BUY'?1:-1;
@@ -17,4 +18,6 @@ for(const seed of [1,2,3,4,5,6,7,8]){
     if(p.quality<0||p.quality>95)throw new Error('quality');
   }
 }
-console.log('ok positions',total);
+const modes=new Set();
+for(const seed of [1,2,3,4,5,6,7,8,9,10,11,12]){const c={D1:gen(200,seed,.8,1000,14),H4:gen(300,seed+10,.5,1000,10),H1:gen(300,seed+20,.3,1000,6),M15:gen(300,seed+30,.2,1000,3),W1:gen(120,seed+40,1.2,1000,25),M30:gen(300,seed+50,.15,1000,2),M5:gen(400,seed+60,.1,1000,1),M1:gen(400,seed+70,.05,1000,.5)};for(const p of msnrPositions(c))modes.add(p.mode+':'+p.tf);}
+console.log('ok positions',total,[...modes].join(' '));

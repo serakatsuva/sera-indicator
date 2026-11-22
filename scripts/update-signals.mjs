@@ -539,6 +539,60 @@ async function fetchDerivCandles(){
   });
 }
 
+// Extra timeframes used only by the Positions page (fine M1/M5/M30 and long-swing W1 aggregated from D1).
+// Own connection and timeout: a failure here never blocks the main analysis, those pairs are just skipped.
+const EXTRA_TIMEFRAMES=[
+  {timeframe:'M1',granularity:60,count:400},
+  {timeframe:'M5',granularity:300,count:400},
+  {timeframe:'M30',granularity:1800,count:400},
+  {timeframe:'D1L',granularity:86400,count:1200}
+];
+const WEEK_SECONDS=604800,WEEK_OFFSET=259200; // weeks start Monday 00:00 UTC
+async function fetchDerivExtra(metas=MARKETS,timeoutMs=150000){
+  return new Promise(resolve=>{
+    const received=new Map();
+    let ws;
+    try{ws=new WebSocket(DERIV_WS);}catch{return resolve(received);}
+    const queue=metas.flatMap(meta=>EXTRA_TIMEFRAMES.map(tf=>({meta,...tf,attempt:0})));
+    const total=queue.length,requests=new Map();
+    let reqId=5000,inFlight=0,done=0,finished=false,timer=null,pumpTimer=null;
+    const finish=()=>{if(finished)return;finished=true;clearTimeout(timer);clearTimeout(pumpTimer);try{ws.close();}catch{}resolve(received);};
+    timer=setTimeout(finish,timeoutMs);
+    const pump=()=>{
+      if(finished)return;
+      if(done>=total&&inFlight===0)return finish();
+      while(inFlight<4&&queue.length){
+        const task=queue.shift(),id=++reqId;
+        inFlight+=1;requests.set(id,task);
+        ws.send(JSON.stringify({ticks_history:task.meta.symbol,style:'candles',granularity:task.granularity,count:task.count,end:'latest',adjust_start_time:1,req_id:id}));
+      }
+    };
+    ws.addEventListener('open',pump);
+    ws.addEventListener('error',finish);
+    ws.addEventListener('message',event=>{
+      let message;try{message=JSON.parse(String(event.data));}catch{return;}
+      const request=requests.get(Number(message.req_id??message.echo_req?.req_id));
+      if(!request)return;
+      requests.delete(Number(message.req_id??message.echo_req?.req_id));inFlight=Math.max(0,inFlight-1);
+      if(Array.isArray(message.candles)){
+        const rows=message.candles.map(c=>({open:+c.open,high:+c.high,low:+c.low,close:+c.close,epoch:+c.epoch}));
+        const symbol=request.meta.symbol;
+        if(request.timeframe==='D1L')received.set(`${symbol}:W1`,aggregateCandles(onlyClosedCandles(rows,86400),WEEK_SECONDS,WEEK_OFFSET));
+        else received.set(`${symbol}:${request.timeframe}`,onlyClosedCandles(rows,request.granularity));
+        done+=1;
+      }else if(message.error){
+        const reason=message.error?.message||'';
+        if(request.attempt<2&&/rate limit|temporar|try again/i.test(reason)){
+          queue.push({...request,attempt:request.attempt+1});
+          clearTimeout(pumpTimer);pumpTimer=setTimeout(pump,1500);return;
+        }
+        done+=1;
+      }
+      clearTimeout(pumpTimer);pumpTimer=setTimeout(pump,60);
+    });
+  });
+}
+
 // offsetSeconds shifts the bucket boundaries. Forex uses 7200 so D1/H4 candles start at
 // 22:00 UTC (New York close), like MT5 broker charts, instead of UTC midnight.
 function aggregateCandles(rows,seconds,offsetSeconds=0){
@@ -1277,7 +1331,9 @@ async function main(){
   await fs.mkdir(path.dirname(OUTPUT),{recursive:true});
   await fs.writeFile(OUTPUT,JSON.stringify(payload,null,2));
   await writePlaybook(candles,payload.updated_at);
-  await writePositions(candles,markets,payload.updated_at);
+  const extraCandles=await fetchDerivExtra().catch(()=>new Map());
+  console.log(`Positions extra timeframes: ${extraCandles.size} series.`);
+  await writePositions(new Map([...candles,...extraCandles]),markets,payload.updated_at);
   console.log(`Wrote ${markets.length} analyses; ${trendChanges} trend change(s), ${trendFlips} flip(s); ${payload.confirmed_signals} confirmed signals.`);
 }
 
@@ -1324,8 +1380,9 @@ function positionRows(candles,rows,metas=MARKETS){
   const out=[];
   const closed=(symbol,tf,seconds)=>onlyClosedCandles(candles.get(`${symbol}:${tf}`)||[],seconds);
   for(const meta of metas){
-    const series={D1:closed(meta.symbol,'D1',86400),H4:closed(meta.symbol,'H4',14400),
-      H1:closed(meta.symbol,'H1',3600),M15:closed(meta.symbol,'M15',900)};
+    const series={W1:closed(meta.symbol,'W1',WEEK_SECONDS),D1:closed(meta.symbol,'D1',86400),H4:closed(meta.symbol,'H4',14400),
+      H1:closed(meta.symbol,'H1',3600),M30:closed(meta.symbol,'M30',1800),M15:closed(meta.symbol,'M15',900),
+      M5:closed(meta.symbol,'M5',300),M1:closed(meta.symbol,'M1',60)};
     const price=series.M15.at(-1)?.close??series.H1.at(-1)?.close;
     const positions=[];
     for(const position of msnrPositions(series))positions.push(position);
@@ -1340,7 +1397,7 @@ function positionRows(candles,rows,metas=MARKETS){
     if(!positions.length)continue;
     positions.sort((a,b)=>b.quality-a.quality);
     out.push({id:`${meta.symbol}:positions`,market:meta.market,symbol:meta.symbol,family:meta.family,price:price??null,
-      positions:positions.slice(0,6)});
+      positions:positions.slice(0,8)});
   }
   return out;
 }
