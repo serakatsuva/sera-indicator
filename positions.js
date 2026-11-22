@@ -73,8 +73,21 @@
     }
   }
 
+  function setView(view,updateHash){
+    const pos=view==="positions";
+    document.body.classList.toggle("view-positions",pos);
+    for(const b of document.querySelectorAll(".view-tab")){
+      const on=b.dataset.view===view;b.classList.toggle("active",on);b.setAttribute("aria-selected",String(on));
+    }
+    if(updateHash)history.replaceState(null,"",pos?"#positions":location.pathname+location.search);
+    window.scrollTo(0,0);
+  }
+
   async function init(){
     if(!$("positions"))return;
+    for(const b of document.querySelectorAll(".view-tab"))b.addEventListener("click",()=>setView(b.dataset.view,true));
+    window.addEventListener("hashchange",()=>{if(location.hash==="#positions")setView("positions",false);});
+    if(location.hash==="#positions")setView("positions",false);
     bind();
     state.data=await load();
     render();
