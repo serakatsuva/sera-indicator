@@ -1,45 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-22T02:36:55.379739Z",
+  "updated_at": "2026-11-22T02:41:47.478695Z",
   "records": [
-    {
-      "key": "WLDUSD:day|1795079700|SELL",
-      "id": "WLDUSD:day",
-      "market": "USD Basket",
-      "symbol": "WLDUSD",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1795079700,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 90,
-      "execution_score": 78.0,
-      "active_strategies": [
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 1261.377,
-        "sl": 1264.041,
-        "tp1": 1257.3809999999999,
-        "tp2": 1254.9834,
-        "tp3": 1251.7866,
-        "tp4": 1248.5898,
-        "tp5": 1245.393
-      },
-      "status": "resolved",
-      "created_at": "2026-11-19T09:32:49.813917Z",
-      "max_stage": 0,
-      "last_epoch": 1795106700,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1795107600
-    },
     {
       "key": "1HZ75V:day|1795079700|SELL",
       "id": "1HZ75V:day",
@@ -24007,19 +23969,45 @@
         "tp5": 16941.659000000003
       },
       "status": "open",
-      "created_at": "2026-11-22T02:36:55.289494Z"
+      "created_at": "2026-11-22T02:36:55.289494Z",
+      "max_stage": 0,
+      "last_epoch": 1795313700
+    },
+    {
+      "key": "JD25:day|1795313700|BUY",
+      "id": "JD25:day",
+      "market": "Jump 25 Index",
+      "symbol": "JD25",
+      "mode": "day",
+      "direction": "BUY",
+      "opened_epoch": 1795313700,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 88,
+      "execution_score": 77.0,
+      "active_strategies": [
+        "Momentum",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 130657.78,
+        "sl": 130067.49,
+        "tp1": 131543.215,
+        "tp2": 132074.476,
+        "tp3": 132782.82399999996,
+        "tp4": 133491.17199999996,
+        "tp5": 134199.51999999996
+      },
+      "status": "open",
+      "created_at": "2026-11-22T02:41:47.379074Z"
     }
   ],
   "profiles": {
-    "USD Basket|day|GENERIC|TRANSITION": {
-      "samples": 10,
-      "decisive_samples": 10,
-      "win_rate": 0.0,
-      "avg_r": -1.0,
-      "losses": 10,
-      "breakeven_or_flat": 0,
-      "wins": 0
-    },
     "Volatility 75 (1s) Index|day|BREAKOUT_CONTINUATION|TRENDING": {
       "samples": 3,
       "decisive_samples": 3,
@@ -24108,6 +24096,15 @@
       "avg_r": -0.667,
       "losses": 4,
       "breakeven_or_flat": 2,
+      "wins": 0
+    },
+    "USD Basket|day|GENERIC|TRANSITION": {
+      "samples": 9,
+      "decisive_samples": 9,
+      "win_rate": 0.0,
+      "avg_r": -1.0,
+      "losses": 9,
+      "breakeven_or_flat": 0,
       "wins": 0
     },
     "Volatility 25 (1s) Index|day|GENERIC|TRANSITION": {
@@ -24760,6 +24757,24 @@
     }
   },
   "strategy_profiles": {
+    "Trend following": {
+      "samples": 135,
+      "decisive_samples": 112,
+      "win_rate": 17.0,
+      "avg_r": -0.378
+    },
+    "SMC structure": {
+      "samples": 150,
+      "decisive_samples": 103,
+      "win_rate": 18.4,
+      "avg_r": -0.272
+    },
+    "Breakout + impulse": {
+      "samples": 150,
+      "decisive_samples": 117,
+      "win_rate": 16.2,
+      "avg_r": -0.387
+    },
     "Momentum": {
       "samples": 150,
       "decisive_samples": 106,
@@ -24796,30 +24811,6 @@
       "win_rate": 17.0,
       "avg_r": -0.329
     },
-    "HH/HL or LH/LL structure": {
-      "samples": 150,
-      "decisive_samples": 103,
-      "win_rate": 17.5,
-      "avg_r": -0.295
-    },
-    "Trend following": {
-      "samples": 135,
-      "decisive_samples": 112,
-      "win_rate": 17.0,
-      "avg_r": -0.378
-    },
-    "SMC structure": {
-      "samples": 150,
-      "decisive_samples": 103,
-      "win_rate": 18.4,
-      "avg_r": -0.272
-    },
-    "Breakout + impulse": {
-      "samples": 150,
-      "decisive_samples": 117,
-      "win_rate": 16.2,
-      "avg_r": -0.387
-    },
     "MACD momentum alignment": {
       "samples": 150,
       "decisive_samples": 117,
@@ -24831,6 +24822,12 @@
       "decisive_samples": 74,
       "win_rate": 21.6,
       "avg_r": -0.298
+    },
+    "HH/HL or LH/LL structure": {
+      "samples": 150,
+      "decisive_samples": 103,
+      "win_rate": 17.5,
+      "avg_r": -0.295
     },
     "Donchian breakout": {
       "samples": 137,
