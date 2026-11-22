@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="./weltrade.css?v=weltrade-20261101e">
   <link rel="stylesheet" href="./crypto.css?v=crypto-20261106">
   <link rel="stylesheet" href="./copilot.css?v=copilot-20261105">
-  <link rel="stylesheet" href="./positions.css?v=positions-20261122d">
+  <link rel="stylesheet" href="./positions.css?v=positions-20261122e">
   <link rel="stylesheet" href="./theme.css?v=theme-20261105">
 </head>
 <body>
@@ -238,10 +238,11 @@
         <div><span class="eyebrow cyan">APA + MSNR</span><h2>Positions anticipées</h2></div>
       </div>
       <p class="pos-intro">Uniquement des anticipations de positions : price action (APA) et niveaux MSNR (OCL d’une grande unité de temps confirmé par un SNR de l’unité inférieure : Classic A/V, RBS/SBR, QML, dans le sens de la structure).
-        Ce ne sont pas des ordres. La qualité est un score heuristique, pas une probabilité de gain ; testez toujours en démo d’abord.</p>
+        Ce ne sont pas des ordres. Chaque carte montre ce qui a été mesuré sur un an d’historique Deriv ; par défaut, seules les positions avec un avantage mesuré sont affichées (il est petit : quelques points de pourcentage au-dessus de l’équilibre). Testez toujours en démo d’abord.</p>
       <div class="pos-filters">
         <label>Marché<select id="posMarket"><option value="">Tous</option></select></label>
         <label>Méthode<select id="posMethod"><option value="">APA + MSNR</option><option value="MSNR">MSNR</option><option value="APA">APA</option></select></label>
+        <label>Fiabilité<select id="posRel"><option value="edge">Avantage mesuré (recommandé)</option><option value="all">Toutes (y compris sans avantage)</option></select></label>
         <label>Moment<select id="posPhase"><option value="">Tous (hors passées)</option><option value="NOW">Entrer maintenant</option><option value="PREP">En préparation</option><option value="UPCOMING">À venir</option></select></label>
         <label>Style<select id="posStyle"><option value="">Tous</option><option value="scalp">Fin (M1/M5)</option><option value="day">Day (M15)</option><option value="swing">Swing (H1/H4/D1)</option><option value="long">Long swing (W1/D1)</option></select></label>
         <label>Sens<select id="posSide"><option value="">Tous</option><option value="BUY">BUY</option><option value="SELL">SELL</option></select></label>
@@ -393,7 +394,7 @@
   <script src="./crypto-engine.js?v=crypto-20261106" defer></script>
   <script src="./crypto.js?v=crypto-20261106" defer></script>
   <script src="./playbook.js?v=playbook-20261101c" defer></script>
-  <script src="./positions-chart.js?v=positions-20261122d" defer></script>
-  <script src="./positions.js?v=positions-20261122d" defer></script>
+  <script src="./positions-chart.js?v=positions-20261122e" defer></script>
+  <script src="./positions.js?v=positions-20261122e" defer></script>
 </body>
 </html>

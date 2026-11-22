@@ -103,7 +103,7 @@
 
   function stamp(note,what){
     const t=new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
-    note.textContent=`Anticipation, pas un ordre : boîte rouge = risque (entrée → SL), grise = objectif (entrée → TP1). Prix en direct ; bougies ${what} à ${t}, remises à jour toutes les 5 min. Qualité = score heuristique.`;
+    note.textContent=`Anticipation, pas un ordre : boîte rouge = risque (entrée → SL), grise = objectif (entrée → TP1). Prix en direct ; bougies ${what} à ${t}, remises à jour toutes les 5 min.`;
   }
 
   async function open(m,p){
@@ -113,7 +113,7 @@
     modal.hidden=false;document.body.classList.add("pos-modal-open");
     const {high,low}=tfs(p);
     modal.querySelector("#posChartTitle").textContent=`${m.market} · ${p.side} · ${p.setup}`;
-    modal.querySelector("#posChartSub").textContent=` ${high?high+" → ":""}${low} · qualité ${p.quality}/95`;
+    modal.querySelector("#posChartSub").textContent=` ${high?high+" → ":""}${low} · ${({EDGE:'avantage mesuré',PARTIAL:'avantage sur 2 mois',NEUTRAL:'sans avantage net',NEGATIVE:'perdant sur l’historique'})[p.reliability]||'non mesuré'}`;
     const note=modal.querySelector("#posChartNote");
     note.textContent="Chargement des bougies…";
     overlay=modal.querySelector("#posOverlay");overlay.innerHTML="";

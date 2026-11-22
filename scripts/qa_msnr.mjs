@@ -30,3 +30,12 @@ const cases=[[sell,100,'NOW'],[sell,95,'PREP'],[sell,80.5,'UPCOMING'],[sell,111,
   [{...buy,order:'STOP',entry:105,zone_min:105,zone_max:105},103,'PREP'],[{...buy,order:'STOP',entry:105,zone_min:105,zone_max:105},112,'PASSED'],[{...buy,order:'STOP',entry:105,zone_min:105,zone_max:105},108,'NOW']];
 for(const [p,px,want] of cases){const got=positionPhase(p,px);if(got!==want)throw new Error(`phase ${p.side} ${p.order} @${px}: ${got} != ${want}`);}
 console.log('ok phases');
+import {reliabilityFor,driftGroup,classify} from './position-reliability.mjs';
+const must=(c,m)=>{if(!c)throw new Error(m);};
+must(driftGroup('Boom 100 Index','SELL')==='drift'&&driftGroup('Boom 100 Index','BUY')==='counter'&&driftGroup('Crash 500 Index','BUY')==='drift'
+  &&driftGroup('Bull Market Index','BUY')==='drift'&&driftGroup('Bear Market Index','SELL')==='drift'&&driftGroup('Volatility 75 Index','BUY')==='random','groupes');
+const cell=(trn,tst,all=0.1)=>({all:{exp_r:all},train:{n:500,exp_r:trn},test:{n:500,exp_r:tst}});
+must(classify(cell(.09,.15))==='EDGE'&&classify(cell(-.04,-.03))==='NEGATIVE'&&classify(cell(.09,-.01))==='NEUTRAL'&&classify(null)==='UNMEASURED','classify');
+must(reliabilityFor({cells:{'drift|H4/H1':cell(.09,.15)}},'Boom 100 Index',{method:'MSNR',tf:'H4/H1',side:'SELL'}).level==='EDGE','reliabilityFor MSNR');
+must(reliabilityFor({cells:{}},'Boom 100 Index',{method:'APA',tf:'H1',side:'SELL'}).level==='UNMEASURED','APA non mesuré');
+console.log('ok reliability');

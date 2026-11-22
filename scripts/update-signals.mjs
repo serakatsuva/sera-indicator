@@ -4,6 +4,7 @@ import {pathToFileURL} from 'node:url';
 import {driftPlaybook,driftProfile} from './drift-playbook.mjs';
 import {msnrPositions} from './msnr-engine.mjs';
 import {positionPhase} from './position-phase.mjs';
+import {reliabilityFor} from './position-reliability.mjs';
 
 const OUTPUT=path.join(process.cwd(),'data','signals.json');
 const POSITIONS_OUTPUT=path.join(process.cwd(),'data','positions-signals.json');
@@ -1377,7 +1378,7 @@ async function writePlaybook(candles,updatedAt){
 
 // Positions page (data/positions-signals.json): only anticipated positions — APA (price action) and MSNR (OCL + SNR).
 // Anticipations, not orders; quality is a heuristic score, not a win probability.
-function positionRows(candles,rows,metas=MARKETS){
+function positionRows(candles,rows,metas=MARKETS,stats=null){
   const out=[];
   const closed=(symbol,tf,seconds)=>onlyClosedCandles(candles.get(`${symbol}:${tf}`)||[],seconds);
   for(const meta of metas){
@@ -1395,22 +1396,25 @@ function positionRows(candles,rows,metas=MARKETS){
           sl:position.sl,tp1:position.tp1,tp2:position.tp2,rr1:position.rr1,rr2:position.rr2,
           quality:position.quality,aligned:Boolean(position.aligned),trend_side:row.apa.trend_side});
     }
-    const ORDER={NOW:0,PREP:1,UPCOMING:2};
-    const live=positions.map(x=>({...x,phase:positionPhase(x,price)})).filter(x=>x.phase!=='PASSED');
+    const ORDER={NOW:0,PREP:1,UPCOMING:2},REL={EDGE:0,PARTIAL:1,NEUTRAL:2,UNMEASURED:3,NEGATIVE:4};
+    const live=positions.map(x=>({...x,phase:positionPhase(x,price),...(()=>{const r=reliabilityFor(stats,meta.market,x);return {reliability:r.level,group:r.group,measured:r.measured};})()})).filter(x=>x.phase!=='PASSED');
     positions.length=0;positions.push(...live);
     if(!positions.length)continue;
-    positions.sort((a,b)=>ORDER[a.phase]-ORDER[b.phase]||b.quality-a.quality);
+    positions.sort((a,b)=>REL[a.reliability]-REL[b.reliability]||ORDER[a.phase]-ORDER[b.phase]||b.quality-a.quality);
     out.push({id:`${meta.symbol}:positions`,market:meta.market,symbol:meta.symbol,family:meta.family,price:price??null,
-      positions:positions.slice(0,8)});
+      positions:positions.slice(0,12)});
   }
   return out;
 }
 
 async function writePositions(candles,rows,updatedAt){
-  const list=positionRows(candles,rows);
+  let stats=null;
+  try{stats=JSON.parse(await fs.readFile(path.join(process.cwd(),'data','msnr-stats.json'),'utf8'));}catch{stats=null;}
+  const list=positionRows(candles,rows,MARKETS,stats);
   const count=list.reduce((n,m)=>n+m.positions.length,0);
   const out={updated_at:updatedAt,strategy:'Sera Positions (APA + MSNR)',
-    disclaimer:'Anticipations de positions, pas des ordres. Qualité = score heuristique, pas une probabilité de gain.',
+    disclaimer:'Anticipations de positions, pas des ordres. La fiabilité vient de mesures sur un an d\'historique (data/msnr-stats.json), pas d\'une promesse de gain.',
+    stats_period:stats?.history||null,
     positions:count,markets:list};
   await fs.writeFile(POSITIONS_OUTPUT,JSON.stringify(out,null,1));
   console.log(`Positions: ${count} anticipated position(s) on ${list.length} market(s).`);
