@@ -8,7 +8,7 @@
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
   const price=v=>{const n=num(v);if(n===null)return "—";return n.toLocaleString("fr-FR",{maximumFractionDigits:Math.abs(n)>=1000?2:Math.abs(n)>=10?3:5});};
   const STATUS={IN_ZONE:"Dans la zone",WAIT_RETEST:"Attendre le retest",ARMED:"Armée (déclencheur)"};
-  const state={data:null,market:"",method:"",side:"",style:""};
+  const state={data:null,market:"",method:"",side:"",style:"",phase:""};
   let registry=[];
 
   async function load(){
@@ -17,6 +17,26 @@
     }
     return null;
   }
+
+  // Même logique que scripts/position-phase.mjs
+  function phaseOf(p,px){
+    const n=num(px);if(n===null)return "UPCOMING";
+    const d=p.side==="BUY"?1:-1,risk=Math.abs(p.entry-p.sl);
+    if(!(risk>0))return "PASSED";
+    if((n-p.sl)*d<=0||(n-p.tp1)*d>=0)return "PASSED";
+    const zmin=num(p.zone_min)??p.entry,zmax=num(p.zone_max)??p.entry,tol=num(p.zone_tol)||0;
+    if(n>=zmin-tol&&n<=zmax+tol)return "NOW";
+    const dist=Math.abs(n-p.entry)/risk;
+    if(p.order==="STOP"){
+      if((n-p.entry)*d<0)return dist<=1.5?"PREP":"UPCOMING";
+      return dist<=0.3?"NOW":"PASSED";
+    }
+    const onTarget=p.side==="BUY"?n>zmax+tol:n<zmin-tol;
+    if(!onTarget)return "PASSED";
+    return dist<=1.5?"PREP":"UPCOMING";
+  }
+  const PHASE_LABEL={NOW:"Entrer maintenant",PREP:"En préparation",UPCOMING:"À venir"};
+  const PHASE_ORDER={NOW:0,PREP:1,UPCOMING:2};
 
   function live(p,px){
     const n=num(px);if(n===null)return "";
@@ -29,12 +49,13 @@
     return `prix à ${dist.toLocaleString("fr-FR",{maximumFractionDigits:1})} R de l’entrée`;
   }
 
-  function card(m,p,idx){
+  function card(m,p,idx,phase){
     const cls=p.side==="BUY"?"buy":"sell";
     const q=Math.max(0,Math.min(95,Number(p.quality)||0));
     const tags=[p.aligned?"aligné sur la structure":"contre / hors structure",p.liquidity_swept?"liquidité prise":"",p.ocl_double?"OCL double":""].filter(Boolean);
     return `<article class="wt-card ${cls} pos-card" data-pos-market="${esc(m.market)}">
       <div class="wt-top"><div><h3>${esc(m.market)}</h3><p>${esc(p.setup)} · ${esc(p.tf)}</p></div><span class="wt-signal ${cls}">${esc(p.side)}</span></div>
+      <div class="pos-phase ${esc(phase)}">${esc(PHASE_LABEL[phase]||"")}</div>
       <div class="pos-quality" title="Score heuristique, pas une probabilité de gain"><i style="width:${q/0.95}%"></i><span>Qualité ${q}/95</span></div>
       <div class="wt-levels">
         <div><small>${esc(p.order==="STOP"?"Entrée (stop)":"Entrée (limite)")}</small><strong>${price(p.entry)}</strong></div>
@@ -62,12 +83,15 @@
         if(state.method&&p.method!==state.method)continue;
         if(state.side&&p.side!==state.side)continue;
         if(state.style&&p.mode!==state.style)continue;
-        items.push({m,p});
+        const phase=phaseOf(p,m.price);
+        if(phase==="PASSED")continue;
+        if(state.phase&&phase!==state.phase)continue;
+        items.push({m,p,phase});
       }
     }
-    items.sort((a,b)=>b.p.quality-a.p.quality);
+    items.sort((a,b)=>PHASE_ORDER[a.phase]-PHASE_ORDER[b.phase]||b.p.quality-a.p.quality);
     registry=items;
-    list.innerHTML=items.length?items.map((x,i)=>card(x.m,x.p,i)).join(""):`<p class="wt-empty">Aucune position anticipée avec ces filtres.</p>`;
+    list.innerHTML=items.length?items.map((x,i)=>card(x.m,x.p,i,x.phase)).join(""):`<p class="wt-empty">Aucune position anticipée avec ces filtres.</p>`;
     if(note){note.className="notice";note.textContent=`${items.length} position(s) affichée(s) · mise à jour ${d.updated_at?new Date(d.updated_at).toLocaleString("fr-FR"):"—"} · ${d.disclaimer||""}`;}
   }
 
@@ -78,7 +102,7 @@
       const it=registry[Number(b.dataset.posOpen)];
       if(it&&window.SeraPositionChart)window.SeraPositionChart.open(it.m,it.p);
     });
-    for(const [id,key] of [["posMarket","market"],["posMethod","method"],["posSide","side"],["posStyle","style"]]){
+    for(const [id,key] of [["posMarket","market"],["posMethod","method"],["posSide","side"],["posStyle","style"],["posPhase","phase"]]){
       const el=$(id);if(el)el.addEventListener("change",()=>{state[key]=el.value;render();});
     }
   }
