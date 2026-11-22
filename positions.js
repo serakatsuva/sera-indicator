@@ -87,7 +87,8 @@
     if(!$("positions"))return;
     for(const b of document.querySelectorAll(".view-tab"))b.addEventListener("click",()=>setView(b.dataset.view,true));
     window.addEventListener("hashchange",()=>{if(location.hash==="#positions")setView("positions",false);});
-    if(location.hash==="#positions")setView("positions",false);
+    // Ouverture par défaut sur Positions, sauf si l'URL demande explicitement une autre section.
+    if(!location.hash||location.hash==="#positions")setView("positions",false);
     bind();
     state.data=await load();
     render();
