@@ -1,4 +1,4 @@
-#property version "1.00"
+#property version "1.01"
 #property indicator_chart_window
 #property indicator_buffers 0
 #property indicator_plots 0
@@ -64,9 +64,9 @@ void DiscoverMarkets()
       string symbol = SymbolName(i, false);
       string name = symbol;
       StringToLower(name);
-      if(StringFind(name, "boom") >= 0)
+      if(StringFind(name, "boom") >= 0 || StringFind(name, "gain") >= 0)
          RegisterMarket(symbol, 1);
-      if(StringFind(name, "crash") >= 0)
+      if(StringFind(name, "crash") >= 0 || StringFind(name, "pain") >= 0)
          RegisterMarket(symbol, -1);
    }
 }
