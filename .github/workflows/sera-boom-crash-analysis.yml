@@ -1,0 +1,21 @@
+name: Sera Boom and Crash analysis
+on:
+  repository_dispatch:
+    types: [sera-boom-crash-signal-v1]
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Review the MT5 signal
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SERA_OPENAI_MODEL: ${{ vars.SERA_OPENAI_MODEL }}
+        run: python3 sera-boom-crash/analyze.py
