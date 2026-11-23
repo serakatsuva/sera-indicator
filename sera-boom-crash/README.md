@@ -1,8 +1,11 @@
 # Sera Boom & Crash pour MetaTrader 5
 
 Indicateur multi-symboles APA + Malaysian SNR. Une instance scanne le catalogue
-complet du serveur MT5 à partir des noms contenant Boom ou Crash, suffixes inclus.
-Un symbole dont le nom contient les deux est scanné dans les deux directions.
+complet du serveur MT5, suffixes inclus. Boom et GainX sont scannés en achat
+après un spike haussier. Crash et PainX sont scannés en vente après un spike
+baissier. Cela couvre notamment les variantes Pain/Gain 400, 600, 800, 999 et 1200
+lorsqu’elles sont disponibles sur le compte Weltrade SyntX. Les symboles
+Boom/Crash combinés sont scannés dans les deux directions.
 Le tableau affiche les configurations détectées. Les lignes apparaissent lorsque
 le graphique actif correspond au symbole du signal.
 
@@ -11,7 +14,7 @@ le graphique actif correspond au symbole du signal.
 1. Dans MT5, ouvre le dossier des données et copie `Sera_Boom_Crash.mq5` dans
    `MQL5/Indicators`. Ouvre le fichier dans MetaEditor et compile avec F7.
 2. Ajoute l’indicateur à un seul graphique sur un compte démo. Il sélectionne
-   les symboles Boom et Crash du serveur dans l’Observateur du marché.
+   les symboles Boom, Crash, Gain et Pain du serveur dans l’Observateur du marché.
 3. Les signaux validés sont exportés vers `Terminal/Common/Files/SeraBoomCrash`.
    Chaque CSV est écrit d’abord comme fichier temporaire, puis publié sous
    son nom final. Les dates dans les exports sont celles du serveur MT5.
