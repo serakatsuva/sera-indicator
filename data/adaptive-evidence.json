@@ -1,46 +1,7 @@
 {
   "version": "Sera Adaptive Evidence v1.0",
-  "updated_at": "2026-11-28T06:08:53.072686Z",
+  "updated_at": "2026-11-28T06:14:04.910954Z",
   "records": [
-    {
-      "key": "WLDGBP:day|1795617000|SELL",
-      "id": "WLDGBP:day",
-      "market": "GBP Basket",
-      "symbol": "WLDGBP",
-      "mode": "day",
-      "direction": "SELL",
-      "opened_epoch": 1795617000,
-      "setup_type": "GENERIC",
-      "regime": "TRANSITION",
-      "confidence": 96,
-      "execution_score": 90.0,
-      "active_strategies": [
-        "SMC structure",
-        "Momentum",
-        "FVG / Order Block",
-        "Trend memory",
-        "Volatility control",
-        "Boom/Crash guard",
-        "Family context confirmation",
-        "HH/HL or LH/LL structure"
-      ],
-      "levels": {
-        "entry": 1006.788,
-        "sl": 1010.131,
-        "tp1": 1001.7735,
-        "tp2": 998.7648000000002,
-        "tp3": 994.7532000000001,
-        "tp4": 990.7416000000002,
-        "tp5": 986.7300000000002
-      },
-      "status": "resolved",
-      "created_at": "2026-11-25T14:50:26.703558Z",
-      "max_stage": 0,
-      "last_epoch": 1795773600,
-      "result": "LOSS",
-      "r": -1.0,
-      "resolved_epoch": 1795774500
-    },
     {
       "key": "WLDXAU:day|1795617000|SELL",
       "id": "WLDXAU:day",
@@ -24215,18 +24176,42 @@
       "created_at": "2026-11-28T06:02:59.179174Z",
       "max_stage": 0,
       "last_epoch": 1795844700
+    },
+    {
+      "key": "CRASH50:day|1795844700|SELL",
+      "id": "CRASH50:day",
+      "market": "Crash 50 Index",
+      "symbol": "CRASH50",
+      "mode": "day",
+      "direction": "SELL",
+      "opened_epoch": 1795844700,
+      "setup_type": "GENERIC",
+      "regime": "TRANSITION",
+      "confidence": 95,
+      "execution_score": 88.0,
+      "active_strategies": [
+        "SMC structure",
+        "FVG / Order Block",
+        "Trend memory",
+        "Volatility control",
+        "Boom/Crash guard",
+        "Family context confirmation",
+        "HH/HL or LH/LL structure"
+      ],
+      "levels": {
+        "entry": 100627.694,
+        "sl": 100835.254,
+        "tp1": 100316.354,
+        "tp2": 100129.55,
+        "tp3": 99880.47800000002,
+        "tp4": 99631.40600000002,
+        "tp5": 99382.33400000002
+      },
+      "status": "open",
+      "created_at": "2026-11-28T06:14:04.804735Z"
     }
   ],
   "profiles": {
-    "GBP Basket|day|GENERIC|TRANSITION": {
-      "samples": 6,
-      "decisive_samples": 6,
-      "win_rate": 0.0,
-      "avg_r": -1.0,
-      "losses": 6,
-      "breakeven_or_flat": 0,
-      "wins": 0
-    },
     "Gold Basket|day|BREAKOUT_CONTINUATION|TRENDING": {
       "samples": 1,
       "decisive_samples": 1,
@@ -24251,6 +24236,15 @@
       "win_rate": 0.0,
       "avg_r": -1.0,
       "losses": 2,
+      "breakeven_or_flat": 0,
+      "wins": 0
+    },
+    "GBP Basket|day|GENERIC|TRANSITION": {
+      "samples": 5,
+      "decisive_samples": 5,
+      "win_rate": 0.0,
+      "avg_r": -1.0,
+      "losses": 5,
       "breakeven_or_flat": 0,
       "wins": 0
     },
@@ -25003,11 +24997,23 @@
     }
   },
   "strategy_profiles": {
+    "Trend following": {
+      "samples": 150,
+      "decisive_samples": 124,
+      "win_rate": 23.4,
+      "avg_r": -0.249
+    },
     "SMC structure": {
       "samples": 150,
       "decisive_samples": 120,
       "win_rate": 27.5,
       "avg_r": -0.114
+    },
+    "Breakout + impulse": {
+      "samples": 150,
+      "decisive_samples": 127,
+      "win_rate": 23.6,
+      "avg_r": -0.245
     },
     "Momentum": {
       "samples": 150,
@@ -25045,24 +25051,6 @@
       "win_rate": 18.1,
       "avg_r": -0.373
     },
-    "HH/HL or LH/LL structure": {
-      "samples": 150,
-      "decisive_samples": 123,
-      "win_rate": 22.8,
-      "avg_r": -0.231
-    },
-    "Trend following": {
-      "samples": 150,
-      "decisive_samples": 124,
-      "win_rate": 23.4,
-      "avg_r": -0.249
-    },
-    "Breakout + impulse": {
-      "samples": 150,
-      "decisive_samples": 127,
-      "win_rate": 23.6,
-      "avg_r": -0.245
-    },
     "ADX / DMI trend strength": {
       "samples": 149,
       "decisive_samples": 125,
@@ -25092,6 +25080,12 @@
       "decisive_samples": 103,
       "win_rate": 18.4,
       "avg_r": -0.361
+    },
+    "HH/HL or LH/LL structure": {
+      "samples": 150,
+      "decisive_samples": 123,
+      "win_rate": 23.6,
+      "avg_r": -0.215
     },
     "Break & retest": {
       "samples": 1,
